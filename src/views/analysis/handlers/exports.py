@@ -5,6 +5,7 @@ import flet as ft
 from core.state import state
 from core import theme
 from services import file_service
+from services import dataset_cache
 from .base import show_error
 
 logger = logging.getLogger(__name__)
@@ -14,6 +15,7 @@ def on_clear_data(view_state, e):
     import matplotlib.pyplot as plt
 
     plt.close("all")
+    dataset_cache.delete_cache(state.active_project_id)
     state.clear_data()
     state.analysis_blocks.clear()
     view_state.rebuild()

@@ -11,6 +11,7 @@ from services.file_service import FileValidationError
 from .base import show_error, show_success
 from .autopilot import run_autopilot
 from components.credit_badge import show_credits_dialog
+from services import dataset_cache
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,11 @@ async def process_file(view_state, file):
 
             state.set_dataframe(df, file.name)
             state.current_file_path = file.path
+
+            # Cache the linked file locally for future auto-reload
+            await asyncio.to_thread(
+                dataset_cache.cache_file, state.active_project_id, file.path
+            )
 
             state.current_df_summary = await asyncio.to_thread(
                 file_service.get_data_summary, df
@@ -127,6 +133,11 @@ async def process_file(view_state, file):
 
         state.set_dataframe(df, file.name)
         state.current_file_path = file.path
+
+        # Cache the imported file locally for auto-reload on restart
+        await asyncio.to_thread(
+            dataset_cache.cache_file, state.active_project_id, file.path
+        )
 
         state.current_df_summary = await asyncio.to_thread(
             file_service.get_data_summary, df
@@ -234,6 +245,15 @@ async def process_db_table(view_state, connection_url: str, table_name: str):
 
         state.set_dataframe(df, f"{table_name} (SQL)")
         state.current_file_path = f"sql://{table_name}"
+
+        # For SQL imports, save a CSV copy to cache (no source file to copy)
+        try:
+            cache_dir = dataset_cache._DATASETS_DIR
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            csv_path = cache_dir / f"{state.active_project_id}.csv"
+            await asyncio.to_thread(lambda: df.to_csv(str(csv_path), index=False))
+        except Exception as cache_err:
+            logger.warning("Failed to cache SQL dataset: %s", cache_err)
 
         state.current_df_summary = await asyncio.to_thread(
             file_service.get_data_summary, df

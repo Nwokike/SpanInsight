@@ -1,13 +1,17 @@
+import asyncio
 import logging
 import flet as ft
 from core import theme, utils
 from core.state import state
+from core.utils import figure_to_png_bytes
 from components.file_import_card import build_file_import_card
 from components.stat_card import build_stat_card
 from components.data_preview import build_data_preview
 from components.brand_header import build_brand_header
 from services.file_picker_service import FilePickerService
 from services.file_service import detect_spatial_columns
+from services import file_service, dataset_cache
+from services import sandbox
 from views.analysis.state import AnalysisState
 from views.analysis.handlers import (
     process_file,
@@ -181,7 +185,30 @@ def build_analysis_view(page: ft.Page, credit_service, report_service=None) -> f
         has_dataframe = state.current_df is not None
 
         if expects_dataset and not has_dataframe:
-            # Beautiful warning banner for locating/linking dataset
+            # Check local cache first — auto-reload silently if available
+            cached_path = dataset_cache.get_cached_path(state.active_project_id)
+            if cached_path:
+                # Show loading spinner while reloading from cache
+                top_section.content = ft.Column(
+                    [
+                        build_brand_header(show_tagline=True, spacing_below=True),
+                        ft.Container(height=80),
+                        ft.ProgressRing(width=40, height=40, stroke_width=3),
+                        ft.Text(
+                            f"Reloading {state.current_df_name}...",
+                            size=14,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                        ),
+                    ],
+                    horizontal_alignment="center",
+                    spacing=16,
+                )
+                top_section.padding = 20
+                top_section.expand = False
+                page.run_task(_auto_reload_from_cache, cached_path)
+                return
+
+            # No cache available — show warning banner (collaboration / cache expired)
             warning_card = ft.Container(
                 content=ft.Column(
                     controls=[
@@ -202,9 +229,9 @@ def build_analysis_view(page: ft.Page, credit_service, report_service=None) -> f
                             spacing=10,
                         ),
                         ft.Text(
-                            "Spaninsight is 100% privacy-first: your raw data is never uploaded to the cloud gateway. "
-                            "Because of this, you must obtain the original file from the creator/collaborator of this project. "
-                            "Once you have a copy, locate and link the file below to re-execute the analysis recipe and enable dataset exports.",
+                            "Your dataset is not available locally. "
+                            "If this is a collaborative project, obtain the original file from the project creator. "
+                            "Otherwise, locate and re-import the file to continue your analysis.",
                             size=13,
                             color=ft.Colors.ON_SURFACE_VARIANT,
                         ),
@@ -212,7 +239,7 @@ def build_analysis_view(page: ft.Page, credit_service, report_service=None) -> f
                         ft.Row(
                             controls=[
                                 ft.FilledButton(
-                                    "Locate & Link Dataset",
+                                    "Locate \u0026 Link Dataset",
                                     icon=ft.Icons.FILE_OPEN_ROUNDED,
                                     style=ft.ButtonStyle(
                                         bgcolor=theme.PRIMARY,
@@ -220,8 +247,18 @@ def build_analysis_view(page: ft.Page, credit_service, report_service=None) -> f
                                     ),
                                     on_click=on_pick_file,
                                 ),
+                                ft.OutlinedButton(
+                                    "Import Different Dataset",
+                                    icon=ft.Icons.ADD_ROUNDED,
+                                    style=ft.ButtonStyle(
+                                        shape=ft.RoundedRectangleBorder(radius=12),
+                                        color=ft.Colors.ON_SURFACE_VARIANT,
+                                    ),
+                                    on_click=lambda e: on_clear_data(view_state, e),
+                                ),
                             ],
                             alignment=ft.MainAxisAlignment.CENTER,
+                            wrap=True,
                         ),
                     ],
                     spacing=12,
@@ -813,6 +850,52 @@ def build_analysis_view(page: ft.Page, credit_service, report_service=None) -> f
             logger.exception("Rebuild failed in analysis view: %s", ex)
 
     view_state.rebuild_fn = _rebuild
+
+    async def _auto_reload_from_cache(cached_path):
+        """Silently reload dataset from local cache on revisit."""
+        try:
+            df = await asyncio.to_thread(file_service.load_dataframe, str(cached_path))
+            state.set_dataframe(df, state.current_df_name)
+            state.current_file_path = str(cached_path)
+
+            state.current_df_summary = await asyncio.to_thread(
+                file_service.get_data_summary, df
+            )
+
+            # Re-execute analysis blocks (recipe replay)
+            for block in state.analysis_blocks:
+                if block.get("type") == "initial" or block.get("failed"):
+                    continue
+                code = block.get("code", "")
+                if code:
+                    res = await sandbox.execute_code_async(code, state.current_df)
+                    if res["success"]:
+                        raw_figure = res.get("figure")
+                        figure_png = None
+                        if raw_figure:
+                            try:
+                                figure_png = await asyncio.to_thread(
+                                    figure_to_png_bytes, raw_figure
+                                )
+                            except Exception:
+                                pass
+                        block["figure_png"] = figure_png or block.get("figure_png")
+                        block["stdout"] = res.get("stdout", "")
+                        block["result"] = res.get("result", "")
+                        block["failed"] = False
+                        if res.get("modified") and res.get("new_df") is not None:
+                            state.current_df = res["new_df"]
+                            state.current_df_columns = list(state.current_df.columns)
+                            state.current_df_rows = len(state.current_df)
+                    else:
+                        block["failed"] = True
+
+        except Exception as ex:
+            logger.warning("Auto-reload from cache failed: %s", ex)
+            # Cache is corrupted or unreadable — delete it so user sees the warning banner
+            dataset_cache.delete_cache(state.active_project_id)
+        finally:
+            view_state.rebuild()
 
     if getattr(state, "trigger_file_picker", False):
         state.trigger_file_picker = False

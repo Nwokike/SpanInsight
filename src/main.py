@@ -86,6 +86,14 @@ def cleanup_temp_files():
     except Exception as e:
         logger.warning("Temp cleanup failed: %s", e)
 
+    # Purge dataset cache files older than 7 days
+    try:
+        from services.dataset_cache import cleanup_stale
+
+        cleanup_stale()
+    except Exception as e:
+        logger.warning("Dataset cache cleanup failed: %s", e)
+
 
 async def main(page: ft.Page):
     """Main Flet application entry point."""

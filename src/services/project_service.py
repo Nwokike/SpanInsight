@@ -361,6 +361,9 @@ class ProjectService:
 
     async def delete_project(self, project_id: str) -> bool:
         """Remove a project locally and trigger gateway cascade delete."""
+        from services import dataset_cache
+
+        dataset_cache.delete_cache(project_id)
         state.user_projects.pop(project_id, None)
         await self._persist_local_projects()
 
