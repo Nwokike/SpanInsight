@@ -292,7 +292,7 @@ def build_settings_view(
             setting_tile(
                 icon=ft.Icons.INFO_OUTLINE_ROUNDED,
                 title="Version",
-                subtitle="Spaninsight v1.2.2",
+                subtitle="Spaninsight v1.2.3",
             ),
             setting_tile(
                 icon=ft.Icons.PRIVACY_TIP_OUTLINED,

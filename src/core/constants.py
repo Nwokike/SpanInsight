@@ -13,7 +13,7 @@ API_CHAT_ENDPOINT = f"{API_BASE_URL}/chat"
 
 # Headers required by the gateway's security gate
 APP_CLIENT_ID = "spaninsight-mobile-v1"
-APP_VERSION = "1.2.2"
+APP_VERSION = "1.2.3"
 USER_AGENT = f"SpaninsightApp/{APP_VERSION}"
 
 # ── Task Types (maps to gateway ROUTES) ─────────────────────────────

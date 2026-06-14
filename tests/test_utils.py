@@ -48,7 +48,7 @@ class TestParseVersion:
 
     def test_comparison(self):
         assert parse_version("2.0.0") > parse_version("1.9.9")
-        assert parse_version("1.2.2") > parse_version("1.0.1")
+        assert parse_version("1.2.3") > parse_version("1.0.1")
 
     def test_invalid_returns_zero(self):
         assert parse_version("invalid") == (0, 0, 0)
@@ -58,7 +58,7 @@ class TestParseVersion:
         assert parse_version(None) == (0, 0, 0)
 
     def test_whitespace_stripped(self):
-        assert parse_version("  1.2.2  ") == (1, 2, 1)
+        assert parse_version("  1.2.3  ") == (1, 2, 1)
 
 
 class TestFigureToPngBytes:

@@ -1,6 +1,6 @@
 [project]
 name = "spaninsight"
-version = "1.2.2"
+version = "1.2.3"
 description = "A high-performance, privacy-first data intelligence platform for smart data collection, analysis and reporting."
 readme = "README.md"
 requires-python = ">=3.13"

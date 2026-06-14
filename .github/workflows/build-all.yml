@@ -6,18 +6,18 @@ on:
       build_version:
         description: "Build version"
         required: true
-        default: "1.2.2"
+        default: "1.2.3"
       build_number:
         description: "Build number"
         required: true
-        default: "5"
+        default: "6"
 
 env:
   PYTHONUTF8: "1"
   FLET_CLI_NO_RICH_OUTPUT: "1"
   UV_PYTHON: "3.13"
-  BUILD_VERSION: ${{ inputs.build_version || '1.2.2' }}
-  BUILD_NUMBER: ${{ inputs.build_number || '5' }}
+  BUILD_VERSION: ${{ inputs.build_version || '1.2.3' }}
+  BUILD_NUMBER: ${{ inputs.build_number || '6' }}
 
 jobs:
   # ─── Android APK (split per ABI) ───────────────────────
