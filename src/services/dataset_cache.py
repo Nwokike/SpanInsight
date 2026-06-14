@@ -49,7 +49,7 @@ def cache_file(project_id: str, source_path: str) -> Path | None:
 
         ext = Path(source_path).suffix.lower() or ".csv"
         dest = _DATASETS_DIR / f"{project_id}{ext}"
-        shutil.copy2(source_path, dest)
+        shutil.copy(source_path, dest)
         logger.info("Cached dataset for project %s → %s", project_id, dest.name)
         return dest
     except Exception as e:
