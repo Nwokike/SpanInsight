@@ -118,7 +118,6 @@
 - **Local Sandbox** — Built-in Python runtime (`pandas`, `matplotlib`) runs in a restricted environment.
 - **Credit-Based System** — AI tasks use a transparent credit system with generous daily free allowances.
 - **Responsive Widescreen & Mobile** — High-performance, optimized deployments across widescreen and Android layouts.
-- **Google AdMob Integration** — Safe, buffered banner and interstitial advertising support for mobile app users.
 - **Resilient Mobile Sandbox** — Hardened client environment utilizing sandboxed directory access (`FLET_APP_STORAGE_DATA`/`TEMP`) for maximum permission security and zero PermissionError crashes.
 
 ---
