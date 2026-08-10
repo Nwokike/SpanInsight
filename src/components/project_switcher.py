@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import logging
+
 import flet as ft
+
 from core import theme
 from core.state import state
 
@@ -295,6 +297,7 @@ def _show_switcher_dialog(page: ft.Page, project_service):
         fpath = proj.get("current_file_path", "")
         if fpath:
             import os
+
             from services import file_service
 
             if os.path.exists(fpath):

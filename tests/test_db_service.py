@@ -1,6 +1,6 @@
 import pandas as pd
-from sqlalchemy import create_engine
 from services.db_service import DatabaseService
+from sqlalchemy import create_engine
 
 
 def test_database_service_test_connection_success():
@@ -20,8 +20,8 @@ def test_database_service_test_connection_failure():
 
 
 def test_database_service_list_tables_and_load_table():
-    import tempfile
     import os
+    import tempfile
 
     # Create an in-memory-like but persistent temporary SQLite file database
     with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as tmp:

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import flet as ft
 import base64
+
+import flet as ft
 
 from core import theme, tokens
 
@@ -14,7 +15,7 @@ def build_chart_card(
     figure=None,
     insight: str = "",
     code: str = "",
-    on_change: callable = None,
+    on_change: callable | None = None,
 ) -> ft.Container:
     """Build a single chart card with its AI insight."""
     chart_widget = ft.Container(height=10)  # fallback

@@ -1,6 +1,6 @@
 """Tests for core.utils module."""
 
-from core.utils import sanitize_numpy, parse_version, figure_to_png_bytes
+from core.utils import figure_to_png_bytes, parse_version, sanitize_numpy
 
 
 class TestSanitizeNumpy:

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import logging
 import re
-from core.constants import API_HEALTH_ENDPOINT, API_CHAT_ENDPOINT, USER_AGENT
+
+from core.constants import API_CHAT_ENDPOINT, API_HEALTH_ENDPOINT, USER_AGENT
 from services.api_client import get_client, request_with_retry
 
 logger = logging.getLogger(__name__)
@@ -91,15 +92,14 @@ async def call_gateway(task_type: str, messages: list[dict]) -> dict:
             "groq" in model_name.lower()
             or "llama" in model_name.lower()
             or "mixtral" in model_name.lower()
-        ):
-            if prompt_chars > 15000 or prompt_tokens > 4000:
-                logger.warning(
-                    "[AI Gateway WARNING] Large context (%d chars / %d tokens) detected on model %s. "
-                    "Groq models have strict limits and should ideally be kept under ~5K context for optimal stability.",
-                    prompt_chars,
-                    prompt_tokens,
-                    model_name,
-                )
+        ) and (prompt_chars > 15000 or prompt_tokens > 4000):
+            logger.warning(
+                "[AI Gateway WARNING] Large context (%d chars / %d tokens) detected on model %s. "
+                "Groq models have strict limits and should ideally be kept under ~5K context for optimal stability.",
+                prompt_chars,
+                prompt_tokens,
+                model_name,
+            )
         return data
     except Exception as err:
         duration = time.perf_counter() - start_time
@@ -158,15 +158,14 @@ async def call_gateway_raw(payload: dict, timeout: float = 15.0) -> dict:
             "groq" in model_name.lower()
             or "llama" in model_name.lower()
             or "mixtral" in model_name.lower()
-        ):
-            if prompt_chars > 15000 or prompt_tokens > 4000:
-                logger.warning(
-                    "[AI Gateway WARNING] Large context (%d chars / %d tokens) detected on model %s. "
-                    "Groq models have strict limits and should ideally be kept under ~5K context for optimal stability.",
-                    prompt_chars,
-                    prompt_tokens,
-                    model_name,
-                )
+        ) and (prompt_chars > 15000 or prompt_tokens > 4000):
+            logger.warning(
+                "[AI Gateway WARNING] Large context (%d chars / %d tokens) detected on model %s. "
+                "Groq models have strict limits and should ideally be kept under ~5K context for optimal stability.",
+                prompt_chars,
+                prompt_tokens,
+                model_name,
+            )
         return data
     except Exception as err:
         duration = time.perf_counter() - start_time
@@ -188,7 +187,7 @@ def extract_content(data: dict) -> str:
             content = message.get("content", "") or ""
             content = strip_thinking(content)
             return content.strip()
-    except (IndexError, KeyError, TypeError):
+    except IndexError, KeyError, TypeError:
         pass
     return ""
 
@@ -234,7 +233,6 @@ def extract_block_by_pattern(text: str, is_json: bool = False) -> str:
     for trim_target in ["```python", "```json", "```"]:
         if cleaned.lower().startswith(trim_target):
             cleaned = cleaned[len(trim_target) :]
-    if cleaned.endswith("```"):
-        cleaned = cleaned[:-3]
+    cleaned = cleaned.removesuffix("```")
 
     return cleaned.strip()

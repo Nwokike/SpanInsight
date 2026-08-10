@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
+
 from core.constants import API_CHAT_ENDPOINT, TASK_AUDIO
-from services.api_client import get_client, COMMON_HEADERS
+from services.api_client import COMMON_HEADERS, get_client
+
 from .client import extract_content
 
 logger = logging.getLogger(__name__)

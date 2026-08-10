@@ -9,7 +9,6 @@ import string
 import time
 
 from core.constants import API_BASE_URL
-from core.utils import sanitize_numpy
 from services.api_client import request_with_retry
 
 logger = logging.getLogger(__name__)
@@ -24,19 +23,23 @@ class ReportService:
     async def _load_all(self) -> list[dict]:
         from core.state import state
 
+        if not state.user_reports:
+            raw = await self._storage.get("spaninsight_reports")
+            if raw:
+                try:
+                    state.user_reports = json.loads(raw)
+                except json.JSONDecodeError, ValueError:
+                    state.user_reports = []
         return state.user_reports
 
     async def _save_all(self, reports: list[dict]) -> None:
         from core.state import state
-        from services.project_service import ProjectService
 
         try:
             state.user_reports = reports
-            proj_svc = ProjectService(self._storage._page, self._storage)
-            safe_copy = {}
-            for pid, p in state.user_projects.items():
-                safe_copy[pid] = proj_svc._serialize_local_project(p)
-            await self._storage.set("spaninsight_projects", json.dumps(safe_copy))
+            await self._storage.set(
+                "spaninsight_reports", json.dumps(reports, default=str)
+            )
         except Exception as e:
             logger.error("Failed to save reports: %s", e)
 
@@ -59,6 +62,7 @@ class ReportService:
             "title": title,
             "description": description,
             "is_arranged": False,
+            "is_public": False,
             "created_at": time.time(),
             "updated_at": time.time(),
             "dataset_name": dataset_name,
@@ -116,7 +120,7 @@ class ReportService:
             item = {
                 "prompt": block.get("prompt", ""),
                 "description": block.get("description", ""),
-                "serialized_result": sanitize_numpy(block.get("serialized_result")),
+                "serialized_result": block.get("serialized_result"),
                 "stdout": block.get("stdout"),
             }
             if block.get("figure_png_b64"):
@@ -138,6 +142,7 @@ class ReportService:
                 json={
                     "project_id": state.active_project_id,
                     "report_json": report_json,
+                    "is_public": report.get("is_public", False),
                 },
                 timeout=15.0,
             )

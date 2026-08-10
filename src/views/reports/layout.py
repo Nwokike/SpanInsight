@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import flet as ft
-import pendulum
-from core import theme, utils
 
 from components.brand_header import build_brand_header
 from components.refresh_button import build_refresh_button
 from components.report_editor import build_report_editor
+from core import theme, utils
 
-from .state import ReportsState
 from . import handlers
+from .state import ReportsState
 
 
 def build_report_view(
@@ -90,6 +91,14 @@ def build_report_view(
                     is_recording=ui_state.is_recording["value"],
                     is_transcribing=ui_state.is_transcribing["value"],
                     is_ai_editing=ui_state.is_ai_editing["value"],
+                    is_public=ui_state.is_public["value"],
+                    on_public_changed=lambda v: (
+                        ui_state.is_public.update({"value": v}),
+                        ui_state.active_report["data"].__setitem__("is_public", v)
+                        if ui_state.active_report["data"]
+                        else None,
+                        _rebuild(),
+                    ),
                     recording_time=ui_state.recording_time["value"],
                     ai_prompt_text=ui_state.ai_prompt_text["value"],
                     recording_timer_ref=ui_state.recording_timer_ref,
@@ -191,8 +200,8 @@ def build_report_view(
     def _build_report_card(report: dict) -> ft.Container:
         block_count = len(report.get("blocks", []))
         try:
-            dt = pendulum.from_timestamp(report.get("created_at", 0))
-            time_str = dt.format("MMM DD, YYYY")
+            dt = datetime.fromtimestamp(report.get("created_at", 0), tz=UTC)
+            time_str = dt.strftime("%b %d, %Y")
         except Exception:
             time_str = ""
 

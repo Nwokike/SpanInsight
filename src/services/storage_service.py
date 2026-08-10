@@ -3,15 +3,17 @@
 Uses a split local JSON file approach for desktop/mobile persistence
 (separating heavy history from light settings), and falls back to
 ``page.client_storage`` when running on the web.
+
+v2: Replaced msgspec with stdlib json. Added notebook save/load.
 """
 
 from __future__ import annotations
 
-import logging
 import asyncio
-import time
+import json
+import logging
 import os
-import msgspec
+import time
 from pathlib import Path
 
 import flet as ft
@@ -55,12 +57,7 @@ class StorageService:
 
     def _is_history_key(self, key: str) -> bool:
         """Determines if a key contains heavy analytical data vs lightweight settings."""
-        return (
-            key.startswith("report_")
-            or key.startswith("history_")
-            or key.startswith("analysis_")
-            or key == "spaninsight_projects"
-        )
+        return key.startswith(("report_", "history_", "analysis_", "notebook_"))
 
     # ── Web/Pyodide helpers ──────────────────────────────────────────
 
@@ -69,8 +66,8 @@ class StorageService:
             cs = self._page.client_storage
             raw_s = cs.get("spaninsight_settings")
             raw_h = cs.get("spaninsight_history")
-            self._settings = msgspec.json.decode(raw_s) if raw_s else {}
-            self._history = msgspec.json.decode(raw_h) if raw_h else {}
+            self._settings = json.loads(raw_s) if raw_s else {}
+            self._history = json.loads(raw_h) if raw_h else {}
         except Exception as e:
             logger.warning("StorageService._load_web failed: %s", e)
             self._settings, self._history = {}, {}
@@ -79,14 +76,10 @@ class StorageService:
         try:
             cs = self._page.client_storage
             if self._settings_dirty:
-                cs.set(
-                    "spaninsight_settings", msgspec.json.encode(self._settings).decode()
-                )
+                cs.set("spaninsight_settings", json.dumps(self._settings))
                 self._settings_dirty = False
             if self._history_dirty:
-                cs.set(
-                    "spaninsight_history", msgspec.json.encode(self._history).decode()
-                )
+                cs.set("spaninsight_history", json.dumps(self._history))
                 self._history_dirty = False
             self._last_write = time.monotonic()
         except Exception as e:
@@ -108,7 +101,7 @@ class StorageService:
             raw = path.read_bytes()
             if not raw:
                 return {}
-            return msgspec.json.decode(raw)
+            return json.loads(raw)
         except Exception as e:
             logger.warning("Storage %s corrupted (%s) — resetting", label, e)
             try:
@@ -125,11 +118,11 @@ class StorageService:
         _STORAGE_DIR.mkdir(parents=True, exist_ok=True)
         if write_settings:
             _SETTINGS_FILE.write_bytes(
-                msgspec.json.encode(settings_copy),
+                json.dumps(settings_copy, ensure_ascii=False).encode("utf-8"),
             )
         if write_history:
             _HISTORY_FILE.write_bytes(
-                msgspec.json.encode(history_copy),
+                json.dumps(history_copy, ensure_ascii=False).encode("utf-8"),
             )
 
     async def _save_now_async(self) -> None:
@@ -169,12 +162,12 @@ class StorageService:
             _STORAGE_DIR.mkdir(parents=True, exist_ok=True)
             if self._settings_dirty:
                 _SETTINGS_FILE.write_bytes(
-                    msgspec.json.encode(self._settings),
+                    json.dumps(self._settings, ensure_ascii=False).encode("utf-8"),
                 )
                 self._settings_dirty = False
             if self._history_dirty:
                 _HISTORY_FILE.write_bytes(
-                    msgspec.json.encode(self._history),
+                    json.dumps(self._history, ensure_ascii=False).encode("utf-8"),
                 )
                 self._history_dirty = False
             self._last_write = time.monotonic()
@@ -237,3 +230,21 @@ class StorageService:
                 await (
                     self._save_now_async()
                 ) if not self._is_web else self._save_now_web()
+
+    # ── Notebook persistence ─────────────────────────────────────────
+
+    async def save_notebook(self, session_name: str, cells: list[dict]) -> None:
+        """Save notebook cells for a given session."""
+        key = f"notebook_{session_name}"
+        await self.set(key, json.dumps(cells, ensure_ascii=False))
+
+    async def load_notebook(self, session_name: str) -> list[dict]:
+        """Load notebook cells for a given session."""
+        key = f"notebook_{session_name}"
+        raw = await self.get(key)
+        if raw:
+            try:
+                return json.loads(raw)
+            except json.JSONDecodeError, TypeError:
+                return []
+        return []

@@ -9,15 +9,15 @@ import wave
 
 import flet as ft
 
-from core.constants import MAX_VOICE_DURATION_SEC, MAX_AUDIO_SIZE_BYTES
+from core.constants import MAX_AUDIO_SIZE_BYTES, MAX_VOICE_DURATION_SEC
 
 logger = logging.getLogger(__name__)
 
 try:
     from flet_audio_recorder import (
+        AudioEncoder,
         AudioRecorder,
         AudioRecorderConfiguration,
-        AudioEncoder,
         AudioRecorderStreamEvent,
     )
 

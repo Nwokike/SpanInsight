@@ -48,7 +48,23 @@ LIGHT_GLASS_BORDER = ft.Colors.with_opacity(0.08, ft.Colors.BLACK)
 SHADOW_PRIMARY = ft.Colors.with_opacity(0.20, PRIMARY)
 SHADOW_DARK = ft.Colors.with_opacity(0.12, "#000000")
 
-# ── Credit Badge Colours ────────────────────────────────────────────
+# ── Semantic additions ──────────────────────────────────────────────
+INFO = "#42A5F5"  # Blue — info badges, Colab status
+
+# ── Terminal / Output ───────────────────────────────────────────────
+TERMINAL_BG = "#0D0D1A"
+TERMINAL_GREEN = "#A6E22E"
+TERMINAL_HEADER = "#1A1A2E"
+
+# ── Hardware Badge Colours ──────────────────────────────────────────
+BADGE_CPU = "#78909C"  # Blue-gray for CPU
+BADGE_GPU = "#E58514"  # Orange for GPU
+BADGE_TPU = "#42A5F5"  # Blue for TPU
+BADGE_FREE = "#4CAF50"  # Green — free tier
+BADGE_PAID = "#AB47BC"  # Purple — paid tier
+HARDWARE_CPU = BADGE_CPU
+HARDWARE_GPU = BADGE_GPU
+HARDWARE_TPU = BADGE_TPU
 CREDIT_HIGH = PRIMARY  # > 20 credits — teal (brand)
 CREDIT_MEDIUM = WARNING  # 5–20 credits
 CREDIT_LOW = ERROR  # < 5 credits

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 import mimetypes
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import flet as ft
 
@@ -43,7 +43,7 @@ class FilePickerService:
 
     async def pick_files_async(
         self,
-        allowed_extensions: Optional[list[str]] = None,
+        allowed_extensions: list[str] | None = None,
         file_type: ft.FilePickerFileType = ft.FilePickerFileType.ANY,
     ) -> list | None:
         """Direct async call — returns file list or None."""
@@ -62,8 +62,8 @@ class FilePickerService:
     async def save_file_async(
         self,
         file_name: str,
-        allowed_extensions: Optional[list[str]] = None,
-        src_bytes: Optional[bytes] = None,
+        allowed_extensions: list[str] | None = None,
+        src_bytes: bytes | None = None,
     ) -> str | None:
         """Trigger the save file picker dialog natively."""
         try:

@@ -51,8 +51,9 @@ def build_credit_badge(credits: int) -> ft.Container:
 
 def show_credits_dialog(page: ft.Page, credit_service):
     """Show the premium credits panel, featuring Ad Rewards with a 30s cooldown on mobile and standard balance display on PC."""
-    import time
     import asyncio
+    import time
+
     from core import theme
     from core.state import state
     from services.ad_service import AdService

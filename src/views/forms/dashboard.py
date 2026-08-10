@@ -1,17 +1,21 @@
+from datetime import UTC
+
 import flet as ft
-from core import theme, utils
+
 from components.brand_header import build_brand_header
 from components.refresh_button import build_refresh_button
+from core import theme, utils
+
 from .state import FormsState
 
 
 def build_form_card(form: dict, on_view_form, page: ft.Page) -> ft.Container:
     is_expired = False
     try:
-        import pendulum
+        from datetime import datetime
 
-        exp = pendulum.parse(form["expires_at"])
-        is_expired = exp < pendulum.now()
+        exp = datetime.fromisoformat(form["expires_at"])
+        is_expired = exp < datetime.now(UTC)
     except Exception:
         pass
     status_color = theme.ERROR if is_expired else theme.SUCCESS
@@ -177,34 +181,32 @@ def build_dashboard_layout(
                 border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
             ),
             # ── Banner Ad (Mobile Only) ──────────────────────────────────────
-            (
-                lambda: ft.Container(
-                    content=ft.Column(
-                        [
-                            ft.Text(
-                                "SPONSORED",
-                                size=8,
-                                weight=ft.FontWeight.W_700,
-                                color=ft.Colors.ON_SURFACE_VARIANT,
-                                style=ft.TextStyle(letter_spacing=1),
-                            ),
-                            utils.get_banner_ad(
-                                unit_id="ca-app-pub-5679949845754640/5628404223",
-                                width=320,
-                                height=50,
-                            ),
-                        ],
-                        horizontal_alignment="center",
-                        spacing=4,
-                    ),
-                    alignment=ft.Alignment.CENTER,
-                    padding=8,
-                    border_radius=12,
-                    bgcolor=theme.GLASS_BG,
-                    border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
-                    margin=ft.Margin(20, 4, 20, 10),
-                )
-            )()
+            ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Text(
+                            "SPONSORED",
+                            size=8,
+                            weight=ft.FontWeight.W_700,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                            style=ft.TextStyle(letter_spacing=1),
+                        ),
+                        utils.get_banner_ad(
+                            unit_id="ca-app-pub-5679949845754640/5628404223",
+                            width=320,
+                            height=50,
+                        ),
+                    ],
+                    horizontal_alignment="center",
+                    spacing=4,
+                ),
+                alignment=ft.Alignment.CENTER,
+                padding=8,
+                border_radius=12,
+                bgcolor=theme.GLASS_BG,
+                border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+                margin=ft.Margin(20, 4, 20, 10),
+            )
             if page.platform in (ft.PagePlatform.ANDROID, ft.PagePlatform.IOS)
             else ft.Container(),
             ft.Container(
@@ -221,34 +223,32 @@ def build_dashboard_layout(
             ),
             ft.Column(ref=ui_state.user_forms_column_ref, controls=[]),
             # ── Banner Ad After Forms (Mobile Only) ──────────────────────────
-            (
-                lambda: ft.Container(
-                    content=ft.Column(
-                        [
-                            ft.Text(
-                                "SPONSORED",
-                                size=8,
-                                weight=ft.FontWeight.W_700,
-                                color=ft.Colors.ON_SURFACE_VARIANT,
-                                style=ft.TextStyle(letter_spacing=1),
-                            ),
-                            utils.get_banner_ad(
-                                unit_id="ca-app-pub-5679949845754640/5628404223",
-                                width=320,
-                                height=50,
-                            ),
-                        ],
-                        horizontal_alignment="center",
-                        spacing=4,
-                    ),
-                    alignment=ft.Alignment.CENTER,
-                    padding=8,
-                    border_radius=12,
-                    bgcolor=theme.GLASS_BG,
-                    border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
-                    margin=ft.Margin(20, 10, 20, 10),
-                )
-            )()
+            ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Text(
+                            "SPONSORED",
+                            size=8,
+                            weight=ft.FontWeight.W_700,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                            style=ft.TextStyle(letter_spacing=1),
+                        ),
+                        utils.get_banner_ad(
+                            unit_id="ca-app-pub-5679949845754640/5628404223",
+                            width=320,
+                            height=50,
+                        ),
+                    ],
+                    horizontal_alignment="center",
+                    spacing=4,
+                ),
+                alignment=ft.Alignment.CENTER,
+                padding=8,
+                border_radius=12,
+                bgcolor=theme.GLASS_BG,
+                border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+                margin=ft.Margin(20, 10, 20, 10),
+            )
             if page.platform in (ft.PagePlatform.ANDROID, ft.PagePlatform.IOS)
             else ft.Container(),
             ft.Container(height=100),

@@ -1,5 +1,6 @@
-import flet as ft
 from dataclasses import dataclass, field
+
+import flet as ft
 
 
 @dataclass

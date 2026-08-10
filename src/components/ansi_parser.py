@@ -1,0 +1,190 @@
+import flet as ft
+from rich.ansi import AnsiDecoder
+
+from core import theme
+
+# Maximum number of styled spans we produce before falling back to plain text
+# (protects against memory blowout from absurdly long terminal dumps).
+_MAX_SPANS = 2000
+
+
+def _rich_color_to_hex(color):
+    """Convert a rich.color.Color to a hex string for Flet, if possible."""
+    if not color:
+        return None
+    # rich colors can be standard (0-15), 8-bit (0-255), or truecolor
+    if color.triplet:
+        r, g, b = color.triplet
+        return f"#{r:02x}{g:02x}{b:02x}"
+
+    if color.number is not None:
+        n = color.number
+
+        # Standard 16 terminal colors
+        if n <= 15:
+            cmap = {
+                0: "#000000",
+                1: "#cc0000",
+                2: "#4e9a06",
+                3: "#c4a000",
+                4: "#3465a4",
+                5: "#75507b",
+                6: "#06989a",
+                7: "#d3d7cf",
+                8: "#555753",
+                9: "#ef2929",
+                10: "#8ae234",
+                11: "#fce94f",
+                12: "#729fcf",
+                13: "#ad7fa8",
+                14: "#34e2e2",
+                15: "#eeeeec",
+            }
+            return cmap.get(n, None)
+
+        # 256-color palette: colors 16-231 are a 6x6x6 color cube
+        if 16 <= n <= 231:
+            n -= 16
+            b = (n % 6) * 51
+            g = ((n // 6) % 6) * 51
+            r = (n // 36) * 51
+            return f"#{r:02x}{g:02x}{b:02x}"
+
+        # 256-color palette: colors 232-255 are a grayscale ramp
+        if 232 <= n <= 255:
+            v = 8 + (n - 232) * 10
+            return f"#{v:02x}{v:02x}{v:02x}"
+
+    return None
+
+
+def parse_ansi_to_flet_text(
+    raw_text: str,
+    default_size: int = 12,
+    default_color: str = theme.DARK_TEXT,
+    is_error: bool = False,
+) -> ft.Text:
+    """
+    Takes a raw ANSI string containing \\x1b codes, parses it with rich,
+    and returns a Flet ft.Text component with properly colored TextSpans.
+    """
+    if is_error:
+        default_color = theme.ERROR
+
+    # Clean carriage returns: simulate terminal overwrite by taking the last segment per line
+    lines = raw_text.split("\n")
+    cleaned_lines = []
+    for line in lines:
+        segments = [s for s in line.split("\r") if s.strip()]
+        if segments:
+            cleaned_lines.append(segments[-1])
+        else:
+            cleaned_lines.append("")
+
+    cleaned_text = "\n".join(cleaned_lines)
+
+    if not cleaned_text.strip():
+        return ft.Text(
+            cleaned_text,
+            size=default_size,
+            font_family="RobotoMono",
+            color=default_color,
+        )
+
+    # Create a fresh AnsiDecoder per call so the internal style state doesn't
+    # leak between independent parse invocations.
+    decoder = AnsiDecoder()
+    decoded_lines = list(decoder.decode(cleaned_text))
+
+    flet_spans = []
+    span_count = 0
+
+    for line_idx, rich_text in enumerate(decoded_lines):
+        if line_idx > 0:
+            if span_count >= _MAX_SPANS:
+                break
+            flet_spans.append(
+                ft.TextSpan("\n", style=ft.TextStyle(color=default_color))
+            )
+            span_count += 1
+
+        if not rich_text.spans:
+            if span_count >= _MAX_SPANS:
+                break
+            flet_spans.append(
+                ft.TextSpan(rich_text.plain, style=ft.TextStyle(color=default_color))
+            )
+            span_count += 1
+            continue
+
+        last_idx = 0
+        spans = sorted(rich_text.spans, key=lambda s: s.start)
+
+        for span in spans:
+            if span_count >= _MAX_SPANS:
+                break
+
+            # Unstyled text before this span
+            if span.start > last_idx:
+                flet_spans.append(
+                    ft.TextSpan(
+                        rich_text.plain[last_idx : span.start],
+                        style=ft.TextStyle(color=default_color),
+                    )
+                )
+                span_count += 1
+
+            # Styled text
+            if span_count >= _MAX_SPANS:
+                break
+            flet_color = _rich_color_to_hex(span.style.color) or default_color
+            weight = ft.FontWeight.BOLD if span.style.bold else None
+            italic = span.style.italic
+            bgcolor = _rich_color_to_hex(span.style.bgcolor)
+
+            # Underline and strikethrough support
+            decoration = None
+            decorations = []
+            if span.style.underline:
+                decorations.append(ft.TextDecoration.UNDERLINE)
+            if span.style.strike:
+                decorations.append(ft.TextDecoration.LINE_THROUGH)
+            if decorations:
+                decoration = (
+                    decorations[0]
+                    if len(decorations) == 1
+                    else ft.TextDecoration.combine(decorations)
+                )
+
+            flet_spans.append(
+                ft.TextSpan(
+                    rich_text.plain[span.start : span.end],
+                    style=ft.TextStyle(
+                        color=flet_color,
+                        weight=weight,
+                        italic=italic,
+                        bgcolor=bgcolor,
+                        decoration=decoration,
+                    ),
+                )
+            )
+            span_count += 1
+            last_idx = span.end
+
+        if span_count >= _MAX_SPANS:
+            break
+
+        # Remaining unstyled text
+        if last_idx < len(rich_text.plain):
+            if span_count >= _MAX_SPANS:
+                break
+            flet_spans.append(
+                ft.TextSpan(
+                    rich_text.plain[last_idx:], style=ft.TextStyle(color=default_color)
+                )
+            )
+            span_count += 1
+
+    return ft.Text(
+        spans=flet_spans, size=default_size, font_family="RobotoMono", no_wrap=False
+    )

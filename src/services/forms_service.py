@@ -84,6 +84,8 @@ async def create_form(
 
 async def list_forms(project_id: str) -> list[dict]:
     """Fetch all forms for a project. Returns list of form dicts."""
+    if not project_id:
+        return []
     try:
         client = get_client()
         resp = await client.get(
@@ -160,8 +162,22 @@ def responses_to_csv_bytes(responses: list[dict]) -> bytes:
     if not responses:
         return b""
 
-    import pandas as pd
+    import csv
+    import io
 
     rows = [r["data"] for r in responses]
-    df = pd.DataFrame(rows)
-    return df.to_csv(index=False).encode("utf-8")
+    if not rows:
+        return b""
+
+    # Collect all unique field names preserving order
+    fieldnames = []
+    for row in rows:
+        for key in row:
+            if key not in fieldnames:
+                fieldnames.append(key)
+
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(rows)
+    return output.getvalue().encode("utf-8")

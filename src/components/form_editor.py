@@ -1,7 +1,9 @@
 """Form schema editor — editable field list with add/remove/reorder."""
 
 from __future__ import annotations
+
 import flet as ft
+
 from core import theme
 
 FIELD_TYPES = [

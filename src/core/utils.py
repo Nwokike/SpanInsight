@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import base64
-import io
 import logging
 from pathlib import Path
 
@@ -59,30 +58,30 @@ def parse_version(version_str: str) -> tuple[int, ...]:
     """
     try:
         return tuple(int(x) for x in version_str.strip().split("."))
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         return (0, 0, 0)
-
-
-def figure_to_png_bytes(figure, dpi: int = 150) -> bytes:
-    """Convert a matplotlib Figure to PNG bytes and close it.
-
-    Closing the figure after conversion prevents the ~2-5MB per-figure
-    memory leak that occurs when figures are kept alive in state.
-    """
-    import matplotlib.pyplot as plt
-
-    buf = io.BytesIO()
-    figure.savefig(buf, format="png", dpi=dpi, bbox_inches="tight")
-    buf.seek(0)
-    data = buf.read()
-    buf.close()
-    plt.close(figure)
-    return data
 
 
 def png_bytes_to_base64(png_bytes: bytes) -> str:
     """Encode PNG bytes as a base64 string for ft.Image(src_base64=...)."""
     return base64.b64encode(png_bytes).decode("utf-8")
+
+
+def figure_to_png_bytes(fig) -> bytes:
+    """Convert a matplotlib Figure to PNG bytes.
+
+    Args:
+        fig: A matplotlib.figure.Figure instance.
+
+    Returns:
+        PNG image as bytes.
+    """
+    import io
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight", transparent=True)
+    buf.seek(0)
+    return buf.read()
 
 
 def get_temp_dir() -> Path:
@@ -127,14 +126,40 @@ def get_banner_ad(unit_id: str, width: int = 320, height: int = 50) -> ft.Contro
         return ft.Container()
 
 
-def sanitize_numpy(val):
-    """Replace NaN/Infinity with None recursively in nested structures."""
+def sanitize_output(val):
+    """Replace NaN/Infinity with None recursively in nested structures.
+
+    Used to sanitize Colab execution output before JSON serialization.
+    """
     import math
+
+    if isinstance(val, list):
+        return [sanitize_output(v) for v in val]
+    if isinstance(val, dict):
+        return {k: sanitize_output(v) for k, v in val.items()}
+    if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+        return None
+    return val
+
+
+def sanitize_numpy(val):
+    """Recursively convert numpy types to Python natives for JSON serialization."""
+    try:
+        import numpy as np
+
+        if isinstance(val, np.integer):
+            return int(val)
+        if isinstance(val, np.floating):
+            return float(val) if not np.isnan(val) else None
+        if isinstance(val, np.ndarray):
+            return [sanitize_numpy(v) for v in val.tolist()]
+        if isinstance(val, np.bool_):
+            return bool(val)
+    except ImportError:
+        pass
 
     if isinstance(val, list):
         return [sanitize_numpy(v) for v in val]
     if isinstance(val, dict):
         return {k: sanitize_numpy(v) for k, v in val.items()}
-    if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
-        return None
     return val

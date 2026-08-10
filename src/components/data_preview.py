@@ -1,31 +1,38 @@
-"""Data preview component — DataTable with 50-row cap."""
-
-from __future__ import annotations
+"""Data preview component — shows a scrollable table preview of a DataFrame."""
 
 import flet as ft
-import numpy as np
-import pandas as pd
-from core import tokens
-from core.constants import DATA_PREVIEW_ROWS
+
+from core import theme, tokens
+from core.styles import glass_card
 
 
-def build_data_preview(df) -> ft.Column:
-    """Build a scrollable DataTable preview of the first 50 rows.
+def build_data_preview(df) -> ft.Container:
+    """Build a data table preview of the first 50 rows of a DataFrame."""
+    if df is None:
+        return ft.Container()
 
-    Args:
-        df: The pandas DataFrame to preview.
+    if len(df) == 0:
+        return glass_card(
+            ft.Text(
+                "Dataset is empty (0 rows)",
+                size=tokens.FONT_SM,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+                text_align=ft.TextAlign.CENTER,
+            )
+        )
 
-    Returns:
-        A Column containing the DataTable and a row count footer.
-    """
-    preview_df = df.head(DATA_PREVIEW_ROWS)
-    total_rows = len(df)
+    max_rows = 50
+    max_cell_len = 40
+    preview_df = df.head(max_rows)
 
-    # Build column headers
+    def _truncate(val) -> str:
+        s = str(val) if val is not None else ""
+        return s[:max_cell_len] + "…" if len(s) > max_cell_len else s
+
     columns = [
         ft.DataColumn(
             ft.Text(
-                str(col),
+                _truncate(col),
                 size=tokens.FONT_XS,
                 weight=ft.FontWeight.W_600,
             )
@@ -34,82 +41,54 @@ def build_data_preview(df) -> ft.Column:
     ]
 
     rows = []
-    cols = list(preview_df.columns)
-    for i in range(len(preview_df)):
-        cells = [
-            ft.DataCell(
-                ft.Text(
-                    _format_cell(preview_df.iloc[i, j]),
-                    size=tokens.FONT_XS,
-                    max_lines=1,
-                    overflow=ft.TextOverflow.ELLIPSIS,
-                )
+    for i, (_, row) in enumerate(preview_df.iterrows()):
+        rows.append(
+            ft.DataRow(
+                cells=[
+                    ft.DataCell(ft.Text(_truncate(row[col]), size=tokens.FONT_XS))
+                    for col in preview_df.columns
+                ],
+                color=ft.Colors.with_opacity(0.02, ft.Colors.ON_SURFACE)
+                if i % 2 == 0
+                else None,
             )
-            for j in range(len(cols))
-        ]
-        rows.append(ft.DataRow(cells=cells))
+        )
 
-    table = ft.DataTable(
-        columns=columns,
-        rows=rows,
-        border=ft.Border.all(1, ft.Colors.with_opacity(0.1, ft.Colors.ON_SURFACE)),
-        border_radius=tokens.RADIUS_MD,
-        horizontal_lines=ft.BorderSide(
-            1, ft.Colors.with_opacity(0.06, ft.Colors.ON_SURFACE)
-        ),
-        column_spacing=tokens.SPACE_LG,
-        heading_row_height=40,
-        data_row_max_height=36,
-    )
+    row_label = f"{len(df):,} rows" if len(df) > max_rows else f"{len(df)} rows"
 
-    showing = min(DATA_PREVIEW_ROWS, total_rows)
-    footer_text = (
-        f"Showing {showing} of {total_rows:,} rows"
-        if total_rows > DATA_PREVIEW_ROWS
-        else f"{total_rows:,} rows"
-    )
-
-    return ft.Column(
-        controls=[
-            ft.Container(
-                content=ft.Row(
-                    controls=[table],
-                    scroll=ft.ScrollMode.AUTO,
+    return glass_card(
+        ft.Column(
+            [
+                ft.Row(
+                    [
+                        ft.Icon(
+                            ft.Icons.TABLE_CHART_ROUNDED, size=16, color=theme.PRIMARY
+                        ),
+                        ft.Text(
+                            f"Preview (first {min(len(df), max_rows)} of {row_label})",
+                            size=tokens.FONT_SM,
+                            weight=ft.FontWeight.W_600,
+                        ),
+                    ],
+                    spacing=tokens.SPACE_SM,
                 ),
-                border_radius=tokens.RADIUS_LG,
-            ),
-            ft.Container(
-                content=ft.Text(
-                    footer_text,
-                    size=tokens.FONT_XS,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
-                    italic=True,
+                ft.Container(
+                    content=ft.DataTable(
+                        columns=columns,
+                        rows=rows,
+                        column_spacing=20,
+                        horizontal_lines=ft.BorderSide(
+                            0.5, ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE)
+                        ),
+                        heading_row_height=36,
+                        data_row_min_height=30,
+                        data_row_max_height=30,
+                    ),
+                    border_radius=tokens.RADIUS_SM,
+                    clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
                 ),
-                padding=ft.Padding(
-                    left=tokens.SPACE_SM, top=tokens.SPACE_XS, right=0, bottom=0
-                ),
-            ),
-        ],
-        spacing=tokens.SPACE_XS,
+            ],
+            spacing=tokens.SPACE_SM,
+            scroll=ft.ScrollMode.AUTO,
+        )
     )
-
-
-def _format_cell(value) -> str:
-    """Format a cell value for display."""
-    if isinstance(value, np.ndarray):
-        if np.ndim(value) == 0:
-            return _format_cell(value.item())
-        return ", ".join(str(v) for v in value) if len(value) else "—"
-    if isinstance(value, list):
-        return ", ".join(str(v) for v in value) if len(value) else "—"
-    try:
-        if pd.isna(value):
-            return "—"
-    except (ValueError, TypeError):
-        pass
-    if isinstance(value, float):
-        if value == int(value):
-            return str(int(value))
-        return f"{value:.2f}"
-    s = str(value)
-    return s[:40] + "…" if len(s) > 40 else s

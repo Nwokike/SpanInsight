@@ -1,6 +1,9 @@
 from __future__ import annotations
+
 import asyncio
+
 import flet as ft
+
 from services.audio_service import AudioService
 
 
@@ -43,7 +46,7 @@ class AnalysisState:
         self._disposed = True
 
     def rebuild(self):
-        if self._disposed or self.page.route != "/analysis":
+        if self._disposed:
             return
         if self.rebuild_fn:
             self.rebuild_fn()

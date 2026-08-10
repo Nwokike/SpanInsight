@@ -1,4 +1,5 @@
 import pytest
+
 from core.state import state
 from services.project_service import ProjectService
 from services.report_service import ReportService
@@ -43,6 +44,7 @@ async def test_project_lifecycle():
 
     # 1. Initialize (creates default "My Workspace")
     from unittest.mock import patch
+
     import httpx
 
     with patch("services.project_service.request_with_retry") as mock_req:
@@ -107,6 +109,7 @@ async def test_report_service_project_context():
 
     project_svc = ProjectService(page, storage)
     from unittest.mock import patch
+
     import httpx
 
     with patch("services.project_service.request_with_retry") as mock_req:
@@ -179,7 +182,7 @@ async def test_pull_project_behaviors():
     state.user_projects["123456"] = proj_server
 
     # 2. Remote deleted (404) -> returns "deleted"
-    from unittest.mock import patch, MagicMock, AsyncMock
+    from unittest.mock import AsyncMock, MagicMock, patch
 
     with patch("services.project_service.get_client") as mock_client:
         mock_resp = MagicMock()
@@ -243,6 +246,7 @@ async def test_block_pinning_unpinning_multi_report():
 
     project_svc = ProjectService(page, storage)
     from unittest.mock import patch
+
     import httpx
 
     with patch("services.project_service.request_with_retry") as mock_req:

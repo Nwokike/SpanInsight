@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import base64
 import logging
+
 from core.constants import TASK_VISION
+
 from .client import call_gateway_raw, extract_content
 
 logger = logging.getLogger(__name__)

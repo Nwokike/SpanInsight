@@ -1,7 +1,9 @@
 import logging
+
 import flet as ft
-from core.state import state
+
 from core import theme
+from core.state import state
 
 logger = logging.getLogger(__name__)
 

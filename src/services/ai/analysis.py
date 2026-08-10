@@ -5,40 +5,34 @@ from __future__ import annotations
 import json
 import logging
 import re
+
 import httpx
 
-from core.constants import TASK_SUGGEST, TASK_INTERPRET, TASK_CODE
-from .client import call_gateway, extract_content, extract_block_by_pattern
+from core.constants import TASK_CODE, TASK_INTERPRET, TASK_SUGGEST
+
+from .client import call_gateway, extract_block_by_pattern, extract_content
 from .vision import analyze_image
 
 logger = logging.getLogger(__name__)
 
-_SANDBOX_LIB_CONSTRAINTS = (
-    "AVAILABLE LIBRARIES (ONLY these):\n"
-    "  pandas (pd), numpy (np), matplotlib.pyplot (plt), math, datetime,\n"
-    "  statistics, shapely, jq, pendulum, re, collections, itertools,\n"
-    "  functools, operator, string, copy, random, json, textwrap, typing, warnings.\n"
-    "FORBIDDEN (will crash): seaborn, scipy, sklearn, statsmodels, plotly, pingouin, lifelines.\n"
-    "BANNED PATTERNS:\n"
-    "  - NEVER use .plot.kde() or kind='kde' (requires scipy internally).\n"
-    "  - NEVER use np.percentile() inside .agg() lambda — use df.quantile() instead.\n"
-    "LIBRARY TIPS:\n"
-    "  - Use pendulum for advanced datetime parsing (pendulum.parse(), .diff(), timezones).\n"
-    "  - Use jq for extracting/flattening nested JSON columns: jq.first('.key', json_str).\n"
-    "  - Use shapely for spatial/GIS analysis: Point, Polygon, unary_union, .area, .distance().\n"
+_COLAB_ENV_CONTEXT = (
+    "EXECUTION ENVIRONMENT: Google Colab (Python 3.10+, Ubuntu).\\n"
+    "PRE-INSTALLED: pandas, numpy, matplotlib, seaborn, scikit-learn, scipy,\\n"
+    "  statsmodels, plotly, tensorflow, torch, transformers, PIL/Pillow,\\n"
+    "  and all Python stdlib modules.\\n"
+    "You can install additional packages with !pip install <package>.\\n"
+    "The user's data files are in /content/. Use pandas to load them.\\n"
 )
 
 _EXEC_RULES = (
-    "EXECUTION RULES:\n"
-    "- DataFrame is pre-loaded as `df`. Use Pandas 2.0+ CoW syntax. NumPy 2.0+.\n"
-    "- Always .dropna() or .fillna() before algebraic/statistical operations.\n"
-    "- select_dtypes: use include=['object', 'string'], never 'object' alone.\n"
-    "- Plotting: always create figures with plt.figure() or plt.subplots(). NEVER call plt.savefig().\n"
-    "- Use tick_labels= instead of labels= in plt.boxplot() (renamed in Matplotlib 3.9).\n"
-    "- Assign key results to a variable named `result`.\n"
-    "- NEVER print human-readable text summaries, comments, or analytical insights. Only output raw tables, statistics, or plots.\n"
-    "- 60-second time limit. Keep code efficient, max 4-5 figures per block.\n"
-    "- Return only executable Python code, no remarks.\n"
+    "EXECUTION RULES:\\n"
+    "- If a DataFrame `df` exists in the session, use it. Otherwise load data from /content/.\\n"
+    "- Always .dropna() or .fillna() before algebraic/statistical operations.\\n"
+    "- Plotting: always create figures with plt.figure() or plt.subplots(). Do NOT call plt.savefig().\\n"
+    "- Assign key results to a variable named `result`.\\n"
+    "- Do NOT print human-readable text summaries. Only output raw tables, statistics, or plots.\\n"
+    "- Keep code efficient and focused on the user's request.\\n"
+    "- Return only executable Python code, no remarks.\\n"
 )
 
 
@@ -111,7 +105,7 @@ async def suggest(
     system_prompt = (
         "You are an expert data intelligence consultant. Suggest exactly 3 distinct, "
         "deeply insightful analysis tracks. Do NOT repeat previous steps.\n\n"
-        + _SANDBOX_LIB_CONSTRAINTS
+        + _COLAB_ENV_CONTEXT
         + "\nReturn ONLY a raw JSON array. Each object has EXACTLY these keys:\n"
         '- "label": concise title (max 5 words)\n'
         '- "icon": "emoji" (double-quoted)\n'
@@ -185,7 +179,7 @@ async def generate_code(
     compressed = _compress_schema(schema_json)
     system_prompt = (
         "You are an expert Python data engineer. Generate optimal, safe code to analyze `df`.\n\n"
-        + _SANDBOX_LIB_CONSTRAINTS
+        + _COLAB_ENV_CONTEXT
         + _EXEC_RULES
         + f"\nComplete Dataset Schema:\n{json.dumps(compressed, default=str)}"
         f"{context_section}"
@@ -219,7 +213,7 @@ async def generate_corrected_code(
     compressed = _compress_schema(schema_json)
     system_prompt = (
         "You are an expert Python data debugging engineer. Correct the failing code.\n\n"
-        + _SANDBOX_LIB_CONSTRAINTS
+        + _COLAB_ENV_CONTEXT
         + _EXEC_RULES
         + f"\nDataset Schema:\n{json.dumps(compressed, default=str)}"
     )
@@ -263,7 +257,7 @@ async def plan_next_step(
 
     system_prompt = (
         "You are an autonomous data analysis agent. Decide the NEXT step.\n\n"
-        + _SANDBOX_LIB_CONSTRAINTS
+        + _COLAB_ENV_CONTEXT
         + "\nReturn ONLY a valid JSON object with these keys:\n"
         '- "prompt": the next analysis instruction (empty string if complete)\n'
         '- "is_complete": boolean\n'

@@ -224,3 +224,36 @@ def chip_button_style() -> ft.ButtonStyle:
             bottom=tokens.SPACE_SM,
         ),
     )
+
+
+def build_banner_ad(page: ft.Page) -> ft.Container:
+    """Build a styled banner ad container (mobile only)."""
+    from core import utils
+
+    is_mobile = page.platform in (ft.PagePlatform.ANDROID, ft.PagePlatform.IOS)
+    if not is_mobile:
+        return ft.Container()
+
+    return ft.Container(
+        content=ft.Column(
+            [
+                ft.Text(
+                    "SPONSORED",
+                    size=8,
+                    weight=ft.FontWeight.W_700,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
+                    style=ft.TextStyle(letter_spacing=1),
+                ),
+                utils.get_banner_ad(
+                    unit_id="ca-app-pub-5679949845754640/5628404223",
+                    width=320,
+                    height=50,
+                ),
+            ],
+            horizontal_alignment="center",
+            spacing=4,
+        ),
+        alignment=ft.Alignment.CENTER,
+        padding=tokens.SPACE_SM,
+        margin=ft.Margin(0, tokens.SPACE_SM, 0, tokens.SPACE_SM),
+    )

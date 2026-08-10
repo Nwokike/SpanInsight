@@ -1,5 +1,7 @@
 import json
+
 import flet as ft
+
 from core import theme, utils
 
 
@@ -247,27 +249,50 @@ def build_form_detail(
 
     responses = form.get("_responses", [])
     if responses:
-        import pandas as pd
-        from components.data_preview import build_data_preview
+        rows_data = [r["data"] for r in responses[:50]]
+        if rows_data:
+            # Collect all field names
+            columns = []
+            for row in rows_data:
+                for key in row:
+                    if key not in columns:
+                        columns.append(key)
 
-        rows = [r["data"] for r in responses[:50]]
-        df = pd.DataFrame(rows)
-        controls.append(
-            ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Text(
-                            f"Latest {min(50, len(responses))} Responses",
-                            weight="bold",
-                            size=13,
-                        ),
-                        build_data_preview(df),
-                    ],
-                    spacing=8,
-                ),
-                padding=ft.Padding(20, 8, 20, 8),
+            controls.append(
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Text(
+                                f"Latest {min(50, len(responses))} Responses",
+                                weight="bold",
+                                size=13,
+                            ),
+                            ft.DataTable(
+                                columns=[
+                                    ft.DataColumn(ft.Text(c, size=11)) for c in columns
+                                ],
+                                rows=[
+                                    ft.DataRow(
+                                        cells=[
+                                            ft.DataCell(
+                                                ft.Text(str(row.get(c, "")), size=11)
+                                            )
+                                            for c in columns
+                                        ]
+                                    )
+                                    for row in rows_data
+                                ],
+                                column_spacing=16,
+                                horizontal_lines=ft.BorderSide(
+                                    0.5, ft.Colors.OUTLINE_VARIANT
+                                ),
+                            ),
+                        ],
+                        spacing=8,
+                    ),
+                    padding=ft.Padding(20, 8, 20, 8),
+                )
             )
-        )
     # Banner Ad Placement (Mobile Only)
     if page.platform in (ft.PagePlatform.ANDROID, ft.PagePlatform.IOS):
         controls.append(

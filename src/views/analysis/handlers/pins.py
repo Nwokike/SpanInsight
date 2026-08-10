@@ -1,9 +1,10 @@
 import base64
 import logging
+
 import flet as ft
 
-from core.state import state
 from core import theme, utils
+from core.state import state
 from core.utils import sanitize_numpy as _sanitize_numpy
 
 logger = logging.getLogger(__name__)
@@ -12,8 +13,9 @@ logger = logging.getLogger(__name__)
 def serialize_result_for_report(result_val) -> dict | None:
     """Recursively convert pandas, numpy, and python collections to serializable JSON-friendly dictionary."""
     import math
-    import pandas as pd
+
     import numpy as np
+    import pandas as pd
 
     if result_val is None:
         return None

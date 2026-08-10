@@ -1,7 +1,9 @@
 """Report block editor — reorderable block cards with AI editing."""
 
 from __future__ import annotations
+
 import flet as ft
+
 from core import theme, tokens
 
 
@@ -419,6 +421,8 @@ def build_report_editor(
     is_recording: bool = False,
     is_transcribing: bool = False,
     is_ai_editing: bool = False,
+    is_public: bool = False,
+    on_public_changed=None,
     recording_time: int = 0,
     ai_prompt_text: str = "",
     recording_timer_ref: ft.Ref[ft.Text] | None = None,
@@ -662,6 +666,42 @@ def build_report_editor(
                                 ),
                                 on_click=lambda e: on_save(),
                                 disabled=is_saving or is_ai_editing,
+                            ),
+                            ft.Container(
+                                content=ft.Row(
+                                    [
+                                        ft.Icon(
+                                            ft.Icons.PUBLIC_ROUNDED,
+                                            size=16,
+                                            color=theme.PRIMARY
+                                            if is_public
+                                            else ft.Colors.ON_SURFACE_VARIANT,
+                                        ),
+                                        ft.Text(
+                                            "Feature on spaninsight.com",
+                                            size=12,
+                                            expand=True,
+                                            color=theme.PRIMARY
+                                            if is_public
+                                            else ft.Colors.ON_SURFACE_VARIANT,
+                                        ),
+                                        ft.Switch(
+                                            value=is_public,
+                                            on_change=lambda e: (
+                                                on_public_changed(e.control.value)
+                                                if on_public_changed
+                                                else None
+                                            ),
+                                        ),
+                                    ],
+                                    spacing=8,
+                                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                ),
+                                padding=ft.Padding(12, 8, 12, 8),
+                                border_radius=8,
+                                bgcolor=ft.Colors.with_opacity(0.05, theme.PRIMARY)
+                                if is_public
+                                else None,
                             ),
                             ft.OutlinedButton(
                                 ref=share_btn_ref,

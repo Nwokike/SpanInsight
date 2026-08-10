@@ -1,6 +1,6 @@
 """Tests for AI reports parsing and repair services."""
 
-from services.ai.reports import _repair_json, _parse_resilient_json
+from services.ai.reports import _parse_resilient_json, _repair_json
 
 
 def test_repair_json_single_quotes():

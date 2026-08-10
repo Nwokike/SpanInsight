@@ -1,6 +1,7 @@
-import pytest
 import pandas as pd
-from services.sandbox import validate_code, execute_code, execute_code_async
+import pytest
+
+from services.sandbox import execute_code, execute_code_async, validate_code
 
 
 def test_validate_code_success():

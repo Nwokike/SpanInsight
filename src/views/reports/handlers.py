@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import base64
-import logging
 import asyncio
+import logging
+
 import flet as ft
 
 from core.state import state
-from core.utils import figure_to_png_bytes
-
 from services import ai as ai_service
 
 logger = logging.getLogger(__name__)
@@ -36,6 +34,7 @@ async def on_open_report(page: ft.Page, ui_state, report: dict, report_service):
     ui_state.editor_blocks.extend(report.get("blocks", []))
     ui_state.draft_title["value"] = report.get("title", "")
     ui_state.draft_desc["value"] = report.get("description", "")
+    ui_state.is_public["value"] = report.get("is_public", False)
     ui_state.editor_active["value"] = True
 
     if not report.get("is_arranged") and len(ui_state.editor_blocks) > 1:
@@ -96,6 +95,7 @@ async def on_save(page: ft.Page, ui_state, report_service):
                     "description": ui_state.draft_desc["value"],
                     "blocks": list(ui_state.editor_blocks),
                     "is_arranged": True,
+                    "is_public": ui_state.is_public["value"],
                 },
             )
             page.snack_bar = ft.SnackBar(
@@ -197,9 +197,10 @@ def on_back(page: ft.Page, ui_state, report_service):
 async def on_import(page: ft.Page, ui_state):
     from core import theme
 
-    if not state.analysis_blocks:
+    cells = state.notebook_cells
+    if not cells:
         page.snack_bar = ft.SnackBar(
-            ft.Text("No analysis blocks available. Run an analysis first."),
+            ft.Text("No notebook cells available. Run an analysis first."),
             duration=3000,
         )
         page.snack_bar.open = True
@@ -207,60 +208,56 @@ async def on_import(page: ft.Page, ui_state):
         return
 
     async def on_select_block(idx):
-        block = state.analysis_blocks[idx]
+        cell = cells[idx]
         png_b64 = ""
-        if block.get("figure_png"):
-            png_b64 = base64.b64encode(block["figure_png"]).decode("utf-8")
-        elif block.get("figure"):
-            try:
-                png_bytes = await asyncio.to_thread(
-                    figure_to_png_bytes, block["figure"], dpi=150
-                )
-                png_b64 = base64.b64encode(png_bytes).decode("utf-8")
-            except Exception as e:
-                logger.error("Async figure conversion failed: %s", e)
+        # Extract first image from Colab outputs
+        for out in cell.get("outputs", []):
+            otype = out.get("output_type") or out.get("type", "")
+            if otype in ("execute_result", "display_data"):
+                data = out.get("data", {})
+                if "image/png" in data:
+                    png_b64 = data["image/png"].replace("\n", "").replace("\r", "")
+                    break
 
         new_block = {
-            "source_block_id": block.get("id"),
-            "prompt": block.get("prompt", "Analysis"),
-            "description": block.get("description", ""),
+            "prompt": cell.get("prompt", "Analysis"),
+            "description": cell.get("description", ""),
             "figure_png_b64": png_b64,
             "block_type": "chart" if png_b64 else "text",
         }
         ui_state.editor_blocks.append(new_block)
-        dlg.open = False
-        page.update()
+        page.pop_dialog()
         ui_state.rebuild()
         page.snack_bar = ft.SnackBar(ft.Text("Block imported!"), duration=2000)
         page.snack_bar.open = True
         page.update()
 
     items = []
-    for i, block in enumerate(state.analysis_blocks):
-        if block.get("type") == "initial":
+    for i, cell in enumerate(cells):
+        if cell.get("is_running"):
             continue
         items.append(
             ft.ListTile(
                 leading=ft.Icon(
                     ft.Icons.AUTO_AWESOME_ROUNDED
-                    if not block.get("failed")
+                    if not cell.get("failed")
                     else ft.Icons.ERROR_OUTLINE,
-                    color=theme.ACCENT if not block.get("failed") else theme.ERROR,
+                    color=theme.ACCENT if not cell.get("failed") else theme.ERROR,
                 ),
                 title=ft.Text(
-                    block.get("prompt", "Block")[:60],
+                    cell.get("prompt", "Cell")[:60],
                     max_lines=2,
                     size=13,
                 ),
                 subtitle=ft.Text(
-                    (block.get("description", "")[:80] + "...")
-                    if block.get("description")
+                    (cell.get("description", "")[:80] + "...")
+                    if cell.get("description")
                     else "",
                     size=11,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
                 on_click=lambda e, idx=i: page.run_task(on_select_block, idx),
-                disabled=block.get("failed", False),
+                disabled=cell.get("failed", False),
             )
         )
 
@@ -268,7 +265,7 @@ async def on_import(page: ft.Page, ui_state):
         items.append(
             ft.Container(
                 ft.Text(
-                    "No importable blocks found.", color=ft.Colors.ON_SURFACE_VARIANT
+                    "No importable cells found.", color=ft.Colors.ON_SURFACE_VARIANT
                 ),
                 padding=20,
             )
@@ -278,7 +275,7 @@ async def on_import(page: ft.Page, ui_state):
         page.pop_dialog()
 
     dlg = ft.AlertDialog(
-        title=ft.Text("Import from Analysis"),
+        title=ft.Text("Import from Notebook"),
         content=ft.Container(
             content=ft.Column(items, scroll="auto", spacing=0),
             width=400,
@@ -355,7 +352,6 @@ async def _handle_voice_auto_stop(page: ft.Page, ui_state, result):
 
 
 async def _update_timer(page: ft.Page, ui_state):
-    import asyncio
 
     while ui_state.is_recording["value"]:
         await asyncio.sleep(1)

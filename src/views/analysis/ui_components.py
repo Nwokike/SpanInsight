@@ -1,12 +1,14 @@
-import logging
 import base64
+import logging
+
 import flet as ft
-from core import theme, tokens
-from core.state import state
+
 from components.data_preview import build_data_preview
 from components.suggestion_chips import build_suggestion_chips
+from core import theme, tokens
+from core.state import state
+from views.analysis.handlers import on_pin_block, on_rerun_code, on_suggestion_selected
 from views.analysis.state import AnalysisState
-from views.analysis.handlers import on_rerun_code, on_suggestion_selected, on_pin_block
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +33,8 @@ def build_chart_container(block: dict) -> ft.Container | None:
 
 
 def build_result_visualizer(result_val, stdout_val) -> ft.Control | None:
-    import pandas as pd
     import numpy as np
+    import pandas as pd
 
     if result_val is None:
         if (
@@ -75,8 +77,7 @@ def build_result_visualizer(result_val, stdout_val) -> ft.Control | None:
         structures = {}
         for k, v in result_val.items():
             if (
-                isinstance(v, (int, float, str, bool))
-                or isinstance(v, np.number)
+                isinstance(v, (int, float, str, bool, np.number))
                 or (isinstance(v, np.ndarray) and v.ndim == 0)
                 or (
                     isinstance(v, (list, tuple, np.ndarray))
@@ -375,7 +376,7 @@ def build_terminal(
                 ft.Container(
                     content=ft.TextField(
                         ref=active_field,
-                        value=code if field_ref is None else code,
+                        value=code,
                         multiline=True,
                         min_lines=3,
                         max_lines=20,

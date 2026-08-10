@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
+
 from core.constants import TASK_SUGGEST
-from .client import call_gateway, extract_content, extract_block_by_pattern
+
+from .client import call_gateway, extract_block_by_pattern, extract_content
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +46,7 @@ def _parse_resilient_json(text: str) -> dict | None:
                 ex,
             )
             logger.error("Raw cleaned text that failed to parse: %s", cleaned)
-            raise ex
+            raise
 
 
 def _repair_json(text: str) -> str:

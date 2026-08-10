@@ -3,15 +3,16 @@ import logging
 import os
 import uuid
 
-from core.state import state
-from core.constants import COST_SUGGEST
-from core.utils import figure_to_png_bytes
-from services import ai as ai_service, file_service, sandbox
-from services.file_service import FileValidationError
-from .base import show_error, show_success
-from .autopilot import run_autopilot
 from components.credit_badge import show_credits_dialog
-from services import dataset_cache
+from core.constants import COST_SUGGEST
+from core.state import state
+from core.utils import figure_to_png_bytes
+from services import ai as ai_service
+from services import dataset_cache, file_service, sandbox
+from services.file_service import FileValidationError
+
+from .autopilot import run_autopilot
+from .base import show_error, show_success
 
 logger = logging.getLogger(__name__)
 

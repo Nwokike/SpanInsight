@@ -1,26 +1,27 @@
 import asyncio
 import logging
+
 import flet as ft
+
+from components.brand_header import build_brand_header
+from components.data_preview import build_data_preview
+from components.file_import_card import build_file_import_card
+from components.stat_card import build_stat_card
 from core import theme, utils
 from core.state import state
 from core.utils import figure_to_png_bytes
-from components.file_import_card import build_file_import_card
-from components.stat_card import build_stat_card
-from components.data_preview import build_data_preview
-from components.brand_header import build_brand_header
+from services import dataset_cache, file_service, sandbox
 from services.file_picker_service import FilePickerService
 from services.file_service import detect_spatial_columns
-from services import file_service, dataset_cache
-from services import sandbox
-from views.analysis.state import AnalysisState
 from views.analysis.handlers import (
-    process_file,
     on_clear_data,
     on_custom_prompt,
+    on_export_data,
     on_run_code,
     on_voice_toggle,
-    on_export_data,
+    process_file,
 )
+from views.analysis.state import AnalysisState
 from views.analysis.ui_components import (
     build_block_card,
     build_db_import_card,
@@ -30,7 +31,9 @@ from views.analysis.ui_components import (
 logger = logging.getLogger(__name__)
 
 
-def build_analysis_view(page: ft.Page, credit_service, report_service=None) -> ft.View:
+def build_analysis_controls(
+    page: ft.Page, credit_service, report_service=None
+) -> tuple[ft.Control, ft.Control | None]:
     view_state = AnalysisState(page, credit_service, report_service)
 
     if not hasattr(state, "analysis_blocks"):
@@ -101,34 +104,32 @@ def build_analysis_view(page: ft.Page, credit_service, report_service=None) -> f
                     ),
                     alignment=ft.Alignment.CENTER,
                 ),
-                (
-                    lambda: ft.Container(
-                        content=ft.Column(
-                            [
-                                ft.Text(
-                                    "SPONSORED",
-                                    size=8,
-                                    weight=ft.FontWeight.W_700,
-                                    color=ft.Colors.ON_SURFACE_VARIANT,
-                                    style=ft.TextStyle(letter_spacing=1),
-                                ),
-                                utils.get_banner_ad(
-                                    unit_id="ca-app-pub-5679949845754640/5628404223",
-                                    width=320,
-                                    height=50,
-                                ),
-                            ],
-                            horizontal_alignment="center",
-                            spacing=4,
-                        ),
-                        alignment=ft.Alignment.CENTER,
-                        padding=8,
-                        border_radius=12,
-                        bgcolor=theme.GLASS_BG,
-                        border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
-                        margin=ft.Margin(0, 4, 0, 4),
-                    )
-                )()
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Text(
+                                "SPONSORED",
+                                size=8,
+                                weight=ft.FontWeight.W_700,
+                                color=ft.Colors.ON_SURFACE_VARIANT,
+                                style=ft.TextStyle(letter_spacing=1),
+                            ),
+                            utils.get_banner_ad(
+                                unit_id="ca-app-pub-5679949845754640/5628404223",
+                                width=320,
+                                height=50,
+                            ),
+                        ],
+                        horizontal_alignment="center",
+                        spacing=4,
+                    ),
+                    alignment=ft.Alignment.CENTER,
+                    padding=8,
+                    border_radius=12,
+                    bgcolor=theme.GLASS_BG,
+                    border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+                    margin=ft.Margin(0, 4, 0, 4),
+                )
                 if page.platform in (ft.PagePlatform.ANDROID, ft.PagePlatform.IOS)
                 else ft.Container(),
                 ft.Container(height=8),
@@ -297,33 +298,31 @@ def build_analysis_view(page: ft.Page, credit_service, report_service=None) -> f
                 if page.platform in (ft.PagePlatform.ANDROID, ft.PagePlatform.IOS):
                     loading_controls.append(ft.Container(height=20))
                     loading_controls.append(
-                        (
-                            lambda: ft.Container(
-                                content=ft.Column(
-                                    [
-                                        ft.Text(
-                                            "SPONSORED",
-                                            size=8,
-                                            weight=ft.FontWeight.W_700,
-                                            color=ft.Colors.ON_SURFACE_VARIANT,
-                                            style=ft.TextStyle(letter_spacing=1),
-                                        ),
-                                        utils.get_banner_ad(
-                                            unit_id="ca-app-pub-5679949845754640/5628404223",
-                                            width=320,
-                                            height=50,
-                                        ),
-                                    ],
-                                    horizontal_alignment="center",
-                                    spacing=4,
-                                ),
-                                alignment=ft.Alignment.CENTER,
-                                padding=8,
-                                border_radius=12,
-                                bgcolor=theme.GLASS_BG,
-                                border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
-                            )
-                        )()
+                        ft.Container(
+                            content=ft.Column(
+                                [
+                                    ft.Text(
+                                        "SPONSORED",
+                                        size=8,
+                                        weight=ft.FontWeight.W_700,
+                                        color=ft.Colors.ON_SURFACE_VARIANT,
+                                        style=ft.TextStyle(letter_spacing=1),
+                                    ),
+                                    utils.get_banner_ad(
+                                        unit_id="ca-app-pub-5679949845754640/5628404223",
+                                        width=320,
+                                        height=50,
+                                    ),
+                                ],
+                                horizontal_alignment="center",
+                                spacing=4,
+                            ),
+                            alignment=ft.Alignment.CENTER,
+                            padding=8,
+                            border_radius=12,
+                            bgcolor=theme.GLASS_BG,
+                            border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+                        )
                     )
                 if size_mb > 5 and fname.lower().endswith(".xlsx"):
                     loading_controls.append(
@@ -412,34 +411,32 @@ def build_analysis_view(page: ft.Page, credit_service, report_service=None) -> f
                             spacing=10,
                         ),
                         # Banner Ad After Autopilot Switch (Mobile Only)
-                        (
-                            lambda: ft.Container(
-                                content=ft.Column(
-                                    [
-                                        ft.Text(
-                                            "SPONSORED",
-                                            size=8,
-                                            weight=ft.FontWeight.W_700,
-                                            color=ft.Colors.ON_SURFACE_VARIANT,
-                                            style=ft.TextStyle(letter_spacing=1),
-                                        ),
-                                        utils.get_banner_ad(
-                                            unit_id="ca-app-pub-5679949845754640/5628404223",
-                                            width=320,
-                                            height=50,
-                                        ),
-                                    ],
-                                    horizontal_alignment="center",
-                                    spacing=4,
-                                ),
-                                alignment=ft.Alignment.CENTER,
-                                padding=8,
-                                border_radius=12,
-                                bgcolor=theme.GLASS_BG,
-                                border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
-                                margin=ft.Margin(0, 10, 0, 10),
-                            )
-                        )()
+                        ft.Container(
+                            content=ft.Column(
+                                [
+                                    ft.Text(
+                                        "SPONSORED",
+                                        size=8,
+                                        weight=ft.FontWeight.W_700,
+                                        color=ft.Colors.ON_SURFACE_VARIANT,
+                                        style=ft.TextStyle(letter_spacing=1),
+                                    ),
+                                    utils.get_banner_ad(
+                                        unit_id="ca-app-pub-5679949845754640/5628404223",
+                                        width=320,
+                                        height=50,
+                                    ),
+                                ],
+                                horizontal_alignment="center",
+                                spacing=4,
+                            ),
+                            alignment=ft.Alignment.CENTER,
+                            padding=8,
+                            border_radius=12,
+                            bgcolor=theme.GLASS_BG,
+                            border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+                            margin=ft.Margin(0, 10, 0, 10),
+                        )
                         if page.platform
                         in (ft.PagePlatform.ANDROID, ft.PagePlatform.IOS)
                         else ft.Container(),
@@ -846,8 +843,8 @@ def build_analysis_view(page: ft.Page, credit_service, report_service=None) -> f
                         pass
 
                 page.run_task(do_scroll)
-        except Exception as ex:
-            logger.exception("Rebuild failed in analysis view: %s", ex)
+        except Exception:
+            logger.exception("Rebuild failed in analysis view")
 
     view_state.rebuild_fn = _rebuild
 
@@ -918,6 +915,7 @@ def build_analysis_view(page: ft.Page, credit_service, report_service=None) -> f
 
     async def poll_for_updates():
         import asyncio
+
         from services.project_service import ProjectService
         from views.analysis.handlers.ai import execute_pending_blocks
 
@@ -969,21 +967,22 @@ def build_analysis_view(page: ft.Page, credit_service, report_service=None) -> f
 
     page.run_task(poll_for_updates)
 
-    _rebuild()
-
     stack = ft.Stack(
         controls=[main_column, autopilot_overlay],
         expand=True,
     )
+    return stack, None
 
-    view = ft.View(
+
+def build_analysis_view(page: ft.Page, credit_service, report_service=None) -> ft.View:
+    controls, fab = build_analysis_controls(page, credit_service, report_service)
+    return ft.View(
         route="/analysis",
         appbar=ft.AppBar(
             title=ft.Text("Analysis Engine", weight="bold"),
             bgcolor=ft.Colors.TRANSPARENT,
         ),
-        controls=[stack],
+        controls=[controls],
+        floating_action_button=fab,
         padding=0,
     )
-    view._analysis_state = view_state
-    return view

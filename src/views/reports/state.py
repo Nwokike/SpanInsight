@@ -1,6 +1,7 @@
 """Reports view state management."""
 
 from __future__ import annotations
+
 import flet as ft
 
 
@@ -23,6 +24,7 @@ class ReportsState:
         self.is_transcribing = {"value": False}
         self.ai_prompt_text = {"value": ""}
         self.recording_time = {"value": 0}
+        self.is_public = {"value": False}
         self.editor_active = {"value": False}
 
         # View Layer Refs to prevent nuclear rebuilds (toggle visibility instead)

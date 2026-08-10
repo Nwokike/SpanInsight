@@ -1,15 +1,18 @@
 import asyncio
 import logging
-import httpx
 import uuid
-import flet as ft
 
-from core.state import state
-from core.constants import COST_SUGGEST, COST_CUSTOM_PROMPT
-from core.utils import figure_to_png_bytes
-from services import ai as ai_service, sandbox
-from .base import show_error, build_analysis_context
+import flet as ft
+import httpx
+
 from components.credit_badge import show_credits_dialog
+from core.constants import COST_CUSTOM_PROMPT, COST_SUGGEST
+from core.state import state
+from core.utils import figure_to_png_bytes
+from services import ai as ai_service
+from services import sandbox
+
+from .base import build_analysis_context, show_error
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +187,7 @@ async def on_suggestion_selected(
                             continue
                         else:
                             break
-                    except (httpx.ConnectError, httpx.TimeoutException):
+                    except httpx.ConnectError, httpx.TimeoutException:
                         break
 
             if not result or not result["success"]:
@@ -356,7 +359,7 @@ async def _handle_voice_auto_stop(page: ft.Page, ui_state, result):
             transcript = await ai_service.transcribe_audio(audio_bytes, mime)
             if transcript and not transcript.startswith("["):
                 ui_state.ai_prompt_text["value"] = transcript
-        except (httpx.ConnectError, httpx.TimeoutException):
+        except httpx.ConnectError, httpx.TimeoutException:
             logger.warning("Offline network error during voice transcription.")
         except Exception as ex:
             logger.error("Voice transcription failed: %s", ex)
@@ -379,7 +382,7 @@ async def _handle_auto_stop(view_state, result):
             ):
                 view_state.custom_prompt_field.current.value = transcript
                 view_state.page.update()
-        except (httpx.ConnectError, httpx.TimeoutException):
+        except httpx.ConnectError, httpx.TimeoutException:
             show_error(
                 view_state, "⚠️ Voice transcription failed. You are currently offline."
             )
@@ -399,11 +402,14 @@ async def on_voice_toggle(view_state, e):
             audio_bytes, mime_type = result
             try:
                 transcript = await ai_service.transcribe_audio(audio_bytes, mime_type)
-                if transcript and not transcript.startswith("["):
-                    if view_state.custom_prompt_field.current:
-                        view_state.custom_prompt_field.current.value = transcript
-                        view_state.page.update()
-            except (httpx.ConnectError, httpx.TimeoutException):
+                if (
+                    transcript
+                    and not transcript.startswith("[")
+                    and view_state.custom_prompt_field.current
+                ):
+                    view_state.custom_prompt_field.current.value = transcript
+                    view_state.page.update()
+            except httpx.ConnectError, httpx.TimeoutException:
                 show_error(
                     view_state,
                     "⚠️ Voice transcription failed. You are currently offline.",

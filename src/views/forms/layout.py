@@ -1,18 +1,21 @@
 from __future__ import annotations
+
 import asyncio
 import json
 import logging
+
 import flet as ft
 
+from components.form_editor import build_form_editor
 from core import theme
 from core.state import state
-from components.form_editor import build_form_editor
-from services import ai as ai_service, forms_service
+from services import ai as ai_service
+from services import forms_service
 from services.audio_service import AudioService
 
-from .state import FormsState
 from .dashboard import build_dashboard_layout, build_form_card
 from .detail import build_form_detail
+from .state import FormsState
 
 logger = logging.getLogger(__name__)
 
@@ -367,14 +370,23 @@ def build_forms_view(page: ft.Page) -> ft.View:
         if not responses:
             _show_error("No responses to analyze.")
             return
-        import pandas as pd
-        from services import file_service
+
+        import json as _json
 
         rows = [r["data"] for r in responses]
-        df = pd.DataFrame(rows)
-        state.set_dataframe(df, f"{form['title']}_responses")
-        state.current_df_summary = file_service.get_data_summary(df)
-        await page.push_route("/analysis")
+        # Generate a Python code snippet for Colab to load the data
+        rows_json = _json.dumps(rows[:200], default=str)
+        code = (
+            f"import pandas as pd\n"
+            f"import json\n\n"
+            f"data = json.loads('''{rows_json}''')\n"
+            f"df = pd.DataFrame(data)\n"
+            f'print(f"Loaded {{len(df)}} responses, {{len(df.columns)}} fields")\n'
+            f"df.head()"
+        )
+        # Add a notebook cell with this code
+        state.add_cell("code", code)
+        await page.push_route("/notebook")
 
     def _show_error(msg: str):
         page.snack_bar = ft.SnackBar(

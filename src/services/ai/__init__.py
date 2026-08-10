@@ -2,37 +2,37 @@
 
 from __future__ import annotations
 
-from .client import check_health
-from .vision import analyze_image
-from .audio import transcribe_audio
 from .analysis import (
+    analyze_image_for_data,
     describe_dataset,
     describe_result,
-    suggest,
+    fallback_suggestions,
     generate_code,
     generate_corrected_code,
-    plan_next_step,
     interpret,
-    analyze_image_for_data,
-    fallback_suggestions,
+    plan_next_step,
+    suggest,
 )
+from .audio import transcribe_audio
+from .client import check_health
 from .forms import generate_form_schema
 from .reports import arrange_report, edit_report_with_ai
+from .vision import analyze_image
 
 __all__ = [
-    "check_health",
     "analyze_image",
-    "transcribe_audio",
+    "analyze_image_for_data",
+    "arrange_report",
+    "check_health",
     "describe_dataset",
     "describe_result",
-    "suggest",
+    "edit_report_with_ai",
+    "fallback_suggestions",
     "generate_code",
     "generate_corrected_code",
-    "plan_next_step",
-    "interpret",
-    "analyze_image_for_data",
-    "fallback_suggestions",
     "generate_form_schema",
-    "arrange_report",
-    "edit_report_with_ai",
+    "interpret",
+    "plan_next_step",
+    "suggest",
+    "transcribe_audio",
 ]

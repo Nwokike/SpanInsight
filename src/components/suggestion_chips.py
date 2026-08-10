@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import flet as ft
 
+from components.credit_badge import show_credits_dialog
 from core import theme, tokens
 from core.state import state
-from components.credit_badge import show_credits_dialog
 
 
 def build_suggestion_chips(

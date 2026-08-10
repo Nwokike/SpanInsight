@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
+
 from core.constants import TASK_SUGGEST
-from .client import call_gateway, extract_content, extract_block_by_pattern
+
+from .client import call_gateway, extract_block_by_pattern, extract_content
 
 logger = logging.getLogger(__name__)
 

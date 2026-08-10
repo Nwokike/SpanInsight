@@ -1,14 +1,17 @@
 import asyncio
-import logging
 import base64
-import httpx
-import flet as ft
+import logging
 
-from core.state import state
+import flet as ft
+import httpx
+
 from core.constants import COST_AUTOPILOT
+from core.state import state
 from core.utils import figure_to_png_bytes
-from services import ai as ai_service, sandbox
-from .base import show_error, build_analysis_context
+from services import ai as ai_service
+from services import sandbox
+
+from .base import build_analysis_context, show_error
 
 logger = logging.getLogger(__name__)
 
@@ -230,7 +233,7 @@ async def run_autopilot(view_state):
                 }
             )
 
-            async def load_block_ai(b, hist_entry):
+            async def load_block_ai(b, hist_entry, b0_desc=block0_desc):
                 if getattr(state, "autopilot_cancelled", False):
                     return
                 try:
@@ -244,10 +247,10 @@ async def run_autopilot(view_state):
                     ctx = build_analysis_context()
 
                     # Run remote AI tasks concurrently to eliminate sequential waiting latency
-                    desc_task = ai_service.describe_result(block0_desc, res_data)
+                    desc_task = ai_service.describe_result(b0_desc, res_data)
                     sugg_task = ai_service.suggest(
                         state.current_df_summary,
-                        initial_description=block0_desc,
+                        initial_description=b0_desc,
                         analysis_context=ctx,
                     )
 
