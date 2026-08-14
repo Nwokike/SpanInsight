@@ -11,6 +11,7 @@ import logging
 import flet as ft
 from flet import Control
 
+from core import tokens
 from state import AppStateCtx
 from state.controller_ctx import ControllerMethodsCtx
 from state.service_ctx import ServiceCtx
@@ -112,21 +113,88 @@ def AppShell() -> Control:
             on_click=lambda e: page.run_task(controller.toggle_theme),
         )
 
-        colab_indicator = ft.Container(
-            content=ft.Icon(
-                ft.Icons.CLOUD_DONE_ROUNDED
-                if state.colab_connected
-                else ft.Icons.CLOUD_OFF_ROUNDED,
-                size=20,
-                color=ft.Colors.PRIMARY
-                if state.colab_connected
-                else ft.Colors.ON_SURFACE_VARIANT,
-            ),
-            tooltip="Colab: Connected"
-            if state.colab_connected
-            else "Colab: Disconnected",
-            margin=ft.Margin(0, 0, 4, 0),
-        )
+        async def _connect_colab_header():
+            try:
+                res = await services.colab.ensure_active_session()
+                if res:
+                    state.active_session_name = res.get("name", "")
+                    state.session_hardware = (
+                        "CPU"
+                        if res.get("accelerator") == "NONE"
+                        else res.get("accelerator", "CPU")
+                    )
+                    state.colab_connected = True
+                    if page:
+                        page.snack_bar = ft.SnackBar(
+                            ft.Text(f"Connected to Colab ({state.session_hardware})")
+                        )
+                        page.snack_bar.open = True
+                        page.update()
+            except Exception as ex:
+                if page:
+                    page.snack_bar = ft.SnackBar(
+                        ft.Text(f"Colab connect failed: {ex}"),
+                        bgcolor=ft.Colors.ERROR,
+                    )
+                    page.snack_bar.open = True
+                    page.update()
+
+        if state.colab_connected and state.active_session_name:
+            colab_indicator = ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Icon(
+                            ft.Icons.CLOUD_DONE_ROUNDED,
+                            size=16,
+                            color=ft.Colors.PRIMARY,
+                        ),
+                        ft.Text(
+                            state.session_hardware,
+                            size=tokens.FONT_XS,
+                            weight=ft.FontWeight.W_600,
+                            color=ft.Colors.PRIMARY,
+                        ),
+                    ],
+                    spacing=tokens.SPACE_XXS,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                ),
+                padding=ft.Padding(
+                    tokens.SPACE_SM, tokens.SPACE_XXS, tokens.SPACE_SM, tokens.SPACE_XXS
+                ),
+                border_radius=tokens.RADIUS_SM,
+                bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY),
+                tooltip=f"Colab Connected: {state.active_session_name} ({state.session_hardware})",
+                margin=ft.Margin(0, 0, 4, 0),
+            )
+        else:
+            colab_indicator = ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Icon(
+                            ft.Icons.CLOUD_OFF_ROUNDED,
+                            size=16,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                        ),
+                        ft.Text(
+                            "Connect",
+                            size=tokens.FONT_XS,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                        ),
+                    ],
+                    spacing=tokens.SPACE_XXS,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                ),
+                padding=ft.Padding(
+                    tokens.SPACE_SM, tokens.SPACE_XXS, tokens.SPACE_SM, tokens.SPACE_XXS
+                ),
+                border_radius=tokens.RADIUS_SM,
+                border=ft.Border.all(
+                    1, ft.Colors.with_opacity(0.2, ft.Colors.ON_SURFACE)
+                ),
+                tooltip="Colab Disconnected — Click to connect",
+                margin=ft.Margin(0, 0, 4, 0),
+                on_click=lambda _: page.run_task(_connect_colab_header),
+            )
 
         tag_text = (
             _TAB_NAMES[state.current_tab]
@@ -165,6 +233,8 @@ def AppShell() -> Control:
             state.onboarding_done,
             state.is_authenticated,
             state.colab_connected,
+            state.active_session_name,
+            state.session_hardware,
             state.credits_remaining,
             state.theme_mode,
         ],

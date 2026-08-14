@@ -404,7 +404,9 @@ def AnalysisScreen() -> Control:
         autopilot_bar,
     ]
 
-    if schema_json:
+    has_content = bool(state.notebook_cells) or bool(schema_json)
+
+    if has_content:
         content_controls += [prompt_bar, gen_indicator, chips_section]
         if state.notebook_cells:
             content_controls.append(

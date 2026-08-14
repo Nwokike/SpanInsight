@@ -77,6 +77,25 @@ class ColabService:
 
         return await list_sessions_impl(self, auth_method)
 
+    async def ensure_active_session(
+        self, session_name: str | None = None, auth_method: str = "oauth2"
+    ) -> dict:
+        """Probe the specified session or find/create an active session."""
+        try:
+            sessions = await self.list_sessions(auth_method)
+            if session_name:
+                match = next(
+                    (s for s in sessions if s.get("name") == session_name), None
+                )
+                if match:
+                    return match
+            if sessions:
+                return sessions[0]
+        except Exception as ex:
+            logger.warning("Session probe failed: %s", ex)
+
+        return await self.new_session(auth_method=auth_method)
+
     async def stop_session(
         self, session_name: str, auth_method: str = "oauth2"
     ) -> bool:

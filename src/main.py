@@ -282,6 +282,26 @@ class AppController:
             # Valid token → mark onboarding done and go straight to app
             state.onboarding_done = True
             await self.storage.set(STORAGE_ONBOARDING_DONE, "true")
+
+            # Discover and attach to existing active Colab session
+            try:
+                sessions = await self.colab_service.list_sessions()
+                if sessions and isinstance(sessions, list):
+                    active = sessions[0]
+                    state.active_session_name = active["name"]
+                    state.session_hardware = (
+                        "CPU"
+                        if active.get("accelerator") == "NONE"
+                        else active.get("accelerator", "CPU")
+                    )
+                    state.colab_connected = True
+                    logger.info(
+                        "Auto-attached to active Colab session: %s (%s)",
+                        state.active_session_name,
+                        state.session_hardware,
+                    )
+            except Exception as ex:
+                logger.debug("Session auto-discovery: %s", ex)
         else:
             # No valid token → check if they've ever onboarded
             onboarding_done = await self.storage.get(STORAGE_ONBOARDING_DONE)
