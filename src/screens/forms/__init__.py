@@ -1,0 +1,385 @@
+"""FormsScreen — Modular survey builder, publisher, and responses dashboard."""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+
+import flet as ft
+
+from components.form_editor import build_form_editor
+from core import theme
+from screens.forms.dashboard_view import build_forms_dashboard
+from screens.forms.detail_view import build_form_detail_view
+from screens.forms.handlers import (
+    ai_edit_schema_async,
+    create_form_schema_async,
+    delete_form_async,
+    download_csv_async,
+    load_forms_async,
+    publish_form_async,
+)
+from services import ai as ai_service
+from services import forms_service
+from services.audio_service import AudioService
+from state import AppStateCtx
+from state.controller_ctx import ControllerMethodsCtx
+from state.service_ctx import ServiceCtx
+
+logger = logging.getLogger("FormsScreen")
+
+
+@ft.component
+def FormsScreen() -> ft.Control:
+    """Forms & survey builder screen with dashboard, editor, and responses view."""
+    page = ft.context.page
+    state = ft.use_context(AppStateCtx)
+    services = ft.use_context(ServiceCtx)
+    ft.use_context(ControllerMethodsCtx)
+
+    # Mode: "dashboard", "editor", "detail"
+    mode, set_mode = ft.use_state("dashboard")
+
+    user_forms, set_user_forms = ft.use_state([])
+    is_loading, set_is_loading = ft.use_state(False)
+    is_creating, set_is_creating = ft.use_state(False)
+    is_publishing, set_is_publishing = ft.use_state(False)
+
+    is_recording, set_is_recording = ft.use_state(False)
+    recording_time, set_recording_time = ft.use_state(0)
+
+    active_form, set_active_form = ft.use_state(None)
+
+    draft_schema, set_draft_schema = ft.use_state([])
+    draft_title, set_draft_title = ft.use_state("")
+    draft_desc, set_draft_desc = ft.use_state("")
+
+    is_transcribing, set_is_transcribing = ft.use_state(False)
+    prompt_text, set_prompt_text = ft.use_state("")
+
+    is_ai_editing, set_is_ai_editing = ft.use_state(False)
+    editor_recording, set_editor_recording = ft.use_state(False)
+    editor_transcribing, set_editor_transcribing = ft.use_state(False)
+    editor_recording_time, set_editor_recording_time = ft.use_state(0)
+    ai_edit_text, set_ai_edit_text = ft.use_state("")
+
+    audio_svc = ft.use_ref(lambda: AudioService(page))
+
+    def _show_error(msg: str):
+        if page:
+            page.snack_bar = ft.SnackBar(
+                ft.Text(msg, color=ft.Colors.WHITE), bgcolor=theme.ERROR, duration=4000
+            )
+            page.snack_bar.open = True
+            page.update()
+
+    def _load_forms():
+        return load_forms_async(
+            state.active_project_id, state, set_user_forms, set_is_loading, _show_error
+        )
+
+    # ── Mount ────────────────────────────────────────────────────
+    async def _on_mount():
+        await _load_forms()
+
+    ft.use_effect(_on_mount, [])
+
+    # ── Voice helpers ────────────────────────────────────────────
+    async def _update_timer():
+        while is_recording:
+            await asyncio.sleep(1)
+            if is_recording:
+                set_recording_time(recording_time + 1)
+
+    async def _handle_auto_stop(result):
+        set_is_recording(False)
+        if result:
+            audio_bytes, mime_type = result
+            transcript = await ai_service.transcribe_audio(audio_bytes, mime_type)
+            if transcript and not transcript.startswith("["):
+                set_prompt_text(transcript)
+
+    async def on_voice_toggle(e=None):
+        if is_recording:
+            result = await audio_svc.current.stop_recording()
+            set_is_recording(False)
+            set_is_transcribing(True)
+            if result:
+                audio_bytes, mime_type = result
+                try:
+                    transcript = await ai_service.transcribe_audio(
+                        audio_bytes, mime_type
+                    )
+                    if transcript and not transcript.startswith("["):
+                        set_prompt_text(transcript)
+                    else:
+                        _show_error("Could not transcribe audio. Try again.")
+                except Exception as err:
+                    _show_error(f"Transcription failed: {err}")
+            else:
+                _show_error("No audio recorded.")
+            set_is_transcribing(False)
+        else:
+            started = await audio_svc.current.start_recording(
+                on_auto_stop=lambda res: (
+                    page.run_task(_handle_auto_stop, res) if page else None
+                )
+            )
+            if started:
+                set_is_recording(True)
+                set_recording_time(0)
+                if page:
+                    page.run_task(_update_timer)
+
+    async def _update_editor_timer():
+        while editor_recording:
+            await asyncio.sleep(1)
+            if editor_recording:
+                set_editor_recording_time(editor_recording_time + 1)
+
+    async def _handle_editor_auto_stop(result):
+        set_editor_recording(False)
+        if result:
+            audio_bytes, mime_type = result
+            transcript = await ai_service.transcribe_audio(audio_bytes, mime_type)
+            if transcript and not transcript.startswith("["):
+                set_ai_edit_text(transcript)
+
+    async def on_editor_voice_toggle(e=None):
+        if editor_recording:
+            result = await audio_svc.current.stop_recording()
+            set_editor_recording(False)
+            set_editor_transcribing(True)
+            if result:
+                audio_bytes, mime_type = result
+                try:
+                    transcript = await ai_service.transcribe_audio(
+                        audio_bytes, mime_type
+                    )
+                    if transcript and not transcript.startswith("["):
+                        set_ai_edit_text(transcript)
+                    else:
+                        _show_error("Could not transcribe audio. Try again.")
+                except Exception as err:
+                    _show_error(f"Transcription failed: {err}")
+            else:
+                _show_error("No audio recorded.")
+            set_editor_transcribing(False)
+        else:
+            started = await audio_svc.current.start_recording(
+                on_auto_stop=lambda res: (
+                    page.run_task(_handle_editor_auto_stop, res) if page else None
+                )
+            )
+            if started:
+                set_editor_recording(True)
+                set_editor_recording_time(0)
+                if page:
+                    page.run_task(_update_editor_timer)
+
+    # ── Detail view navigation ───────────────────────────────────
+    async def on_view_form(form: dict):
+        set_active_form(form)
+        resp_data = await forms_service.get_responses(
+            form["id"], state.active_project_id
+        )
+        form["_responses"] = resp_data.get("responses", [])
+        form["_count"] = resp_data.get("count", 0)
+        set_active_form(form)
+        set_mode("detail")
+
+    async def on_copy_link(form_id: str):
+        from core.constants import FORMS_PUBLIC_BASE_URL
+
+        url = f"{FORMS_PUBLIC_BASE_URL}/{form_id}"
+        try:
+            await ft.Clipboard().set(url)
+        except Exception:
+            pass
+        if page:
+            page.snack_bar = ft.SnackBar(ft.Text("Link copied!"), duration=2000)
+            page.snack_bar.open = True
+            page.update()
+
+    async def on_renew_form(form_id: str):
+        new_exp = await forms_service.renew_form(form_id, state.active_project_id)
+        if new_exp:
+            if page:
+                page.snack_bar = ft.SnackBar(
+                    ft.Text(f"Extended to {new_exp[:10]}"), duration=3000
+                )
+                page.snack_bar.open = True
+            await _load_forms()
+        else:
+            _show_error("Failed to renew.")
+
+    def on_analyze_responses(form: dict):
+        responses = form.get("_responses", [])
+        if not responses:
+            _show_error("No responses to analyze.")
+            return
+        import json as _json
+        import uuid
+
+        rows = [r["data"] for r in responses]
+        rows_json = _json.dumps(rows[:200], default=str)
+        code = (
+            f"import pandas as pd\n"
+            f"import json\n\n"
+            f"data = json.loads('''{rows_json}''')\n"
+            f"df = pd.DataFrame(data)\n"
+            f'print(f"Loaded {{len(df)}} responses, {{len(df.columns)}} fields")\n'
+            f"df.head()"
+        )
+        form_title = form.get("title", "Survey")
+        if services.projects:
+
+            async def _create_survey_project():
+                proj = await services.projects.create_project(
+                    name=f"{form_title} Analysis",
+                    primary_dataset=f"{form_title}_responses",
+                    initial_cells=[
+                        {
+                            "id": str(uuid.uuid4()),
+                            "type": "code",
+                            "source": code,
+                            "outputs": [],
+                            "is_running": False,
+                        }
+                    ],
+                )
+                state.load_project(proj)
+                state.current_tab = 1
+
+            if page:
+                page.run_task(_create_survey_project)
+        else:
+            state.add_cell("code", code)
+            state.current_tab = 1
+
+    # ── View Router ──────────────────────────────────────────────
+    if mode == "editor":
+        view_content = ft.Column(
+            build_form_editor(
+                schema=draft_schema,
+                title=draft_title,
+                description=draft_desc,
+                on_schema_changed=lambda: None,
+                on_title_changed=set_draft_title,
+                on_desc_changed=set_draft_desc,
+                on_publish=lambda: (
+                    page.run_task(
+                        publish_form_async,
+                        state.active_project_id,
+                        draft_title,
+                        draft_desc,
+                        draft_schema,
+                        page,
+                        set_is_publishing,
+                        set_mode,
+                        set_draft_schema,
+                        set_prompt_text,
+                        _load_forms,
+                        _show_error,
+                    )
+                    if page
+                    else None
+                ),
+                on_cancel=lambda: (set_mode("dashboard"), set_draft_schema([])),
+                on_ai_edit=lambda action, text="": (
+                    page.run_task(
+                        ai_edit_schema_async,
+                        action,
+                        text,
+                        ai_edit_text,
+                        draft_schema,
+                        draft_title,
+                        draft_desc,
+                        set_ai_edit_text,
+                        set_is_ai_editing,
+                        set_draft_schema,
+                        set_draft_title,
+                        set_draft_desc,
+                        _show_error,
+                    )
+                    if page
+                    else None
+                ),
+                on_voice_toggle=lambda e: (
+                    page.run_task(on_editor_voice_toggle, e) if page else None
+                ),
+                is_publishing=is_publishing,
+                is_recording=editor_recording,
+                is_transcribing=editor_transcribing,
+                is_ai_editing=is_ai_editing,
+                recording_time=editor_recording_time,
+                ai_prompt_text=ai_edit_text,
+                recording_timer_ref=None,
+            )
+        )
+    elif mode == "detail":
+        view_content = build_form_detail_view(
+            page=page,
+            form=active_form,
+            on_back=lambda _: (set_active_form(None), set_mode("dashboard")),
+            on_copy_link=lambda fid: page.run_task(on_copy_link, fid) if page else None,
+            on_renew=lambda fid: page.run_task(on_renew_form, fid) if page else None,
+            on_download_csv=lambda f: (
+                page.run_task(download_csv_async, f, page, _show_error)
+                if page
+                else None
+            ),
+            on_analyze=on_analyze_responses,
+            on_delete=lambda fid: (
+                page.run_task(
+                    delete_form_async,
+                    fid,
+                    state.active_project_id,
+                    page,
+                    set_is_loading,
+                    set_active_form,
+                    set_mode,
+                    _load_forms,
+                    _show_error,
+                )
+                if page
+                else None
+            ),
+        )
+    else:
+        view_content = build_forms_dashboard(
+            page=page,
+            user_forms=user_forms,
+            is_loading=is_loading,
+            is_creating=is_creating,
+            is_recording=is_recording,
+            is_transcribing=is_transcribing,
+            recording_time=recording_time,
+            prompt_text=prompt_text,
+            set_prompt_text=set_prompt_text,
+            on_create_form=lambda e: (
+                page.run_task(
+                    create_form_schema_async,
+                    prompt_text,
+                    set_is_creating,
+                    set_draft_schema,
+                    set_draft_title,
+                    set_draft_desc,
+                    set_mode,
+                    _show_error,
+                )
+                if page
+                else None
+            ),
+            on_voice_toggle=lambda e: (
+                page.run_task(on_voice_toggle, e) if page else None
+            ),
+            on_view_form=lambda f: page.run_task(on_view_form, f) if page else None,
+            on_refresh=lambda e: page.run_task(_load_forms) if page else None,
+        )
+
+    return ft.Column(
+        controls=[view_content],
+        scroll=ft.ScrollMode.AUTO,
+        expand=True,
+    )

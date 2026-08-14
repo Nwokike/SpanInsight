@@ -27,7 +27,10 @@ logger = logging.getLogger(__name__)
 class CreditService:
     """Manages the local credit economy."""
 
-    def __init__(self, page: ft.Page, storage):
+    def __init__(self, page: ft.Page | None = None, storage=None):
+        if storage is None and page is not None and not isinstance(page, ft.Page):
+            storage = page
+            page = None
         self._page = page
         self._storage = storage
         self._reservations: dict[str, int] = {}  # tx_id -> amount

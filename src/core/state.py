@@ -49,6 +49,9 @@ class AppState:
     forms: list[dict] = None
 
     # ── Projects ────────────────────────────────────────────────────
+    active_project_name: str = ""
+    active_project_dataset: str = ""
+    projects_list: list[dict] = None
     user_projects: dict = None
 
     # ── Reports ─────────────────────────────────────────────────────
@@ -73,6 +76,8 @@ class AppState:
     # ── Navigation & UI ─────────────────────────────────────────────
     current_tab: int = 0  # 0=Home, 1=Analysis, 2=Forms, 3=Reports, 4=Settings
     is_loading: bool = False
+    is_online: bool = True
+    app_ready: bool = False  # False until _initial_route completes
     gateway_online: bool = True
     trigger_file_picker: bool = False
     onboarding_done: bool = False
@@ -86,6 +91,7 @@ class AppState:
         self.notebook_cells = []
         self.active_sessions = []
         self.forms = []
+        self.projects_list = []
         self.user_projects = {}
         self.user_reports = []
         self.suggestions = []
@@ -99,6 +105,17 @@ class AppState:
         self.current_notebook_name = ""
         self.suggestions = []
         self.autopilot_progress = ""
+
+    def load_project(self, project: dict):
+        """Load a project entity into active state."""
+        self.active_project_id = project.get("id", "")
+        self.active_project_name = project.get("name", "")
+        self.active_project_dataset = project.get("primary_dataset", "")
+        self.notebook_cells = list(project.get("notebook_cells", []))
+        if project.get("hardware"):
+            self.session_hardware = project["hardware"]
+        if project.get("session_name"):
+            self.active_session_name = project["session_name"]
 
     def add_cell(self, cell_type: str = "code", source: str = "") -> dict:
         """Add a new cell to the notebook."""

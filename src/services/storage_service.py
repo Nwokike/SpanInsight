@@ -34,7 +34,7 @@ _WRITE_DEBOUNCE_SEC = 1.0
 
 
 class StorageService:
-    def __init__(self, page: ft.Page):
+    def __init__(self, page: ft.Page | None = None, data_dir: str | Path | None = None):
         self._page = page
         self._settings: dict[str, str] = {}
         self._history: dict[str, str] = {}
@@ -46,7 +46,15 @@ class StorageService:
         self._last_write: float = 0.0
         self._pending_write_task: asyncio.Task | None = None
 
-        self._is_web = bool(getattr(page, "session_id", None))
+        if data_dir:
+            self._storage_dir = Path(data_dir)
+        else:
+            self._storage_dir = _STORAGE_DIR
+
+        self._settings_file = self._storage_dir / "settings.json"
+        self._history_file = self._storage_dir / "history.json"
+
+        self._is_web = bool(getattr(page, "session_id", None)) if page else False
 
         if self._is_web:
             logger.info("StorageService: running on web — using client_storage")
@@ -88,9 +96,9 @@ class StorageService:
     # ── Native file helpers ──────────────────────────────────────────
 
     def _load(self) -> None:
-        _STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-        self._settings = self._load_file(_SETTINGS_FILE, "settings")
-        self._history = self._load_file(_HISTORY_FILE, "history")
+        self._storage_dir.mkdir(parents=True, exist_ok=True)
+        self._settings = self._load_file(self._settings_file, "settings")
+        self._history = self._load_file(self._history_file, "history")
 
     @staticmethod
     def _load_file(path: Path, label: str) -> dict:
@@ -115,13 +123,13 @@ class StorageService:
     def _write_files_sync(
         self, settings_copy, history_copy, write_settings, write_history
     ) -> None:
-        _STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+        self._storage_dir.mkdir(parents=True, exist_ok=True)
         if write_settings:
-            _SETTINGS_FILE.write_bytes(
+            self._settings_file.write_bytes(
                 json.dumps(settings_copy, ensure_ascii=False).encode("utf-8"),
             )
         if write_history:
-            _HISTORY_FILE.write_bytes(
+            self._history_file.write_bytes(
                 json.dumps(history_copy, ensure_ascii=False).encode("utf-8"),
             )
 

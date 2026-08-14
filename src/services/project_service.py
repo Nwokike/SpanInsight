@@ -1,117 +1,185 @@
-"""Project management service v2 — local-only, no gateway sync.
+"""Project management service — local project entity persistence and .ipynb synchronization.
 
-In v2, execution runs on Google Colab. Projects are local organizational
-containers for reports and forms. No cloud sync, no Delta Sync, no blocks.
+A Project encapsulates:
+- id, name, created_at, updated_at
+- session_name (associated Colab session)
+- hardware (CPU, T4 GPU, TPU v2)
+- primary_dataset (e.g. sales.csv)
+- schema_json (compressed dataset metadata & statistics)
+- notebook_cells (live cells with code, markdown, outputs, and figures)
+- file_versions (tracked dataset files & modified outputs)
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import time
 import uuid
 
-import flet as ft
+from services.ipynb_converter import cells_to_ipynb, ipynb_to_cells
 
-from core.state import state
+logger = logging.getLogger("ProjectService")
 
-logger = logging.getLogger(__name__)
-
-STORAGE_PROJECTS = "spaninsight_projects"
-STORAGE_ACTIVE_PROJECT_ID = "spaninsight_active_project_id"
+STORAGE_PROJECTS_INDEX = "spaninsight_projects_index"
 
 
 class ProjectService:
-    def __init__(self, page: ft.Page, storage):
-        self._page = page
+    def __init__(self, storage):
         self._storage = storage
 
-    async def initialize_projects(self) -> str:
-        """Load projects from storage or create a default one. Returns active_project_id."""
+    async def list_projects(self) -> list[dict]:
+        """Fetch all projects, sorted by updated_at descending."""
+        raw = await self._storage.get(STORAGE_PROJECTS_INDEX)
+        if not raw:
+            return []
         try:
-            active_id = await self._storage.get(STORAGE_ACTIVE_PROJECT_ID)
-
-            raw_projects = await self._storage.get(STORAGE_PROJECTS)
-            try:
-                projects = json.loads(raw_projects) if raw_projects else {}
-                if not isinstance(projects, dict):
-                    raise TypeError("Projects data is not a dict")
-            except (json.JSONDecodeError, ValueError, TypeError) as parse_err:
-                logger.error("Corrupt projects JSON, resetting: %s", parse_err)
-                projects = {}
-
-            state.user_projects = projects
-
-            if not projects:
-                logger.info("No projects found. Generating default workspace...")
-                default_proj = await self.create_project("My Workspace")
-                active_id = default_proj["id"]
-
-            if not active_id or active_id not in state.user_projects:
-                active_id = next(iter(state.user_projects.keys()))
-
-            state.active_project_id = active_id
-            await self._storage.set(STORAGE_ACTIVE_PROJECT_ID, active_id)
-            return active_id
-
+            projects = json.loads(raw)
+            if isinstance(projects, list):
+                projects.sort(key=lambda p: p.get("updated_at", 0), reverse=True)
+                return projects
+            return []
         except Exception as e:
-            logger.error("Failed to initialize projects: %s", e)
-            return ""
+            logger.warning("Failed to parse projects index: %s", e)
+            return []
 
-    async def create_project(self, title: str, description: str = "") -> dict:
-        """Create a new local project."""
-        proj_id = "proj_" + uuid.uuid4().hex[:8]
+    async def get_project(self, project_id: str) -> dict | None:
+        """Fetch project details including full notebook cells."""
+        raw = await self._storage.get(f"project_{project_id}")
+        if not raw:
+            return None
+        try:
+            project = json.loads(raw)
+            # Ensure notebook cells are present from notebook.ipynb if available
+            nb_raw = await self._storage.get(f"notebook_{project_id}")
+            if nb_raw:
+                try:
+                    nb_dict = json.loads(nb_raw)
+                    project["notebook_cells"] = ipynb_to_cells(nb_dict)
+                except Exception:
+                    pass
+            return project
+        except Exception as e:
+            logger.error("Failed to load project %s: %s", project_id, e)
+            return None
+
+    async def create_project(
+        self,
+        name: str,
+        primary_dataset: str = "",
+        hardware: str = "CPU",
+        initial_cells: list[dict] | None = None,
+        schema_json: dict | None = None,
+    ) -> dict:
+        """Create a new project entity, initialize its .ipynb notebook, and update the index."""
+        project_id = f"proj_{uuid.uuid4().hex[:8]}"
+        now = time.time()
 
         project = {
-            "id": proj_id,
-            "title": title,
-            "description": description,
-            "user_reports": [],
-            "forms": [],
+            "id": project_id,
+            "name": name.strip() or f"Project {project_id[-4:]}",
+            "primary_dataset": primary_dataset,
+            "hardware": hardware,
+            "created_at": now,
+            "updated_at": now,
+            "session_name": "",
+            "schema_json": schema_json or {},
+            "notebook_cells": initial_cells or [],
+            "file_versions": [],
         }
 
-        state.user_projects[proj_id] = project
-        await self._persist_local_projects()
-        logger.info("Created project %s: %s", proj_id, title)
+        # Save project metadata, notebook .ipynb, and index entry
+        await self.save_project(project)
         return project
 
-    async def rename_project(self, project_id: str, new_title: str) -> bool:
-        """Rename a project."""
-        proj = state.user_projects.get(project_id)
-        if not proj:
-            return False
-        proj["title"] = new_title
-        await self._persist_local_projects()
-        return True
+    async def save_project(self, project: dict) -> None:
+        """Save project state, convert notebook cells to .ipynb JSON format, and update index timestamp."""
+        project_id = project["id"]
+        project["updated_at"] = time.time()
 
-    async def delete_project(self, project_id: str) -> bool:
-        """Remove a project locally."""
-        state.user_projects.pop(project_id, None)
-        await self._persist_local_projects()
+        # Save notebook as standard Jupyter .ipynb format
+        cells = project.get("notebook_cells", [])
+        ipynb_doc = cells_to_ipynb(cells)
+        await self._storage.set(
+            f"notebook_{project_id}", json.dumps(ipynb_doc, indent=2)
+        )
 
-        if state.active_project_id == project_id:
-            if state.user_projects:
-                state.active_project_id = next(iter(state.user_projects.keys()))
-            else:
-                await self.create_project("My Workspace")
-                state.active_project_id = next(iter(state.user_projects.keys()))
-            await self._storage.set(STORAGE_ACTIVE_PROJECT_ID, state.active_project_id)
+        # Save full project json (excluding massive duplicated cells to save memory)
+        project_meta = dict(project)
+        project_meta["notebook_cells"] = cells  # Kept in project record for fast load
+        await self._storage.set(
+            f"project_{project_id}", json.dumps(project_meta, default=str)
+        )
 
-        return True
+        # Update summary in index
+        projects = await self.list_projects()
+        updated_index = []
+        found = False
+        for p in projects:
+            if p["id"] == project_id:
+                p["name"] = project["name"]
+                p["primary_dataset"] = project.get("primary_dataset", "")
+                p["hardware"] = project.get("hardware", "CPU")
+                p["updated_at"] = project["updated_at"]
+                p["session_name"] = project.get("session_name", "")
+                p["cell_count"] = len(cells)
+                found = True
+            updated_index.append(p)
+        if not found:
+            updated_index.insert(
+                0,
+                {
+                    "id": project["id"],
+                    "name": project["name"],
+                    "primary_dataset": project.get("primary_dataset", ""),
+                    "hardware": project.get("hardware", "CPU"),
+                    "created_at": project.get("created_at", time.time()),
+                    "updated_at": project["updated_at"],
+                    "session_name": project.get("session_name", ""),
+                    "cell_count": len(cells),
+                },
+            )
+        await self._storage.set(
+            STORAGE_PROJECTS_INDEX, json.dumps(updated_index, default=str)
+        )
 
-    # ── Helpers ──────────────────────────────────────────────────────
+    async def delete_project(self, project_id: str) -> None:
+        """Permanently remove a project and its notebook."""
+        await self._storage.delete(f"project_{project_id}")
+        await self._storage.delete(f"notebook_{project_id}")
 
-    async def _persist_local_projects(self):
-        """Write current user_projects cache to local device storage."""
-        safe_copy = {}
-        for pid, p in state.user_projects.items():
-            safe_copy[pid] = self._serialize_local_project(p)
-        await self._storage.set(STORAGE_PROJECTS, json.dumps(safe_copy))
+        projects = await self.list_projects()
+        projects = [p for p in projects if p["id"] != project_id]
+        await self._storage.set(
+            STORAGE_PROJECTS_INDEX, json.dumps(projects, default=str)
+        )
 
-    @staticmethod
-    def _serialize_local_project(proj: dict) -> dict:
-        """Prepare project data dict for local JSON serialization."""
-        # Deep copy via JSON round-trip, skip non-serializable objects
-        try:
-            return json.loads(json.dumps(proj, default=str))
-        except Exception:
-            return {"id": proj.get("id", ""), "title": proj.get("title", "")}
+    async def add_file_version(
+        self, project_id: str, file_name: str, remote_path: str, size: int | None = None
+    ) -> dict:
+        """Record or update a file version under the project."""
+        project = await self.get_project(project_id)
+        if not project:
+            return {}
+        versions = project.get("file_versions", [])
+
+        # Check existing version
+        existing = next((f for f in versions if f["name"] == file_name), None)
+        if existing:
+            existing["version"] = existing.get("version", 1) + 1
+            existing["updated_at"] = time.time()
+            existing["size"] = size or existing.get("size")
+        else:
+            versions.append(
+                {
+                    "name": file_name,
+                    "remote_path": remote_path,
+                    "version": 1,
+                    "size": size,
+                    "created_at": time.time(),
+                    "updated_at": time.time(),
+                }
+            )
+        project["file_versions"] = versions
+        await self.save_project(project)
+        return project

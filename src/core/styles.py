@@ -244,11 +244,7 @@ def build_banner_ad(page: ft.Page) -> ft.Container:
                     color=ft.Colors.ON_SURFACE_VARIANT,
                     style=ft.TextStyle(letter_spacing=1),
                 ),
-                utils.get_banner_ad(
-                    unit_id="ca-app-pub-5679949845754640/5628404223",
-                    width=320,
-                    height=50,
-                ),
+                utils.get_banner_ad(),
             ],
             horizontal_alignment="center",
             spacing=4,

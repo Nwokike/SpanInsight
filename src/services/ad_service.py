@@ -12,6 +12,8 @@ from collections.abc import Callable
 
 import flet as ft
 
+from core.constants import ADMOB_BANNER_ID, ADMOB_INTERSTITIAL_ID
+
 logger = logging.getLogger(__name__)
 
 # Try importing flet_ads — only available on mobile
@@ -34,8 +36,8 @@ class AdService:
     INTERSTITIAL_ID_ANDROID_TEST = "ca-app-pub-3940256099942544/1033173712"
 
     # Real Ad Unit IDs for production release
-    BANNER_ID_ANDROID_PROD = "ca-app-pub-5679949845754640/5628404223"
-    INTERSTITIAL_ID_ANDROID_PROD = "ca-app-pub-5679949845754640/6965536622"
+    BANNER_ID_ANDROID_PROD = ADMOB_BANNER_ID
+    INTERSTITIAL_ID_ANDROID_PROD = ADMOB_INTERSTITIAL_ID
 
     def __init__(self, page: ft.Page):
         # S7 FIX: Fail-fast if USE_TEST_IDS is off but production IDs are empty

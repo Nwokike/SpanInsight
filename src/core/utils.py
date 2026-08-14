@@ -111,16 +111,21 @@ def get_temp_dir() -> Path:
         return fallback_path
 
 
-def get_banner_ad(unit_id: str, width: int = 320, height: int = 50) -> ft.Control:
+def get_banner_ad(
+    unit_id: str | None = None, width: int = 320, height: int = 50
+) -> ft.Control:
     """Instantiate flet_ads.BannerAd safely.
 
     If flet_ads fails to load (e.g. unsupported on Web/PC or dynamic linking issues),
     gracefully returns an empty ft.Container() instead of crashing the view.
     """
+    from core.constants import ADMOB_BANNER_ID
+
+    effective_unit_id = unit_id or ADMOB_BANNER_ID
     try:
         import flet_ads as fta
 
-        return fta.BannerAd(unit_id=unit_id, width=width, height=height)
+        return fta.BannerAd(unit_id=effective_unit_id, width=width, height=height)
     except Exception as e:
         logger.warning("Failed to load BannerAd (using safe fallback Container): %s", e)
         return ft.Container()
@@ -143,7 +148,9 @@ def sanitize_output(val):
 
 
 def sanitize_numpy(val):
-    """Recursively convert numpy types to Python natives for JSON serialization."""
+    """Recursively convert numpy and float types to Python natives for JSON serialization."""
+    import math
+
     try:
         import numpy as np
 
@@ -158,6 +165,8 @@ def sanitize_numpy(val):
     except ImportError:
         pass
 
+    if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+        return None
     if isinstance(val, list):
         return [sanitize_numpy(v) for v in val]
     if isinstance(val, dict):

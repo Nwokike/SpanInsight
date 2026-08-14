@@ -47,6 +47,7 @@ def _format_size(size_bytes) -> str:
 def build_file_item(
     file_info: dict,
     selected: bool = False,
+    selection_mode: bool = False,
     on_click=None,
 ) -> ft.Container:
     """Build a file browser list item.
@@ -59,48 +60,53 @@ def build_file_item(
 
     icon = _file_icon(name, is_dir)
 
-    trailing_icon = (
-        ft.Icons.CHECK_CIRCLE_ROUNDED if selected else ft.Icons.RADIO_BUTTON_UNCHECKED
-    )
-
-    return ft.Container(
-        bgcolor=ft.Colors.PRIMARY_CONTAINER if selected else ft.Colors.TRANSPARENT,
-        border_radius=tokens.RADIUS_MD,
-        content=ft.Row(
+    row_controls = [
+        ft.Icon(
+            icon,
+            size=tokens.ICON_LG,
+            color=ft.Colors.PRIMARY if is_dir else ft.Colors.ON_SURFACE_VARIANT,
+        ),
+        ft.Column(
             controls=[
-                ft.Icon(
-                    icon,
-                    size=tokens.ICON_LG,
-                    color=ft.Colors.PRIMARY if is_dir else ft.Colors.ON_SURFACE_VARIANT,
+                ft.Text(
+                    name,
+                    size=tokens.FONT_MD,
+                    weight=ft.FontWeight.W_500 if is_dir else ft.FontWeight.W_400,
+                    max_lines=1,
+                    overflow=ft.TextOverflow.ELLIPSIS,
                 ),
-                ft.Column(
-                    controls=[
-                        ft.Text(
-                            name,
-                            size=tokens.FONT_MD,
-                            weight=ft.FontWeight.W_500
-                            if is_dir
-                            else ft.FontWeight.W_400,
-                            max_lines=1,
-                            overflow=ft.TextOverflow.ELLIPSIS,
-                        ),
-                        ft.Text(
-                            _format_size(size) if not is_dir else "Folder",
-                            size=tokens.FONT_XS,
-                            color=ft.Colors.ON_SURFACE_VARIANT,
-                        ),
-                    ],
-                    spacing=tokens.SPACE_XXS,
-                    expand=True,
-                ),
-                ft.Icon(
-                    trailing_icon,
-                    size=tokens.ICON_MD,
-                    color=ft.Colors.PRIMARY
-                    if selected
-                    else ft.Colors.ON_SURFACE_VARIANT,
+                ft.Text(
+                    _format_size(size) if not is_dir else "Folder",
+                    size=tokens.FONT_XS,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
             ],
+            spacing=tokens.SPACE_XXS,
+            expand=True,
+        ),
+    ]
+
+    if selection_mode:
+        trailing_icon = (
+            ft.Icons.CHECK_CIRCLE_ROUNDED
+            if selected
+            else ft.Icons.RADIO_BUTTON_UNCHECKED
+        )
+        row_controls.append(
+            ft.Icon(
+                trailing_icon,
+                size=tokens.ICON_MD,
+                color=ft.Colors.PRIMARY if selected else ft.Colors.ON_SURFACE_VARIANT,
+            )
+        )
+
+    return ft.Container(
+        bgcolor=ft.Colors.PRIMARY_CONTAINER
+        if (selected and selection_mode)
+        else ft.Colors.TRANSPARENT,
+        border_radius=tokens.RADIUS_MD,
+        content=ft.Row(
+            controls=row_controls,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=tokens.SPACE_MD,
         ),

@@ -180,6 +180,21 @@ class ReportService:
             logger.error("Renew share error: %s", e)
             return False
 
+    async def get_featured_reports(self) -> list[dict]:
+        """Fetch list of public/community featured reports from gateway."""
+        try:
+            resp = await request_with_retry(
+                "GET",
+                f"{API_BASE_URL}/reports/featured",
+                timeout=10.0,
+            )
+            if resp.status_code == 200:
+                return resp.json().get("reports", [])
+            return []
+        except Exception as e:
+            logger.warning("Failed to fetch featured reports: %s", e)
+            return []
+
     @staticmethod
     def _generate_id() -> str:
         chars = string.ascii_lowercase + string.digits

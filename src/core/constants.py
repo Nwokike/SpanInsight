@@ -11,6 +11,16 @@ API_BASE_URL = "https://api.spaninsight.com"
 API_HEALTH_ENDPOINT = f"{API_BASE_URL}/health"
 API_CHAT_ENDPOINT = f"{API_BASE_URL}/chat"
 
+# ── Monetization & Ads ──────────────────────────────────────────────
+ADMOB_BANNER_ID = "ca-app-pub-5679949845754640/5628404223"
+ADMOB_INTERSTITIAL_ID = "ca-app-pub-5679949845754640/2361280962"
+
+# ── External & Public Web URLs ──────────────────────────────────────
+FORMS_PUBLIC_BASE_URL = "https://f.spaninsight.com"
+REPORTS_PUBLIC_BASE_URL = "https://report.spaninsight.com"
+PRIVACY_POLICY_URL = "https://spaninsight.com/privacy.html"
+TERMS_OF_SERVICE_URL = "https://spaninsight.com/terms.html"
+
 # Headers required by the gateway's security gate
 APP_CLIENT_ID = "spaninsight-mobile-v1"
 APP_VERSION = "2.0.0"
@@ -46,6 +56,7 @@ STORAGE_LAST_RESET = "spaninsight_last_reset"
 STORAGE_ONBOARDING_DONE = "spaninsight_onboarding_done"
 STORAGE_NOTEBOOKS = "spaninsight_notebooks"
 STORAGE_ACTIVE_SESSION = "spaninsight_active_session"
+STORAGE_DEFAULT_ACCELERATOR = "spaninsight_default_accelerator"
 STORAGE_DEFAULT_GPU = "spaninsight_default_gpu"
 STORAGE_DEFAULT_TPU = "spaninsight_default_tpu"
 STORAGE_DEFAULT_TIMEOUT = "spaninsight_default_timeout"
@@ -55,6 +66,14 @@ STORAGE_KEEP_ALIVE = "spaninsight_keep_alive"
 ERR_NETWORK = "No internet connection. Please check your network and try again."
 
 # ── Hardware Options ────────────────────────────────────────────────
+ACCELERATOR_OPTIONS = [
+    ("", "Standard CPU (Recommended)"),
+    ("t4", "T4 GPU · Free"),
+    ("l4", "L4 GPU · Pro"),
+    ("a100", "A100 GPU · Pro+"),
+    ("v5e1", "v5e1 TPU · Free"),
+    ("v6e1", "v6e1 TPU · Pro"),
+]
 GPU_OPTIONS = [
     ("", "None (CPU)"),
     ("T4", "T4 · Free"),

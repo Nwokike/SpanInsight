@@ -18,6 +18,7 @@ class Services:
     colab: object = None
     credits: object = None
     storage: object = None
+    projects: object = None
     page: object = None  # ft.Page ref for services that need it
 
 

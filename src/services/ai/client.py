@@ -11,7 +11,7 @@ from services.api_client import get_client, request_with_retry
 logger = logging.getLogger(__name__)
 
 # Pre-compiled regular expressions for robust extraction
-_THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
+_THINK_RE = re.compile(r"<think>.*?(?:</think>|$)", re.DOTALL | re.IGNORECASE)
 _PYTHON_BLOCK_RE = re.compile(r"```python\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE)
 _JSON_BLOCK_RE = re.compile(r"```json\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE)
 _GENERIC_BLOCK_RE = re.compile(r"```\s*(.*?)\s*```", re.DOTALL)
@@ -188,6 +188,26 @@ def extract_content(data: dict) -> str:
             content = strip_thinking(content)
             return content.strip()
     except IndexError, KeyError, TypeError:
+        pass
+    return ""
+
+
+def extract_reasoning(data: dict) -> str:
+    """Extract reasoning/thinking process from message reasoning_content, reasoning, or <think> tags."""
+    try:
+        choices = data.get("choices", [])
+        if choices:
+            message = choices[0].get("message", {})
+            reasoning = message.get("reasoning_content") or message.get("reasoning")
+            if reasoning and str(reasoning).strip():
+                return str(reasoning).strip()
+            content = message.get("content", "") or ""
+            match = re.search(
+                r"<think>(.*?)(?:</think>|$)", content, re.DOTALL | re.IGNORECASE
+            )
+            if match:
+                return match.group(1).strip()
+    except IndexError, KeyError, TypeError, AttributeError:
         pass
     return ""
 

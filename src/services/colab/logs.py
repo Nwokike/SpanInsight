@@ -2,6 +2,18 @@ import asyncio
 import os
 
 
+def _resolve_log_dir() -> str:
+    """Return the history log directory path."""
+    storage_env = os.getenv("FLET_APP_STORAGE_DATA")
+    if storage_env:
+        base_dir = storage_env
+    else:
+        base_dir = os.path.join(os.path.expanduser("~"), ".spaninsight")
+    log_dir = os.path.join(base_dir, "history")
+    os.makedirs(log_dir, exist_ok=True)
+    return log_dir
+
+
 async def get_log_impl(
     service,
     session_name: str,
@@ -12,9 +24,8 @@ async def get_log_impl(
 
     def _log():
         from colab_cli.history import HistoryLogger
-        from core.storage_patch import resolve_storage_dir
 
-        h = HistoryLogger(log_dir=os.path.join(resolve_storage_dir(), "history"))
+        h = HistoryLogger(log_dir=_resolve_log_dir())
         events = h.get_history(session_name)
         if event_type:
             events = [e for e in events if e.get("event_type") == event_type]
@@ -30,9 +41,8 @@ async def list_log_sessions_impl(service) -> list:
 
     def _list():
         from colab_cli.history import HistoryLogger
-        from core.storage_patch import resolve_storage_dir
 
-        h = HistoryLogger(log_dir=os.path.join(resolve_storage_dir(), "history"))
+        h = HistoryLogger(log_dir=_resolve_log_dir())
         return h.list_sessions()
 
     return await asyncio.to_thread(_list)
@@ -44,9 +54,8 @@ async def export_log_impl(service, session_name: str, output_path: str) -> bool:
     def _export():
         from colab_cli.converter import export_history
         from colab_cli.history import HistoryLogger
-        from core.storage_patch import resolve_storage_dir
 
-        h = HistoryLogger(log_dir=os.path.join(resolve_storage_dir(), "history"))
+        h = HistoryLogger(log_dir=_resolve_log_dir())
         events = h.get_history(session_name)
         if not events:
             return False

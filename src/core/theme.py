@@ -35,14 +35,14 @@ LIGHT_BORDER = "#E0E0E0"
 LIGHT_TEXT = "#1A1A2E"
 LIGHT_TEXT_DIM = "#757575"
 
-# ── Surface Cards (replaces glassmorphism — solid, performant) ──────
+# ── Surface Cards (solid, crisp Material 3 containers) ──────────────
 GLASS_BG_OPACITY = 0.06  # kept for backward compat in edge cases
 GLASS_BORDER_OPACITY = 0.12
-GLASS_BG = ft.Colors.with_opacity(0.05, ft.Colors.WHITE)
-GLASS_BORDER_COLOR = ft.Colors.with_opacity(0.10, ft.Colors.WHITE)
+GLASS_BG = ft.Colors.SURFACE_CONTAINER_LOW
+GLASS_BORDER_COLOR = ft.Colors.OUTLINE_VARIANT
 
-LIGHT_GLASS_BG = ft.Colors.with_opacity(0.04, ft.Colors.BLACK)
-LIGHT_GLASS_BORDER = ft.Colors.with_opacity(0.08, ft.Colors.BLACK)
+LIGHT_GLASS_BG = ft.Colors.SURFACE_CONTAINER_LOW
+LIGHT_GLASS_BORDER = ft.Colors.OUTLINE_VARIANT
 
 # ── Shadows ─────────────────────────────────────────────────────────
 SHADOW_PRIMARY = ft.Colors.with_opacity(0.20, PRIMARY)

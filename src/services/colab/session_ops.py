@@ -13,6 +13,7 @@ async def new_session_impl(
     keep_alive: bool = True,
 ) -> dict:
     """Create a new Colab session."""
+    await service._ensure_online()
 
     def _new():
         import uuid
@@ -52,12 +53,19 @@ async def new_session_impl(
                 uuid.uuid4(), variant=variant, accelerator=accelerator
             )
         except ColabRequestError as e:
-            if get_status_code(e) == 400 and accelerator != Accelerator.NONE:
-                raise ValueError(
-                    f"Accelerator '{accelerator.value}' rejected. "
-                    "You may not have quota. Try T4 (free) or CPU."
+            if accelerator != Accelerator.NONE:
+                logger.warning(
+                    "Accelerator '%s' rejected (status %s). Automatically falling back to standard CPU runtime...",
+                    accelerator.value,
+                    get_status_code(e),
                 )
-            raise
+                variant = Variant.DEFAULT
+                accelerator = Accelerator.NONE
+                res = st.client.assign(
+                    uuid.uuid4(), variant=variant, accelerator=accelerator
+                )
+            else:
+                raise
 
         from colab_cli.client import PostAssignmentResponse
 

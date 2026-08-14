@@ -33,7 +33,7 @@ def OnboardingScreen() -> ft.Control:
     page = ft.context.page
 
     slide_index, set_slide_index = ft.use_state(0)
-    auth_code, _set_auth_code = ft.use_state("")
+    auth_code, set_auth_code = ft.use_state("")
     auth_status, set_auth_status = ft.use_state("")
     auth_status_color, set_auth_status_color = ft.use_state(theme.SUCCESS)
     is_loading_auth, set_is_loading_auth = ft.use_state(False)
@@ -62,11 +62,10 @@ def OnboardingScreen() -> ft.Control:
         if state.is_authenticated or is_submitting_ref.current:
             return
 
-        code = (
-            auth_code_ref.current.value.strip()
-            if auth_code_ref.current and auth_code_ref.current.value
-            else auth_code.strip()
-        )
+        # Read value BEFORE any state changes trigger re-render
+        code = auth_code.strip()
+        if not code and auth_code_ref.current and auth_code_ref.current.value:
+            code = auth_code_ref.current.value.strip()
         if not code:
             set_auth_status("Please paste your authorization code first.")
             set_auth_status_color(theme.WARNING)
@@ -278,11 +277,13 @@ def OnboardingScreen() -> ft.Control:
                 ),
                 ft.TextField(
                     ref=auth_code_ref,
+                    value=auth_code,
                     label="Paste authorization code",
                     prefix_icon=ft.Icons.KEY_ROUNDED,
                     border_radius=tokens.RADIUS_MD,
                     text_size=tokens.FONT_MD,
                     visible=show_verify,
+                    on_change=lambda e: set_auth_code(e.control.value),
                     on_submit=lambda e: page.run_task(submit_code, e),
                 ),
                 ft.FilledTonalButton(

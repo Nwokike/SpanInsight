@@ -19,7 +19,7 @@ def use_debounce(value, delay_ms: int = 300):
     debounced, set_debounced = ft.use_state(value)
     timer = ft.use_ref(None)
 
-    def _schedule():
+    async def _schedule():
         old = timer.current
         if old is not None and not old.done():
             old.cancel()

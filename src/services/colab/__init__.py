@@ -4,6 +4,14 @@ import threading
 import time
 from collections.abc import Callable
 
+try:
+    import jupyter_kernel_client
+
+    if not hasattr(jupyter_kernel_client, "KernelClient"):
+        jupyter_kernel_client.KernelClient = jupyter_kernel_client.JupyterKernelClient
+except Exception:
+    pass
+
 logger = logging.getLogger("colab_service")
 
 
@@ -59,6 +67,7 @@ class ColabService:
         auth_method: str = "oauth2",
         keep_alive: bool = True,
     ) -> dict:
+        await self._ensure_online()
         from services.colab.session_ops import new_session_impl
 
         return await new_session_impl(self, name, gpu, tpu, auth_method, keep_alive)
@@ -99,6 +108,7 @@ class ColabService:
         intercept_oauth: bool = False,
         stdin_hook: Callable | None = None,
     ) -> list:
+        await self._ensure_online()
         from services.colab.execution import exec_code_impl
 
         return await exec_code_impl(
@@ -111,21 +121,6 @@ class ColabService:
             intercept_oauth,
             stdin_hook,
         )
-
-    def create_terminal_ws_url(self, raw_url: str, token: str) -> str:
-        from services.colab.terminal_client import create_terminal_ws_url as _create
-
-        return _create(raw_url, token)
-
-    def get_terminal_client(
-        self,
-        ws_url: str,
-        on_stdout: Callable[[str], None],
-        on_status: Callable[[str, bool], None] | None = None,
-    ):
-        from services.colab.terminal_client import ColabTerminalClient
-
-        return ColabTerminalClient(ws_url, on_stdout, on_status)
 
     async def ls(
         self,
@@ -144,6 +139,7 @@ class ColabService:
         session_name: str | None = None,
         auth_method: str = "oauth2",
     ) -> bool:
+        await self._ensure_online()
         from services.colab.files_ops import upload_impl
 
         return await upload_impl(
