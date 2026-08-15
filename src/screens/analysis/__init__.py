@@ -208,8 +208,8 @@ def AnalysisScreen() -> Control:
         _on_cell_change()
         return cell
 
-    def _run_cell(cell_id: str):
-        return run_cell_async(
+    async def _run_cell(cell_id: str):
+        await run_cell_async(
             cell_id,
             session_name,
             colab,
@@ -218,6 +218,10 @@ def AnalysisScreen() -> Control:
             set_is_executing,
             _on_cell_change,
         )
+
+    def _trigger_run_cell(cell_id: str):
+        if page:
+            page.run_task(_run_cell, cell_id)
 
     def _stop_cell(cell_id: str):
         cell = next((c for c in state.notebook_cells if c["id"] == cell_id), None)
@@ -640,7 +644,7 @@ def AnalysisScreen() -> Control:
         page=page,
         notebook_cells=state.notebook_cells,
         cell_refs_map=cell_refs_map,
-        on_run_cell=_run_cell,
+        on_run_cell=_trigger_run_cell,
         on_stop_cell=_stop_cell,
         on_delete_cell=_delete_cell,
         on_move_cell=_move_cell,
