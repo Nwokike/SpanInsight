@@ -194,7 +194,8 @@ def build_dataset_overview_card(
                         ft.Text(
                             sk,
                             size=tokens.FONT_XS,
-                            weight=ft.FontWeight.W_500,
+                            weight=ft.FontWeight.W_600,
+                            color=theme.PRIMARY,
                         )
                     )
                 ]
@@ -210,7 +211,15 @@ def build_dataset_overview_card(
                         )
                     else:
                         val_str = "—"
-                    cells.append(ft.DataCell(ft.Text(val_str, size=tokens.FONT_XS)))
+                    cells.append(
+                        ft.DataCell(
+                            ft.Text(
+                                val_str,
+                                size=tokens.FONT_XS,
+                                font_family="RobotoMono",
+                            )
+                        )
+                    )
                 if has_any_val:
                     stat_rows.append(ft.DataRow(cells=cells))
 
@@ -239,13 +248,19 @@ def build_dataset_overview_card(
                                         ft.DataTable(
                                             columns=stat_cols,
                                             rows=stat_rows,
-                                            heading_row_height=32,
-                                            data_row_max_height=28,
-                                            column_spacing=12,
+                                            heading_row_height=36,
+                                            data_row_max_height=32,
+                                            column_spacing=18,
+                                            horizontal_lines=ft.BorderSide(
+                                                1,
+                                                ft.Colors.with_opacity(
+                                                    0.08, ft.Colors.ON_SURFACE
+                                                ),
+                                            ),
                                             border=ft.Border.all(
                                                 1,
                                                 ft.Colors.with_opacity(
-                                                    0.1, ft.Colors.ON_SURFACE
+                                                    0.12, ft.Colors.ON_SURFACE
                                                 ),
                                             ),
                                             border_radius=tokens.RADIUS_SM,

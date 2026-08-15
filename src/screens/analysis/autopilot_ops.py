@@ -284,16 +284,20 @@ async def pick_and_upload_file_async(
                     parsed = json.loads(json_part)
                     from services.ai import analysis as ai_service
 
+                    _update_status("Compiling AI intelligence & suggestions…")
                     try:
-                        parsed["description"] = await ai_service.describe_dataset(
-                            parsed
+                        desc = await ai_service.describe_dataset(parsed)
+                        parsed["description"] = desc
+                        suggs = await ai_service.suggest(
+                            parsed, initial_description=desc
                         )
-                        parsed["suggestions"] = await ai_service.suggest(parsed)
+                        parsed["suggestions"] = suggs
+                        state.suggestions = suggs
                     except Exception as ai_err:
-                        logger.debug("Initial AI schema description failed: %s", ai_err)
+                        logger.warning(
+                            "Initial AI schema description failed: %s", ai_err
+                        )
                     set_schema_json(parsed)
-                    if page and fetch_suggestions_fn:
-                        page.run_task(fetch_suggestions_fn)
                 except Exception as ex:
                     logger.warning("Schema parsing failed: %s", ex)
 

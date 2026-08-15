@@ -9,10 +9,13 @@ from core.state import state
 
 
 def build_project_switcher(
-    page: ft.Page, project_service, on_project_selected=None
+    page: ft.Page,
+    project_service,
+    active_project_name: str | None = None,
+    on_project_selected=None,
 ) -> ft.Control:
     """Builds a compact header chip showing active project with a dropdown modal to switch/create projects."""
-    active_name = state.active_project_name or "Default Session"
+    active_name = active_project_name or state.active_project_name or "Project 1"
 
     async def _show_switcher_modal(_=None):
         if not project_service or not page:
@@ -41,10 +44,9 @@ def build_project_switcher(
         async def _create_new(_=None):
             _close()
             existing_list = await project_service.list_projects()
-            name = f"Analysis {len(existing_list) + 1}"
+            name = f"Project {len(existing_list) + 1}"
             new_p = await project_service.create_project(name=name)
             state.load_project(new_p)
-            state.current_tab = 1
             if on_project_selected:
                 on_project_selected(new_p)
             if page:
@@ -53,6 +55,7 @@ def build_project_switcher(
         items = []
         for p in projects:
             is_active = p.get("id") == state.active_project_id
+            proj_id = p.get("id")
             items.append(
                 ft.ListTile(
                     leading=ft.Icon(
@@ -62,20 +65,23 @@ def build_project_switcher(
                         color=theme.PRIMARY
                         if is_active
                         else ft.Colors.ON_SURFACE_VARIANT,
+                        size=18,
                     ),
                     title=ft.Text(
                         p.get("name", "Untitled"),
+                        size=tokens.FONT_SM,
                         weight=ft.FontWeight.W_600
                         if is_active
                         else ft.FontWeight.NORMAL,
-                        size=tokens.FONT_SM,
                     ),
                     subtitle=ft.Text(
-                        f"{p.get('primary_dataset') or 'Empty notebook'} · {p.get('cell_count', 0)} cells",
-                        size=tokens.FONT_XS,
+                        f"Dataset: {p.get('primary_dataset', 'None')} • {len(p.get('notebook_cells', []))} cells",
+                        size=tokens.FONT_XXS,
                         color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
-                    on_click=lambda e, pid=p["id"]: page.run_task(_select_project, pid),
+                    trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT_ROUNDED, size=16),
+                    on_click=lambda _, pid=proj_id: page.run_task(_select_project, pid),
+                    shape=ft.RoundedRectangleBorder(radius=tokens.RADIUS_SM),
                 )
             )
 
@@ -83,10 +89,9 @@ def build_project_switcher(
             items.append(
                 ft.Container(
                     content=ft.Text(
-                        "No saved projects yet. Start an analysis to create one.",
+                        "No projects found. Tap '+' to create one.",
                         size=tokens.FONT_SM,
                         color=ft.Colors.ON_SURFACE_VARIANT,
-                        text_align=ft.TextAlign.CENTER,
                     ),
                     padding=tokens.SPACE_MD,
                 )
@@ -129,15 +134,17 @@ def build_project_switcher(
                     weight=ft.FontWeight.W_600,
                     color=theme.PRIMARY,
                     max_lines=1,
-                    overflow="ellipsis",
+                    overflow=ft.TextOverflow.ELLIPSIS,
                 ),
-                ft.Icon(ft.Icons.ARROW_DROP_DOWN_ROUNDED, size=18, color=theme.PRIMARY),
+                ft.Icon(ft.Icons.ARROW_DROP_DOWN_ROUNDED, size=16, color=theme.PRIMARY),
             ],
-            spacing=4,
+            spacing=3,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            tight=True,
         ),
         padding=ft.Padding(8, 4, 8, 4),
-        border_radius=tokens.RADIUS_MD,
+        height=30,
+        border_radius=tokens.RADIUS_SM,
         bgcolor=ft.Colors.with_opacity(0.08, theme.PRIMARY),
         on_click=lambda e: page.run_task(_show_switcher_modal) if page else None,
         ink=True,
