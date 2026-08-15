@@ -269,7 +269,6 @@ def AnalysisScreen() -> Control:
                 )
                 if result:
                     set_suggestions(result)
-                    schema_json["suggestions"] = result
             except Exception as e:
                 logger.warning("Suggestions failed: %s", e)
             finally:
