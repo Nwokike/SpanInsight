@@ -54,7 +54,9 @@ def HomeScreen() -> ft.Control:
 
     async def _on_create_new_project(_=None):
         if services.projects:
-            new_p = await services.projects.create_project(name="New Analysis")
+            existing = await services.projects.list_projects()
+            name = f"Project {len(existing) + 1}"
+            new_p = await services.projects.create_project(name=name)
             state.load_project(new_p)
             controller.navigate_tab(1)
 

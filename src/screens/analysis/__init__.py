@@ -328,11 +328,11 @@ def AnalysisScreen() -> Control:
             except Exception as ex:
                 logger.debug("Project auto-rename: %s", ex)
 
-    async def _create_new_analysis(_=None):
+    async def _create_new_project(_=None):
         if not projects:
             return
         existing_list = await projects.list_projects()
-        name = f"Analysis {len(existing_list) + 1}"
+        name = f"Project {len(existing_list) + 1}"
         new_p = await projects.create_project(
             name=name, hardware=state.session_hardware
         )
@@ -341,7 +341,7 @@ def AnalysisScreen() -> Control:
         set_suggestions([])
         set_cells_version(cells_version + 1)
         if page:
-            page.snack_bar = ft.SnackBar(ft.Text(f"✨ Started {name}"))
+            page.snack_bar = ft.SnackBar(ft.Text(f"✨ Created {name}"))
             page.snack_bar.open = True
             page.update()
 
@@ -528,8 +528,8 @@ def AnalysisScreen() -> Control:
         on_project_selected=lambda p: set_cells_version(cells_version + 1),
     )
 
-    new_analysis_btn = ft.FilledButton(
-        "+ New Analysis",
+    new_project_btn = ft.FilledButton(
+        "+ New Project",
         icon=ft.Icons.ADD_ROUNDED,
         style=ft.ButtonStyle(
             bgcolor=ft.Colors.with_opacity(0.12, theme.PRIMARY),
@@ -537,7 +537,7 @@ def AnalysisScreen() -> Control:
             shape=ft.RoundedRectangleBorder(radius=tokens.RADIUS_SM),
             padding=ft.Padding(12, 6, 12, 6),
         ),
-        on_click=lambda _: page.run_task(_create_new_analysis),
+        on_click=lambda _: page.run_task(_create_new_project),
     )
 
     dataset_label = state.active_project_dataset or (
@@ -587,7 +587,7 @@ def AnalysisScreen() -> Control:
                             [project_chip, dataset_indicator],
                             spacing=tokens.SPACE_XS,
                         ),
-                        new_analysis_btn,
+                        new_project_btn,
                         ft.Row(
                             [mode_switch_bar, session_chip],
                             spacing=tokens.SPACE_XS,
