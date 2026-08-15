@@ -75,19 +75,36 @@ async def submit_prompt_async(
         set_is_generating(False)
         await run_cell_fn(cell["id"])
 
-        # Auto-correct on error
-        if cell.get("outputs"):
-            last_out = cell["outputs"][-1]
-            if last_out.get("output_type") == "error":
-                error_text = "\n".join(last_out.get("traceback", []))
-                corrected = await ai_service.generate_corrected_code(
-                    prompt, code, error_text, schema_json
-                )
-                if corrected and corrected != code:
-                    cell["source"] = corrected
-                    cell["outputs"] = []
-                    on_cell_change()
-                    await run_cell_fn(cell["id"])
+        # Auto-correct / Self-Healing on error
+        max_healing_retries = 2
+        for attempt in range(max_healing_retries):
+            if cell.get("outputs"):
+                last_out = cell["outputs"][-1]
+                if last_out.get("output_type") == "error":
+                    if page:
+                        page.snack_bar = ft.SnackBar(
+                            ft.Text(
+                                f"🩹 AI self-healing code execution (attempt {attempt + 1})..."
+                            ),
+                            duration=2500,
+                        )
+                        page.snack_bar.open = True
+                        page.update()
+                    error_text = "\n".join(last_out.get("traceback", []))
+                    current_bad_code = cell.get("source", code)
+                    corrected = await ai_service.generate_corrected_code(
+                        prompt, current_bad_code, error_text, schema_json
+                    )
+                    if corrected and corrected != current_bad_code:
+                        cell["source"] = corrected
+                        cell["outputs"] = []
+                        if on_cell_change:
+                            on_cell_change()
+                        await run_cell_fn(cell["id"])
+                    else:
+                        break
+                else:
+                    break
 
         # Concurrently generate AI executive narration and follow-up suggestions for the completed cell
         async def _narrate_and_suggest(c):

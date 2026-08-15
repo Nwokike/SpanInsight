@@ -1,15 +1,10 @@
-"""InsightCard — SpanInsight's signature AI Data Intelligence Card.
-
-Renders deterministic VM execution outputs (charts, data tables, metric cards),
-AI executive narration, collapsible raw stdout output drawer, collapsible Python
-code drawer, and interactive follow-up suggestion chips.
-"""
+"""Insight Card component — presents analytical takeaways, visualizations, and raw telemetry."""
 
 from __future__ import annotations
 
 import base64
 import logging
-from collections.abc import Callable
+import re
 
 import flet as ft
 
@@ -19,91 +14,141 @@ from core import theme, tokens
 logger = logging.getLogger("InsightCard")
 
 
+def _try_parse_dataframe_text(text: str) -> ft.Control | None:
+    """Attempts to parse standard Pandas DataFrame text output into a styled DataTable."""
+    lines = [line.strip() for line in text.strip().split("\n") if line.strip()]
+    if len(lines) < 2:
+        return None
+
+    # Check if lines have whitespace-separated tabular structure
+    header_line = lines[0]
+    cols = re.split(r"\s{2,}", header_line)
+    if len(cols) < 2:
+        return None
+
+    try:
+        data_rows = []
+        for line in lines[1:50]:  # Cap at 50 rows for performance
+            parts = re.split(r"\s{2,}", line)
+            if len(parts) == len(cols):
+                cells = [
+                    ft.DataCell(
+                        ft.Text(
+                            p,
+                            size=tokens.FONT_XS,
+                            font_family="RobotoMono"
+                            if re.match(r"^-?\d+(\.\d+)?$", p)
+                            else None,
+                        )
+                    )
+                    for p in parts
+                ]
+                data_rows.append(ft.DataRow(cells=cells))
+
+        if len(data_rows) >= 1:
+            data_cols = [
+                ft.DataColumn(
+                    ft.Text(
+                        c,
+                        size=tokens.FONT_XS,
+                        weight=ft.FontWeight.W_600,
+                        color=theme.PRIMARY,
+                    )
+                )
+                for c in cols
+            ]
+            table = ft.DataTable(
+                columns=data_cols,
+                rows=data_rows,
+                heading_row_height=34,
+                data_row_max_height=30,
+                column_spacing=16,
+                horizontal_lines=ft.BorderSide(
+                    1, ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE)
+                ),
+                border=ft.Border.all(
+                    1, ft.Colors.with_opacity(0.12, ft.Colors.ON_SURFACE)
+                ),
+                border_radius=tokens.RADIUS_SM,
+            )
+            return ft.Container(
+                content=ft.Row([table], scroll=ft.ScrollMode.AUTO),
+                border_radius=tokens.RADIUS_SM,
+            )
+    except Exception:
+        pass
+    return None
+
+
 def build_insight_card(
     block: dict,
-    index: int,
-    page: ft.Page,
-    on_run_code: Callable[[str], None] | None = None,
-    on_pin_report: Callable[[dict], None] | None = None,
-    on_suggestion_selected: Callable[[str], None] | None = None,
-    on_retry_ai: Callable[[str], None] | None = None,
-    on_change: Callable[[], None] | None = None,
-) -> ft.Container:
-    """Build a comprehensive SpanInsight Insight Card with state-driven drawers."""
-    prompt = block.get("prompt") or block.get("name") or f"Analysis #{index + 1}"
-    code = block.get("code") or block.get("source") or ""
-    is_failed = block.get("failed", False)
-    is_pinned = block.get("pinned", False)
+    index: int = 0,
+    page: ft.Page | None = None,
+    on_run_code=None,
+    on_retry_ai=None,
+    on_delete=None,
+    on_pin=None,
+    on_change=None,
+    on_suggestion_selected=None,
+) -> ft.Control:
+    """Builds a card representing an analytical unit with intelligence takeaways and outputs."""
     is_running = block.get("is_running", False)
-    show_raw = block.get("_show_raw", False)
+    is_failed = block.get("failed", False)
+    prompt = block.get("prompt", "Data Analysis")
+    code = block.get("code") or block.get("source", "")
     show_code = block.get("_show_code", False)
+    show_raw = block.get("_show_raw", False)
+    is_pinned = block.get("pinned", False)
 
-    controls: list[ft.Control] = []
+    controls = []
 
-    # ── 1. Card Header ──────────────────────────────────────────
-    status_icon = ft.Icon(
-        ft.Icons.ERROR_OUTLINE_ROUNDED if is_failed else ft.Icons.AUTO_AWESOME_ROUNDED,
-        size=18,
-        color=theme.ERROR if is_failed else theme.ACCENT,
-    )
-    title_text = ft.Text(
-        prompt,
-        size=tokens.FONT_MD,
-        weight=ft.FontWeight.W_700,
-        expand=True,
-        max_lines=2,
-        overflow=ft.TextOverflow.ELLIPSIS,
-    )
-
-    action_buttons = []
-
-    # Copy action
-    async def _on_copy(_):
-        try:
-            content_to_copy = code
-            if block.get("stdout"):
-                content_to_copy += f"\n\n# Output:\n{block.get('stdout')}"
-            await ft.Clipboard().set(content_to_copy)
-            if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text("Code and outputs copied to clipboard!"),
-                    duration=2000,
-                )
-                page.snack_bar.open = True
-                page.update()
-        except Exception as ex:
-            logger.warning("Copy failed: %s", ex)
-
-    copy_btn = ft.IconButton(
-        icon=ft.Icons.CONTENT_COPY_ROUNDED,
+    # ── 1. Top Header Row ─────────────────────────────────────────
+    pin_btn = ft.IconButton(
+        icon=ft.Icons.PUSH_PIN_ROUNDED if is_pinned else ft.Icons.PUSH_PIN_OUTLINED,
+        icon_color=theme.ACCENT if is_pinned else ft.Colors.ON_SURFACE_VARIANT,
         icon_size=16,
-        tooltip="Copy Code & Output",
-        on_click=lambda e: page.run_task(_on_copy, e),
+        tooltip="Unpin from Report" if is_pinned else "Pin to Report",
+        on_click=lambda _: on_pin(block) if on_pin else None,
+        style=ft.ButtonStyle(padding=2),
     )
-    action_buttons.append(copy_btn)
 
-    # Pin to report action
-    if on_pin_report and not is_failed:
-        pin_btn = ft.IconButton(
-            icon=ft.Icons.PUSH_PIN_ROUNDED if is_pinned else ft.Icons.PUSH_PIN_OUTLINED,
-            icon_color=theme.ACCENT if is_pinned else ft.Colors.ON_SURFACE_VARIANT,
-            icon_size=18,
-            tooltip="Pinned to Report" if is_pinned else "Pin to Report",
-            on_click=lambda _: on_pin_report(block),
-        )
-        action_buttons.append(pin_btn)
+    delete_btn = ft.IconButton(
+        icon=ft.Icons.CLOSE_ROUNDED,
+        icon_color=ft.Colors.ON_SURFACE_VARIANT,
+        icon_size=16,
+        tooltip="Remove Step",
+        on_click=lambda _: on_delete() if on_delete else None,
+        style=ft.ButtonStyle(padding=2),
+    )
 
     header_row = ft.Row(
-        [
-            status_icon,
-            title_text,
-            ft.Row(action_buttons, spacing=tokens.SPACE_XXS),
+        controls=[
+            ft.Row(
+                [
+                    ft.Icon(
+                        ft.Icons.AUTO_AWESOME_ROUNDED
+                        if not is_failed
+                        else ft.Icons.ERROR_OUTLINE_ROUNDED,
+                        size=16,
+                        color=theme.PRIMARY if not is_failed else theme.ERROR,
+                    ),
+                    ft.Text(
+                        prompt,
+                        size=tokens.FONT_SM,
+                        weight=ft.FontWeight.W_600,
+                        color=ft.Colors.ON_SURFACE,
+                    ),
+                ],
+                spacing=tokens.SPACE_XS,
+                expand=True,
+            ),
+            ft.Row([pin_btn, delete_btn], spacing=0),
         ],
-        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
     )
     controls.append(header_row)
 
-    # ── 2. Loading State ────────────────────────────────────────
+    # ── 2. Running Spinner ────────────────────────────────────────
     if is_running:
         controls.append(
             ft.Container(
@@ -111,8 +156,8 @@ def build_insight_card(
                     [
                         ft.ProgressRing(width=16, height=16, stroke_width=2),
                         ft.Text(
-                            "Running analysis on Colab VM...",
-                            size=tokens.FONT_SM,
+                            "Executing analysis code...",
+                            size=tokens.FONT_XS,
                             color=ft.Colors.ON_SURFACE_VARIANT,
                         ),
                     ],
@@ -133,18 +178,30 @@ def build_insight_card(
     # ── 3. Visual Execution Output (Charts & Data Tables) ────────
     outputs = block.get("outputs", [])
     figure_png = block.get("figure_png")
-    stdout_text = block.get("stdout", "").strip()
+    raw_output_full = block.get("stdout", "").strip()
 
-    # Extract base64 image if present in outputs
-    if not figure_png:
-        for out in outputs:
-            data = out.get("data", {})
-            if "image/png" in data:
-                try:
-                    figure_png = base64.b64decode(data["image/png"])
-                    break
-                except Exception:
-                    pass
+    # Extract base64 image and complete raw output text
+    text_plain = ""
+    for out in outputs:
+        if isinstance(out, dict):
+            otype = out.get("output_type") or out.get("type", "")
+            if otype == "stream":
+                txt = out.get("text", "")
+                raw_output_full += ("\n" if raw_output_full else "") + str(txt)
+            elif otype == "error":
+                tb = "\n".join(out.get("traceback", []))
+                raw_output_full += ("\n" if raw_output_full else "") + tb
+            elif otype in ("execute_result", "display_data"):
+                data = out.get("data", {})
+                if "image/png" in data and not figure_png:
+                    try:
+                        figure_png = base64.b64decode(data["image/png"])
+                    except Exception:
+                        pass
+                if "text/plain" in data:
+                    tp = str(data["text/plain"])
+                    text_plain += ("\n" if text_plain else "") + tp
+                    raw_output_full += ("\n" if raw_output_full else "") + tp
 
     # Render Chart if available
     if figure_png:
@@ -167,41 +224,50 @@ def build_insight_card(
         except Exception as ex:
             logger.error("Chart render error: %s", ex)
 
-    # Extract text results & table output
-    text_plain = ""
-    for out in outputs:
-        otype = out.get("output_type") or out.get("type", "")
-        if otype == "stream":
-            stdout_text += ("\n" if stdout_text else "") + out.get("text", "")
-        elif otype in ("execute_result", "display_data"):
-            data = out.get("data", {})
-            if "text/plain" in data:
-                text_plain += ("\n" if text_plain else "") + data["text/plain"]
-
-    result_val = block.get("result") or text_plain
+    # Render Structured Table or Rich Text Output
+    result_val = block.get("result") or text_plain or raw_output_full
     if result_val and str(result_val).strip() and str(result_val).strip() != "None":
-        parsed_ctrl = parse_ansi_to_flet_text(
-            str(result_val).strip(), default_size=tokens.FONT_SM
-        )
-        controls.append(
-            ft.Container(
-                content=parsed_ctrl,
-                padding=tokens.SPACE_SM,
-                bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ON_SURFACE),
-                border_radius=tokens.RADIUS_SM,
-                border=ft.Border.all(
-                    1, ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE)
-                ),
+        val_str = str(result_val).strip()
+        table_ctrl = _try_parse_dataframe_text(val_str)
+        if table_ctrl:
+            controls.append(table_ctrl)
+        else:
+            parsed_ctrl = parse_ansi_to_flet_text(val_str, default_size=tokens.FONT_SM)
+            controls.append(
+                ft.Container(
+                    content=parsed_ctrl,
+                    padding=tokens.SPACE_SM,
+                    bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ON_SURFACE),
+                    border_radius=tokens.RADIUS_SM,
+                    border=ft.Border.all(
+                        1, ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE)
+                    ),
+                )
             )
-        )
 
-    # ── 4. Collapsible Raw Output Drawer (State-driven) ─────────
-    if stdout_text and stdout_text != str(result_val).strip():
+    # ── 4. Collapsible Raw Output Drawer (Complete Telemetry) ────
+    if raw_output_full:
 
         def _toggle_raw_output(_):
             block["_show_raw"] = not show_raw
             if on_change:
                 on_change()
+
+        async def _copy_raw_output(_=None):
+            if not page:
+                return
+            try:
+                if hasattr(page, "set_clipboard_async"):
+                    await page.set_clipboard_async(raw_output_full)
+                else:
+                    await ft.Clipboard().set(raw_output_full)
+                page.snack_bar = ft.SnackBar(
+                    ft.Text("📋 Raw output copied to clipboard!"), duration=2000
+                )
+                page.snack_bar.open = True
+                page.update()
+            except Exception as ex:
+                logger.error("Copy raw output failed: %s", ex)
 
         raw_toggle_btn = ft.TextButton(
             "Hide Raw Output" if show_raw else "View Raw Output",
@@ -216,12 +282,49 @@ def build_insight_card(
             ft.Row([raw_toggle_btn], alignment=ft.MainAxisAlignment.START)
         ]
         if show_raw:
+            raw_lines = max(raw_output_full.count("\n") + 1, 1)
+            raw_height = min(max(raw_lines * 18 + 20, 50), 320)
             raw_output_box = ft.Container(
-                content=parse_ansi_to_flet_text(
-                    stdout_text, default_size=tokens.FONT_XS
+                content=ft.Column(
+                    [
+                        ft.Row(
+                            [
+                                ft.Text(
+                                    "RAW KERNEL OUTPUT",
+                                    size=8,
+                                    color=ft.Colors.with_opacity(
+                                        0.4, ft.Colors.ON_SURFACE
+                                    ),
+                                    weight=ft.FontWeight.W_600,
+                                ),
+                                ft.IconButton(
+                                    ft.Icons.COPY_ALL_ROUNDED,
+                                    icon_size=12,
+                                    tooltip="Copy Raw Output",
+                                    style=ft.ButtonStyle(padding=2),
+                                    on_click=lambda e: page.run_task(
+                                        _copy_raw_output, e
+                                    ),
+                                ),
+                            ],
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        ),
+                        ft.Container(
+                            content=ft.ListView(
+                                [
+                                    parse_ansi_to_flet_text(
+                                        raw_output_full, default_size=tokens.FONT_XS
+                                    )
+                                ],
+                                scroll=ft.ScrollMode.AUTO,
+                            ),
+                            height=raw_height,
+                        ),
+                    ],
+                    spacing=2,
                 ),
                 padding=tokens.SPACE_SM,
-                bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+                bgcolor=theme.TERMINAL_BG,
                 border_radius=tokens.RADIUS_SM,
             )
             drawer_controls.append(raw_output_box)

@@ -57,10 +57,13 @@ async def copy_code(page: ft.Page, code: str):
     if not code or not code.strip():
         return
     try:
-        await ft.Clipboard().set(code.strip())
+        if page and hasattr(page, "set_clipboard_async"):
+            await page.set_clipboard_async(code.strip())
+        else:
+            await ft.Clipboard().set(code.strip())
         if page:
             page.snack_bar = ft.SnackBar(
-                ft.Text("Code copied to clipboard!"), duration=2000
+                ft.Text("📋 Code copied to clipboard!"), duration=2000
             )
             page.snack_bar.open = True
             page.update()
@@ -116,10 +119,13 @@ async def copy_output(page: ft.Page, outputs: list):
 
     if final_text:
         try:
-            await ft.Clipboard().set(final_text)
+            if page and hasattr(page, "set_clipboard_async"):
+                await page.set_clipboard_async(final_text)
+            else:
+                await ft.Clipboard().set(final_text)
             if page:
                 page.snack_bar = ft.SnackBar(
-                    ft.Text("Output copied to clipboard!"), duration=2000
+                    ft.Text("📋 Output copied to clipboard!"), duration=2000
                 )
                 page.snack_bar.open = True
                 page.update()
