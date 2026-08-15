@@ -40,7 +40,9 @@ def build_project_switcher(
 
         async def _create_new(_=None):
             _close()
-            new_p = await project_service.create_project(name="New Analysis")
+            existing_list = await project_service.list_projects()
+            name = f"Analysis {len(existing_list) + 1}"
+            new_p = await project_service.create_project(name=name)
             state.load_project(new_p)
             state.current_tab = 1
             if on_project_selected:

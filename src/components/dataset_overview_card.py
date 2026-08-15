@@ -264,19 +264,32 @@ def build_dataset_overview_card(
 
     # ── 5. Starter Suggestion Chips ─────────────────────────────
     if suggestions and on_suggestion_selected:
-        chips = [
-            ft.ActionChip(
-                label=ft.Text(s, size=tokens.FONT_XS),
-                on_click=lambda _, p=s: on_suggestion_selected(p),
+        chips = []
+        for s in suggestions[:5]:
+            if isinstance(s, dict):
+                label_txt = s.get("label") or s.get("prompt", "")
+                icon_txt = s.get("icon", "✨")
+                prompt_val = s.get("prompt") or label_txt
+                disp = f"{icon_txt} {label_txt}".strip()
+            else:
+                prompt_val = str(s)
+                disp = str(s)
+
+            chips.append(
+                ft.ActionChip(
+                    label=ft.Text(disp, size=tokens.FONT_XS),
+                    tooltip=prompt_val,
+                    on_click=lambda _, p=prompt_val: on_suggestion_selected(p),
+                )
             )
-            for s in suggestions[:4]
-        ]
+
         controls.append(
             ft.Column(
                 [
                     ft.Text(
                         "Recommended analyses to explore:",
                         size=tokens.FONT_XS,
+                        weight=ft.FontWeight.W_600,
                         color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
                     ft.Row(chips, wrap=True, spacing=tokens.SPACE_XXS),

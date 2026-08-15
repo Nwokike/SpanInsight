@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 
 import flet as ft
 from flet import Control
@@ -234,28 +235,47 @@ def AnalysisScreen() -> Control:
             page.snack_bar.open = True
             page.update()
 
-    # ── Suggestions ──────────────────────────────────────────────
-    async def _fetch_suggestions():
+    # ── AI Overview & Suggestions ────────────────────────────────
+    async def _fetch_ai_overview():
         if not schema_json:
             return
-        set_suggestions_loading(True)
-        try:
-            from services.ai import analysis as ai_service
+        # 1. Fetch AI description if missing
+        if not schema_json.get("description"):
+            try:
+                from services.ai import analysis as ai_service
 
-            ctx = "\n".join(
-                c.get("source", "")[:80]
-                for c in state.notebook_cells
-                if c.get("type") == "code" and c.get("source")
-            )
-            result = await ai_service.suggest(schema_json, analysis_context=ctx)
-            if result:
-                set_suggestions(result)
-        except Exception as e:
-            logger.warning("Suggestions failed: %s", e)
-        finally:
-            set_suggestions_loading(False)
+                desc = await ai_service.describe_dataset(schema_json)
+                if desc:
+                    schema_json["description"] = desc
+                    set_schema_json(dict(schema_json))
+                    set_cells_version(cells_version + 1)
+            except Exception as ex:
+                logger.warning("AI describe_dataset failed: %s", ex)
 
-    ft.use_effect(_fetch_suggestions, [bool(schema_json)])
+        # 2. Fetch AI starter suggestions if missing
+        if not suggestions:
+            set_suggestions_loading(True)
+            try:
+                from services.ai import analysis as ai_service
+
+                ctx = "\n".join(
+                    c.get("source", "")[:80]
+                    for c in state.notebook_cells
+                    if c.get("type") == "code" and c.get("source")
+                )
+                desc = schema_json.get("description", "")
+                result = await ai_service.suggest(
+                    schema_json, initial_description=desc, analysis_context=ctx
+                )
+                if result:
+                    set_suggestions(result)
+                    schema_json["suggestions"] = result
+            except Exception as e:
+                logger.warning("Suggestions failed: %s", e)
+            finally:
+                set_suggestions_loading(False)
+
+    ft.use_effect(_fetch_ai_overview, [bool(schema_json), cells_version])
 
     # ── Prompt & File actions ────────────────────────────────────
     async def _submit_prompt(p: str):
@@ -267,7 +287,7 @@ def AnalysisScreen() -> Control:
             page,
             _add_cell,
             _run_cell,
-            _fetch_suggestions,
+            _fetch_ai_overview,
             set_is_generating,
             set_prompt_text,
             _on_cell_change,
@@ -280,10 +300,50 @@ def AnalysisScreen() -> Control:
             page,
             _add_cell,
             _run_cell,
-            _fetch_suggestions,
+            _fetch_ai_overview,
             set_schema_json,
             set_is_generating,
         )
+        # Rename project if default
+        if projects and state.active_project_id and state.active_project_dataset:
+            try:
+                proj = await projects.get_project(state.active_project_id)
+                if proj and (
+                    proj["name"].startswith("Analysis ")
+                    or proj["name"].startswith("Project ")
+                ):
+                    d_stem = Path(state.active_project_dataset).stem
+                    all_p = await projects.list_projects()
+                    similar = [
+                        p
+                        for p in all_p
+                        if p.get("primary_dataset") == state.active_project_dataset
+                    ]
+                    if len(similar) <= 1:
+                        proj["name"] = d_stem
+                    else:
+                        proj["name"] = f"{d_stem} ({len(similar)})"
+                    await projects.save_project(proj)
+                    set_cells_version(cells_version + 1)
+            except Exception as ex:
+                logger.debug("Project auto-rename: %s", ex)
+
+    async def _create_new_analysis(_=None):
+        if not projects:
+            return
+        existing_list = await projects.list_projects()
+        name = f"Analysis {len(existing_list) + 1}"
+        new_p = await projects.create_project(
+            name=name, hardware=state.session_hardware
+        )
+        state.load_project(new_p)
+        set_schema_json({})
+        set_suggestions([])
+        set_cells_version(cells_version + 1)
+        if page:
+            page.snack_bar = ft.SnackBar(ft.Text(f"✨ Started {name}"))
+            page.snack_bar.open = True
+            page.update()
 
     async def _toggle_voice():
         if is_recording:
@@ -395,40 +455,89 @@ def AnalysisScreen() -> Control:
         on_stop=lambda _: setattr(state, "autopilot_cancelled", True),
     )
 
-    mode_toggle_btn = ft.Container(
+    # Segmented Mode Switcher (KTV-Player style)
+    insight_bg = theme.PRIMARY if not is_expert_mode else ft.Colors.TRANSPARENT
+    insight_fg = ft.Colors.WHITE if not is_expert_mode else ft.Colors.ON_SURFACE_VARIANT
+    expert_bg = theme.PRIMARY if is_expert_mode else ft.Colors.TRANSPARENT
+    expert_fg = ft.Colors.WHITE if is_expert_mode else ft.Colors.ON_SURFACE_VARIANT
+
+    mode_switch_bar = ft.Container(
+        padding=ft.Padding(3, 3, 3, 3),
+        border_radius=tokens.RADIUS_MD,
+        bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE),
+        border=ft.Border.all(1, ft.Colors.with_opacity(0.12, ft.Colors.ON_SURFACE)),
         content=ft.Row(
-            [
-                ft.Icon(
-                    ft.Icons.AUTO_AWESOME_ROUNDED
-                    if not is_expert_mode
-                    else ft.Icons.TERMINAL_ROUNDED,
-                    size=14,
-                    color=theme.ACCENT if not is_expert_mode else theme.PRIMARY,
+            controls=[
+                ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Icon(
+                                ft.Icons.AUTO_AWESOME_ROUNDED,
+                                size=13,
+                                color=insight_fg,
+                            ),
+                            ft.Text(
+                                "Insight View",
+                                size=tokens.FONT_XS,
+                                weight=ft.FontWeight.BOLD
+                                if not is_expert_mode
+                                else ft.FontWeight.NORMAL,
+                                color=insight_fg,
+                            ),
+                        ],
+                        spacing=4,
+                        alignment=ft.MainAxisAlignment.CENTER,
+                    ),
+                    bgcolor=insight_bg,
+                    border_radius=tokens.RADIUS_SM,
+                    padding=ft.Padding(10, 5, 10, 5),
+                    ink=True,
+                    on_click=lambda _: set_is_expert_mode(False),
                 ),
-                ft.Text(
-                    "Insight View" if not is_expert_mode else "Expert Mode",
-                    size=tokens.FONT_XS,
-                    weight=ft.FontWeight.W_600,
-                    color=theme.ACCENT if not is_expert_mode else theme.PRIMARY,
+                ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Icon(ft.Icons.CODE_ROUNDED, size=13, color=expert_fg),
+                            ft.Text(
+                                "Expert Mode",
+                                size=tokens.FONT_XS,
+                                weight=ft.FontWeight.BOLD
+                                if is_expert_mode
+                                else ft.FontWeight.NORMAL,
+                                color=expert_fg,
+                            ),
+                        ],
+                        spacing=4,
+                        alignment=ft.MainAxisAlignment.CENTER,
+                    ),
+                    bgcolor=expert_bg,
+                    border_radius=tokens.RADIUS_SM,
+                    padding=ft.Padding(10, 5, 10, 5),
+                    ink=True,
+                    on_click=lambda _: set_is_expert_mode(True),
                 ),
             ],
-            spacing=tokens.SPACE_XXS,
+            spacing=2,
+            tight=True,
         ),
-        padding=ft.Padding(
-            tokens.SPACE_SM, tokens.SPACE_XXS, tokens.SPACE_SM, tokens.SPACE_XXS
-        ),
-        border_radius=tokens.RADIUS_SM,
-        bgcolor=ft.Colors.with_opacity(
-            0.1, theme.ACCENT if not is_expert_mode else theme.PRIMARY
-        ),
-        tooltip="Toggle between SpanInsight Insight Cards and Expert Notebook Cells",
-        on_click=lambda _: set_is_expert_mode(not is_expert_mode),
     )
 
     project_chip = build_project_switcher(
         page,
         projects,
         on_project_selected=lambda p: set_cells_version(cells_version + 1),
+    )
+
+    new_analysis_btn = ft.FilledButton(
+        "+ New Analysis",
+        icon=ft.Icons.ADD_ROUNDED,
+        style=ft.ButtonStyle(
+            bgcolor=ft.Colors.with_opacity(0.12, theme.PRIMARY),
+            color=theme.PRIMARY,
+            shape=ft.RoundedRectangleBorder(radius=tokens.RADIUS_SM),
+            padding=ft.Padding(12, 6, 12, 6),
+        ),
+        on_click=lambda _: page.run_task(_create_new_analysis),
     )
 
     dataset_label = state.active_project_dataset or (
@@ -474,9 +583,13 @@ def AnalysisScreen() -> Control:
             ft.Container(
                 content=ft.Row(
                     controls=[
-                        project_chip,
                         ft.Row(
-                            [dataset_indicator, mode_toggle_btn, session_chip],
+                            [project_chip, dataset_indicator],
+                            spacing=tokens.SPACE_XS,
+                        ),
+                        new_analysis_btn,
+                        ft.Row(
+                            [mode_switch_bar, session_chip],
                             spacing=tokens.SPACE_XS,
                         ),
                     ],
@@ -511,9 +624,10 @@ def AnalysisScreen() -> Control:
         ),
     )
 
+    # + Code and + Markdown ONLY visible in Expert Mode
     add_cell_row = build_add_cell_row(
         on_add_cell=_add_cell,
-        visible=bool(state.notebook_cells) or is_expert_mode,
+        visible=is_expert_mode,
     )
 
     has_dataset = bool(schema_json) or bool(state.notebook_cells)
@@ -543,7 +657,65 @@ def AnalysisScreen() -> Control:
 
     if cell_controls:
         feed_controls.extend(cell_controls)
+
+    # In Expert Mode: show + Code / + Markdown
+    if is_expert_mode:
         feed_controls.append(add_cell_row)
+
+    # In Insight View: show Suggestions at the bottom of the feed
+    if suggestions and not is_expert_mode and has_dataset:
+        sugg_chips_feed = []
+        for s in suggestions[:4]:
+            if isinstance(s, dict):
+                label_txt = s.get("label") or s.get("prompt", "")
+                icon_txt = s.get("icon", "✨")
+                prompt_val = s.get("prompt") or label_txt
+                disp = f"{icon_txt} {label_txt}".strip()
+            else:
+                prompt_val = str(s)
+                disp = str(s)
+
+            sugg_chips_feed.append(
+                ft.ActionChip(
+                    label=ft.Text(disp, size=tokens.FONT_XS),
+                    tooltip=prompt_val,
+                    on_click=lambda _, p=prompt_val: (
+                        set_prompt_text(p),
+                        page.run_task(_submit_prompt, p),
+                    ),
+                )
+            )
+
+        feed_controls.append(
+            ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Row(
+                            [
+                                ft.Icon(
+                                    ft.Icons.LIGHTBULB_ROUNDED,
+                                    size=16,
+                                    color=theme.ACCENT,
+                                ),
+                                ft.Text(
+                                    "Next Recommended Analyses:",
+                                    size=tokens.FONT_SM,
+                                    weight=ft.FontWeight.W_700,
+                                ),
+                            ],
+                            spacing=tokens.SPACE_XXS,
+                        ),
+                        ft.Row(sugg_chips_feed, wrap=True, spacing=tokens.SPACE_XS),
+                    ],
+                    spacing=tokens.SPACE_XS,
+                ),
+                padding=tokens.SPACE_MD,
+                border_radius=tokens.RADIUS_MD,
+                bgcolor=ft.Colors.with_opacity(0.04, theme.ACCENT),
+                border=ft.Border.all(1, ft.Colors.with_opacity(0.12, theme.ACCENT)),
+                margin=ft.Margin(0, tokens.SPACE_XS, 0, tokens.SPACE_SM),
+            )
+        )
 
     scrollable_feed = ft.ListView(
         controls=feed_controls if (has_dataset and feed_controls) else [import_area],
