@@ -88,8 +88,10 @@ def build_insight_card(
     on_retry_ai=None,
     on_delete=None,
     on_pin=None,
+    on_pin_report=None,
     on_change=None,
     on_suggestion_selected=None,
+    **kwargs,
 ) -> ft.Control:
     """Builds a card representing an analytical unit with intelligence takeaways and outputs."""
     is_running = block.get("is_running", False)
@@ -99,6 +101,7 @@ def build_insight_card(
     show_code = block.get("_show_code", False)
     show_raw = block.get("_show_raw", False)
     is_pinned = block.get("pinned", False)
+    pin_fn = on_pin_report or on_pin
 
     controls = []
 
@@ -108,7 +111,7 @@ def build_insight_card(
         icon_color=theme.ACCENT if is_pinned else ft.Colors.ON_SURFACE_VARIANT,
         icon_size=16,
         tooltip="Unpin from Report" if is_pinned else "Pin to Report",
-        on_click=lambda _: on_pin(block) if on_pin else None,
+        on_click=lambda _: pin_fn(block) if pin_fn else None,
         style=ft.ButtonStyle(padding=2),
     )
 

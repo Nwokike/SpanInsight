@@ -105,13 +105,18 @@ def build_empty_dir_view(on_upload) -> ft.Control:
     )
 
 
-def build_breadcrumbs(current_path: str, set_current_path) -> ft.Control:
+def build_breadcrumbs(
+    current_path: str,
+    on_navigate=None,
+    set_current_path=None,
+) -> ft.Control:
     """Interactive POSIX directory path breadcrumbs."""
+    nav_fn = on_navigate or set_current_path or (lambda p: None)
     parts = [p for p in current_path.strip("/").split("/") if p]
     controls: list[ft.Control] = [
         ft.TextButton(
             "/",
-            on_click=lambda _: set_current_path("/content"),
+            on_click=lambda _: nav_fn("/content"),
             style=ft.ButtonStyle(
                 padding=ft.Padding(4, 2, 4, 2),
                 color=theme.PRIMARY,
@@ -132,11 +137,15 @@ def build_breadcrumbs(current_path: str, set_current_path) -> ft.Control:
         controls.append(
             ft.TextButton(
                 part,
-                on_click=lambda _, p=curr: set_current_path(p),
+                on_click=lambda _, p=curr: nav_fn(p),
                 style=ft.ButtonStyle(
                     padding=ft.Padding(4, 2, 4, 2),
                     color=theme.PRIMARY,
                 ),
             )
         )
-    return ft.Row(controls=controls, spacing=0, wrap=True)
+    return ft.Row(
+        controls=controls,
+        spacing=0,
+        scroll=ft.ScrollMode.AUTO,
+    )
