@@ -711,7 +711,7 @@ def AnalysisScreen() -> Control:
                 disp = str(s)
 
             sugg_chips_feed.append(
-                ft.ActionChip(
+                ft.Chip(
                     label=ft.Text(disp, size=tokens.FONT_XS),
                     tooltip=prompt_val,
                     on_click=lambda _, p=prompt_val: (

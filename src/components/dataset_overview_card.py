@@ -291,7 +291,7 @@ def build_dataset_overview_card(
                 disp = str(s)
 
             chips.append(
-                ft.ActionChip(
+                ft.Chip(
                     label=ft.Text(disp, size=tokens.FONT_XS),
                     tooltip=prompt_val,
                     on_click=lambda _, p=prompt_val: on_suggestion_selected(p),
