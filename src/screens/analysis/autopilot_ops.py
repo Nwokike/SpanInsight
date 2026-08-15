@@ -71,6 +71,7 @@ async def submit_prompt_async(
             return
 
         cell = add_cell_fn("code", code)
+        cell["prompt"] = prompt
         set_is_generating(False)
         await run_cell_fn(cell["id"])
 
@@ -88,8 +89,35 @@ async def submit_prompt_async(
                     on_cell_change()
                     await run_cell_fn(cell["id"])
 
-        # Refresh suggestions
+        # Concurrently generate AI executive narration and follow-up suggestions
+        async def _narrate_and_suggest(c):
+            import asyncio
+
+            try:
+                stdout_str = ""
+                for out in c.get("outputs", []):
+                    if out.get("output_type") == "stream":
+                        stdout_str += out.get("text", "")
+                    elif out.get("data", {}).get("text/plain"):
+                        stdout_str += str(out["data"]["text/plain"])
+
+                desc_task = ai_service.describe_result(
+                    initial_desc=schema_json.get("description", "Dataset Analysis"),
+                    res_data={"prompt": prompt, "code": code, "stdout": stdout_str},
+                )
+                sugg_task = ai_service.suggest(schema_json)
+                narration, suggs = await asyncio.gather(desc_task, sugg_task)
+                c["narration"] = narration
+                c["suggestions"] = suggs
+                on_cell_change()
+            except Exception as ex:
+                logger.warning("Post-execution narration failed: %s", ex)
+
         if page:
+            page.run_task(_narrate_and_suggest, cell)
+
+        # Refresh global suggestions
+        if page and fetch_suggestions_fn:
             page.run_task(fetch_suggestions_fn)
 
     except Exception as e:

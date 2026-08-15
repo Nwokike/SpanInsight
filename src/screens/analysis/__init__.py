@@ -1,4 +1,4 @@
-"""AnalysisScreen — Modular Colab notebook autopilot for data analysis."""
+"""AnalysisScreen — Modular Colab notebook autopilot & AI Data Intelligence engine."""
 
 from __future__ import annotations
 
@@ -8,9 +8,10 @@ import logging
 import flet as ft
 from flet import Control
 
+from components.dataset_overview_card import build_dataset_overview_card
 from components.project_switcher import build_project_switcher
 from components.suggestion_chips import build_suggestion_chips
-from core import tokens
+from core import theme, tokens
 from core.constants import STORAGE_NOTEBOOKS
 from core.state import state
 from screens.analysis.autopilot_bar import build_autopilot_bar
@@ -40,7 +41,7 @@ logger = logging.getLogger("AnalysisScreen")
 
 @ft.component
 def AnalysisScreen() -> Control:
-    """Analysis engine — AI prompt, notebook cells, file import, autopilot."""
+    """Analysis engine — AI prompt, dataset intelligence, notebook cells, autopilot."""
     services = ft.use_context(ServiceCtx)
     _controller = ft.use_context(ControllerMethodsCtx)
     app_state = ft.use_context(AppStateCtx)
@@ -57,6 +58,7 @@ def AnalysisScreen() -> Control:
     is_connecting, set_is_connecting = ft.use_state(False)
     is_generating, set_is_generating = ft.use_state(False)
     is_recording, set_is_recording = ft.use_state(False)
+    is_expert_mode, set_is_expert_mode = ft.use_state(False)
     suggestions, set_suggestions = ft.use_state([])
     suggestions_loading, set_suggestions_loading = ft.use_state(False)
     cells_version, set_cells_version = ft.use_state(0)
@@ -135,16 +137,13 @@ def AnalysisScreen() -> Control:
         )
 
     def _stop_cell(cell_id: str):
-        colab.cancel()
         cell = next((c for c in state.notebook_cells if c["id"] == cell_id), None)
         if cell:
             cell["is_running"] = False
-            set_is_executing(False)
             _on_cell_change()
 
     def _delete_cell(cell_id: str):
         state.notebook_cells = [c for c in state.notebook_cells if c["id"] != cell_id]
-        cell_refs_map.current.pop(cell_id, None)
         _on_cell_change()
 
     def _move_cell(cell_id: str, direction: int):
@@ -161,6 +160,20 @@ def AnalysisScreen() -> Control:
             cell["outputs"] = []
             _on_cell_change()
 
+    def _pin_block_to_report(block: dict):
+        block["pinned"] = not block.get("pinned", False)
+        _on_cell_change()
+        if page:
+            page.snack_bar = ft.SnackBar(
+                ft.Text(
+                    "📌 Pinned to Reports!"
+                    if block["pinned"]
+                    else "Unpinned from Reports"
+                )
+            )
+            page.snack_bar.open = True
+            page.update()
+
     # ── Suggestions ──────────────────────────────────────────────
     async def _fetch_suggestions():
         if not schema_json:
@@ -175,15 +188,18 @@ def AnalysisScreen() -> Control:
                 if c.get("type") == "code" and c.get("source")
             )
             result = await ai_service.suggest(schema_json, analysis_context=ctx)
-            set_suggestions(result)
+            if result:
+                set_suggestions(result)
         except Exception as e:
             logger.warning("Suggestions failed: %s", e)
         finally:
             set_suggestions_loading(False)
 
+    ft.use_effect(_fetch_suggestions, [bool(schema_json)])
+
     # ── Prompt & File actions ────────────────────────────────────
-    def _submit_prompt(p: str):
-        return submit_prompt_async(
+    async def _submit_prompt(p: str):
+        await submit_prompt_async(
             p,
             session_name,
             schema_json,
@@ -210,70 +226,66 @@ def AnalysisScreen() -> Control:
         )
 
     async def _toggle_voice():
-        try:
-            from services.audio_service import AudioService
+        if is_recording:
+            set_is_recording(False)
+            try:
+                from services.audio_service import stop_recording
 
-            audio = AudioService(page)
-            if not audio.available:
+                audio_bytes = await stop_recording()
+                if audio_bytes:
+                    from services.ai.client import transcribe_audio
+
+                    text = await transcribe_audio(audio_bytes)
+                    if text:
+                        set_prompt_text(text)
+            except Exception as ex:
+                logger.warning("Voice processing error: %s", ex)
+        else:
+            set_is_recording(True)
+            try:
+                from services.audio_service import start_recording
+
+                ok = await start_recording()
+                if not ok:
+                    set_is_recording(False)
+                    if page:
+                        page.snack_bar = ft.SnackBar(
+                            ft.Text(
+                                "Microphone unavailable on this platform. Please type your query."
+                            )
+                        )
+                        page.snack_bar.open = True
+                        page.update()
+            except Exception as ex:
+                set_is_recording(False)
                 if page:
                     page.snack_bar = ft.SnackBar(
-                        ft.Text("Voice not available on this platform")
+                        ft.Text(f"Voice recording not supported: {ex}")
                     )
                     page.snack_bar.open = True
                     page.update()
-                return
 
-            if is_recording:
-                result = await audio.stop_recording()
-                set_is_recording(False)
-                if result:
-                    wav, mime = result
-                    from services.ai import audio as ai_audio
-
-                    text = await ai_audio.transcribe(wav, mime)
-                    if text:
-                        set_prompt_text(text)
-            else:
-
-                async def _on_auto_stop(result):
-                    set_is_recording(False)
-                    if result:
-                        wav, mime = result
-                        from services.ai import audio as ai_audio
-
-                        text = await ai_audio.transcribe(wav, mime)
-                        if text:
-                            set_prompt_text(text)
-
-                ok = await audio.start_recording(on_auto_stop=_on_auto_stop)
-                set_is_recording(ok)
-        except Exception as e:
-            logger.warning("Voice error: %s", e)
-            set_is_recording(False)
-
-    # ── Trigger effect (from home screen quick action) ───────────
-    async def _check_trigger():
-        if state.trigger_file_picker:
-            state.trigger_file_picker = False
-            if session_name:
-                await _pick_and_upload_file()
-            else:
-                await connect_colab_async(colab, page, set_is_connecting)
-
-    ft.use_effect(_check_trigger, [state.trigger_file_picker])
-
-    # ── FAB sync effect ──────────────────────────────────────────
-    async def _sync_fab():
+    # ── Floating Action Button ───────────────────────────────────
+    def _sync_fab():
         if not page or not page.views:
             return
+
+        def _cleanup():
+            if page and page.views:
+                try:
+                    page.views[0].floating_action_button = None
+                    page.update()
+                except Exception:
+                    pass
+
+        if not session_name or state.autopilot_running:
+            _cleanup()
+            return
+
+        has_schema = bool(schema_json)
         fab = build_analysis_fab(
-            has_session=bool(session_name),
-            has_cells=bool(state.notebook_cells),
-            has_schema=bool(schema_json),
-            autopilot_running=state.autopilot_running,
-            on_export=lambda _: page.run_task(export_ipynb_async, page),
-            on_clear_all=lambda _: (state.clear_notebook(), _on_cell_change()),
-            on_autopilot=lambda _: page.run_task(
+            has_schema=has_schema,
+            on_autopilot=lambda: page.run_task(
                 run_autopilot_async,
                 session_name,
                 schema_json,
@@ -282,23 +294,16 @@ def AnalysisScreen() -> Control:
                 _add_cell,
                 _run_cell,
             ),
-            on_manage_files=lambda _: show_manage_files_modal(
-                page, colab, session_name
-            ),
+            on_upload_dataset=lambda: page.run_task(_pick_and_upload_file),
+            on_manage_files=lambda: show_manage_files_modal(page, colab, session_name),
+            on_export_ipynb=lambda: page.run_task(export_ipynb_async, page),
         )
-        page.views[0].floating_action_button = fab
+
         try:
+            page.views[0].floating_action_button = fab
             page.update()
         except Exception:
             pass
-
-        def _cleanup():
-            if page and page.views:
-                page.views[0].floating_action_button = None
-                try:
-                    page.update()
-                except Exception:
-                    pass
 
         return _cleanup
 
@@ -326,35 +331,67 @@ def AnalysisScreen() -> Control:
         progress_text=state.autopilot_progress,
         on_stop=lambda _: setattr(state, "autopilot_cancelled", True),
     )
-    prompt_bar = build_prompt_bar(
-        prompt_ref=prompt_ref,
-        prompt_text=prompt_text,
-        set_prompt_text=set_prompt_text,
-        is_generating=is_generating,
-        is_recording=is_recording,
-        autopilot_running=state.autopilot_running,
-        on_submit=lambda p: page.run_task(_submit_prompt, p),
-        on_upload=lambda _: page.run_task(_pick_and_upload_file),
-        on_toggle_voice=lambda _: page.run_task(_toggle_voice),
-    )
-    gen_indicator = build_gen_indicator(is_generating)
 
-    chips_section = ft.Container(visible=False)
-    if suggestions:
-        chips_section = ft.Container(
-            content=build_suggestion_chips(
-                suggestions=suggestions,
-                on_select=lambda p: (
-                    set_prompt_text(p),
-                    page.run_task(_submit_prompt, p),
+    mode_toggle_btn = ft.Container(
+        content=ft.Row(
+            [
+                ft.Icon(
+                    ft.Icons.AUTO_AWESOME_ROUNDED
+                    if not is_expert_mode
+                    else ft.Icons.TERMINAL_ROUNDED,
+                    size=14,
+                    color=theme.ACCENT if not is_expert_mode else theme.PRIMARY,
                 ),
-                is_loading=suggestions_loading or is_generating,
-                page=page,
-                credit_service=credits,
-            ),
-            padding=ft.Padding(tokens.SPACE_LG, tokens.SPACE_XS, tokens.SPACE_LG, 0),
-        )
+                ft.Text(
+                    "Insight View" if not is_expert_mode else "Expert Mode",
+                    size=tokens.FONT_XS,
+                    weight=ft.FontWeight.W_600,
+                    color=theme.ACCENT if not is_expert_mode else theme.PRIMARY,
+                ),
+            ],
+            spacing=tokens.SPACE_XXS,
+        ),
+        padding=ft.Padding(
+            tokens.SPACE_SM, tokens.SPACE_XXS, tokens.SPACE_SM, tokens.SPACE_XXS
+        ),
+        border_radius=tokens.RADIUS_SM,
+        bgcolor=ft.Colors.with_opacity(
+            0.1, theme.ACCENT if not is_expert_mode else theme.PRIMARY
+        ),
+        tooltip="Toggle between SpanInsight Insight Cards and Expert Notebook Cells",
+        on_click=lambda _: set_is_expert_mode(not is_expert_mode),
+    )
 
+    project_chip = build_project_switcher(
+        page,
+        projects,
+        on_project_selected=lambda p: set_cells_version(cells_version + 1),
+    )
+
+    top_bar = ft.Column(
+        controls=[
+            ft.Container(
+                content=ft.Row(
+                    controls=[
+                        project_chip,
+                        ft.Row(
+                            [mode_toggle_btn, session_chip],
+                            spacing=tokens.SPACE_XS,
+                        ),
+                    ],
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=ft.Padding(
+                    tokens.SPACE_MD, tokens.SPACE_SM, tokens.SPACE_MD, 0
+                ),
+            ),
+            autopilot_bar,
+        ],
+        spacing=0,
+    )
+
+    # ── Feed Construction ────────────────────────────────────────
     cell_controls = build_cells_container(
         page=page,
         notebook_cells=state.notebook_cells,
@@ -365,11 +402,17 @@ def AnalysisScreen() -> Control:
         on_move_cell=_move_cell,
         on_cell_change=_on_cell_change,
         on_clear_output=_clear_cell_output,
+        is_expert_mode=is_expert_mode,
+        on_pin_report=_pin_block_to_report,
+        on_suggestion_selected=lambda p: (
+            set_prompt_text(p),
+            page.run_task(_submit_prompt, p),
+        ),
     )
 
     add_cell_row = build_add_cell_row(
         on_add_cell=_add_cell,
-        visible=bool(state.notebook_cells),
+        visible=bool(state.notebook_cells) or is_expert_mode,
     )
 
     empty_prompt = build_empty_state(
@@ -386,45 +429,88 @@ def AnalysisScreen() -> Control:
         has_schema=bool(schema_json),
     )
 
-    project_chip = build_project_switcher(
-        page,
-        projects,
-        on_project_selected=lambda p: set_cells_version(cells_version + 1),
-    )
+    feed_controls = []
+    if schema_json and not is_expert_mode:
+        feed_controls.append(
+            build_dataset_overview_card(
+                dataset_name=state.active_project_dataset or "Active Dataset",
+                schema=schema_json,
+                page=page,
+                initial_description=schema_json.get(
+                    "description", "Dataset schema extracted and ready for analysis."
+                ),
+                suggestions=suggestions,
+                on_suggestion_selected=lambda p: (
+                    set_prompt_text(p),
+                    page.run_task(_submit_prompt, p),
+                ),
+            )
+        )
 
-    content_controls = [
-        ft.Container(
-            content=ft.Row(
-                controls=[project_chip, session_chip],
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            padding=ft.Padding(tokens.SPACE_MD, tokens.SPACE_SM, tokens.SPACE_MD, 0),
-        ),
-        autopilot_bar,
-    ]
+    if cell_controls:
+        feed_controls.extend(cell_controls)
+        feed_controls.append(add_cell_row)
 
     has_content = bool(state.notebook_cells) or bool(schema_json)
 
-    if has_content:
-        content_controls += [prompt_bar, gen_indicator, chips_section]
-        if state.notebook_cells:
-            content_controls.append(
-                ft.Container(
-                    content=ft.Column(controls=cell_controls, spacing=tokens.SPACE_XS),
-                    padding=ft.Padding(
-                        tokens.SPACE_MD, tokens.SPACE_SM, tokens.SPACE_MD, 0
-                    ),
-                )
-            )
-            content_controls.append(add_cell_row)
-        content_controls.append(ft.Container(height=80))
-    else:
-        content_controls.append(empty_prompt)
+    scrollable_feed = ft.ListView(
+        controls=feed_controls if (has_content and feed_controls) else [empty_prompt],
+        expand=True,
+        spacing=tokens.SPACE_SM,
+        padding=ft.Padding(
+            tokens.SPACE_MD, tokens.SPACE_SM, tokens.SPACE_MD, tokens.SPACE_MD
+        ),
+        auto_scroll=True,
+    )
+
+    # ── Bottom Bar Construction ──────────────────────────────────
+    gen_indicator = build_gen_indicator(is_generating)
+
+    chips_section = ft.Container(visible=False)
+    if suggestions:
+        chips_section = ft.Container(
+            content=build_suggestion_chips(
+                suggestions=suggestions,
+                on_select=lambda p: (
+                    set_prompt_text(p),
+                    page.run_task(_submit_prompt, p),
+                ),
+                is_loading=suggestions_loading or is_generating,
+                page=page,
+                credit_service=credits,
+            ),
+            padding=ft.Padding(tokens.SPACE_MD, tokens.SPACE_XS, tokens.SPACE_MD, 0),
+        )
+
+    prompt_bar = build_prompt_bar(
+        prompt_ref=prompt_ref,
+        prompt_text=prompt_text,
+        set_prompt_text=set_prompt_text,
+        is_generating=is_generating,
+        is_recording=is_recording,
+        autopilot_running=state.autopilot_running,
+        on_submit=lambda p: page.run_task(_submit_prompt, p),
+        on_upload=lambda _: page.run_task(_pick_and_upload_file),
+        on_toggle_voice=lambda _: page.run_task(_toggle_voice),
+        on_toggle_expert_mode=lambda _: set_is_expert_mode(not is_expert_mode),
+        is_expert_mode=is_expert_mode,
+    )
+
+    bottom_bar = ft.Column(
+        controls=[
+            gen_indicator,
+            chips_section,
+            prompt_bar,
+        ],
+        spacing=0,
+    )
 
     return ft.Column(
-        controls=content_controls,
-        scroll=ft.ScrollMode.AUTO,
+        controls=[
+            top_bar,
+            scrollable_feed,
+            bottom_bar,
+        ],
         expand=True,
         spacing=0,
     )

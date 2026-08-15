@@ -17,26 +17,53 @@ def build_prompt_bar(
     on_submit,
     on_upload,
     on_toggle_voice,
+    on_toggle_expert_mode=None,
+    is_expert_mode: bool = False,
 ) -> ft.Container:
     """Bottom-docked or inline AI prompt input with file picker, voice, and send."""
     disabled = is_generating or autopilot_running
     has_text = bool(prompt_text.strip())
 
+    left_controls = [
+        ft.IconButton(
+            icon=ft.Icons.ATTACH_FILE_ROUNDED,
+            icon_size=tokens.ICON_MD,
+            tooltip="Import Data File",
+            on_click=on_upload,
+            style=ft.ButtonStyle(padding=6),
+        ),
+    ]
+
+    if on_toggle_expert_mode:
+        left_controls.append(
+            ft.IconButton(
+                icon=ft.Icons.CODE_ROUNDED,
+                icon_color=theme.PRIMARY
+                if is_expert_mode
+                else ft.Colors.ON_SURFACE_VARIANT,
+                icon_size=tokens.ICON_MD,
+                tooltip="Toggle Expert Code Input"
+                if not is_expert_mode
+                else "Switch to Natural Prompt",
+                on_click=on_toggle_expert_mode,
+                style=ft.ButtonStyle(padding=6),
+            )
+        )
+
     return ft.Container(
         content=ft.Row(
             controls=[
-                ft.IconButton(
-                    icon=ft.Icons.ATTACH_FILE_ROUNDED,
-                    icon_size=tokens.ICON_MD,
-                    tooltip="Import Data File",
-                    on_click=on_upload,
-                    style=ft.ButtonStyle(padding=6),
-                ),
+                *left_controls,
                 ft.TextField(
                     ref=prompt_ref,
                     value=prompt_text,
-                    hint_text="Ask anything about your data…",
+                    hint_text="Ask anything about your data, or enter Python code…"
+                    if is_expert_mode
+                    else "Ask anything about your data…",
                     text_size=tokens.FONT_SM,
+                    text_style=ft.TextStyle(
+                        font_family="RobotoMono" if is_expert_mode else None
+                    ),
                     border_color=ft.Colors.TRANSPARENT,
                     bgcolor=ft.Colors.TRANSPARENT,
                     expand=True,
@@ -48,7 +75,9 @@ def build_prompt_bar(
                         tokens.SPACE_SM,
                         tokens.SPACE_XS,
                     ),
-                    max_lines=3,
+                    multiline=is_expert_mode,
+                    min_lines=1 if not is_expert_mode else 3,
+                    max_lines=6 if is_expert_mode else 3,
                     disabled=disabled,
                 ),
                 ft.IconButton(
@@ -63,10 +92,12 @@ def build_prompt_bar(
                 ),
                 ft.Container(
                     content=ft.IconButton(
-                        icon=ft.Icons.SEND_ROUNDED,
+                        icon=ft.Icons.PLAY_ARROW_ROUNDED
+                        if is_expert_mode
+                        else ft.Icons.SEND_ROUNDED,
                         icon_size=tokens.ICON_MD,
                         icon_color=ft.Colors.WHITE,
-                        tooltip="Send",
+                        tooltip="Run Code" if is_expert_mode else "Send",
                         on_click=lambda _: on_submit(prompt_text),
                         disabled=is_generating or not has_text,
                         style=ft.ButtonStyle(padding=6),
@@ -86,7 +117,9 @@ def build_prompt_bar(
         border_radius=tokens.RADIUS_LG,
         bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ON_SURFACE),
         border=ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE)),
-        margin=ft.Margin(tokens.SPACE_MD, tokens.SPACE_SM, tokens.SPACE_MD, 0),
+        margin=ft.Margin(
+            tokens.SPACE_MD, tokens.SPACE_SM, tokens.SPACE_MD, tokens.SPACE_SM
+        ),
     )
 
 
@@ -100,19 +133,12 @@ def build_gen_indicator(is_generating: bool) -> ft.Container:
             controls=[
                 ft.ProgressRing(width=14, height=14, stroke_width=2),
                 ft.Text(
-                    "AI is writing code…",
+                    "AI analyzing & executing on Colab…",
                     size=tokens.FONT_XS,
-                    weight=ft.FontWeight.W_500,
-                    italic=True,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
             ],
             spacing=tokens.SPACE_SM,
         ),
-        padding=ft.Padding(
-            tokens.SPACE_LG,
-            tokens.SPACE_XS,
-            tokens.SPACE_LG,
-            tokens.SPACE_XS,
-        ),
+        padding=ft.Padding(tokens.SPACE_MD, tokens.SPACE_XS, tokens.SPACE_MD, 0),
     )

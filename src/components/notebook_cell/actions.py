@@ -58,6 +58,12 @@ async def copy_code(page: ft.Page, code: str):
         return
     try:
         await ft.Clipboard().set(code.strip())
+        if page:
+            page.snack_bar = ft.SnackBar(
+                ft.Text("Code copied to clipboard!"), duration=2000
+            )
+            page.snack_bar.open = True
+            page.update()
     except Exception as ex:
         logger.error("Copy code failed: %s", ex)
 
@@ -111,5 +117,11 @@ async def copy_output(page: ft.Page, outputs: list):
     if final_text:
         try:
             await ft.Clipboard().set(final_text)
+            if page:
+                page.snack_bar = ft.SnackBar(
+                    ft.Text("Output copied to clipboard!"), duration=2000
+                )
+                page.snack_bar.open = True
+                page.update()
         except Exception as ex:
             logger.error("Copy output failed: %s", ex)

@@ -110,3 +110,41 @@ class TestFileItem:
         assert item is not None
         # Row has 3 controls: icon + name/size column + trailing checkbox
         assert len(item.content.controls) == 3
+
+
+class TestInsightCard:
+    def test_build_insight_card(self):
+        from components.insight_card import build_insight_card
+
+        block = {
+            "prompt": "Show Age Distribution",
+            "code": "df['age'].hist()",
+            "stdout": "Histogram generated",
+            "narration": "Age distribution is centered around 30.",
+            "suggestions": ["Group by Gender", "Check Outliers"],
+        }
+        card = build_insight_card(block, index=0, page=None)
+        assert card is not None
+        assert len(card.content.controls) > 0
+
+    def test_build_dataset_overview_card(self):
+        from components.dataset_overview_card import build_dataset_overview_card
+
+        schema = {
+            "shape": [1000, 5],
+            "columns": ["age", "income", "gender", "purchased", "date"],
+            "dtypes": {"age": "int64", "income": "float64"},
+            "summary": {
+                "age": {"mean": 34.5, "min": 18, "max": 75},
+                "income": {"mean": 55000.0, "min": 20000, "max": 120000},
+            },
+        }
+        card = build_dataset_overview_card(
+            dataset_name="sales.csv",
+            schema=schema,
+            page=None,
+            initial_description="Dataset of customer transactions.",
+            suggestions=["Analyze Income Distribution"],
+        )
+        assert card is not None
+        assert len(card.content.controls) > 0
