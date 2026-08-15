@@ -151,7 +151,7 @@ class AppController:
                 ),
             )
         )
-        logger.info("AppShell mounted — React-like UI active")
+        logger.info("SpanInsight application shell mounted")
 
     def navigate_tab(self, idx: int):
         """Navigate to a specific tab index."""

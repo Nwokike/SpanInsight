@@ -284,7 +284,10 @@ def AnalysisScreen() -> Control:
 
         has_schema = bool(schema_json)
         fab = build_analysis_fab(
+            has_session=bool(session_name),
+            has_cells=bool(state.notebook_cells),
             has_schema=has_schema,
+            autopilot_running=state.autopilot_running,
             on_autopilot=lambda: page.run_task(
                 run_autopilot_async,
                 session_name,

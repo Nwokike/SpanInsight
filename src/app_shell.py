@@ -41,6 +41,7 @@ def AppShell() -> Control:
     controller = ft.use_context(ControllerMethodsCtx)
     state = ft.use_context(AppStateCtx)
     services = ft.use_context(ServiceCtx)
+    is_connecting, set_is_connecting = ft.use_state(False)
 
     # ── Sync NavigationBar & AppBar on page.views[0] ─────────────
     # MUST be declared and registered at top level before any conditional return!
@@ -114,6 +115,9 @@ def AppShell() -> Control:
         )
 
         async def _connect_colab_header():
+            if is_connecting:
+                return
+            set_is_connecting(True)
             try:
                 res = await services.colab.ensure_active_session()
                 if res:
@@ -138,8 +142,31 @@ def AppShell() -> Control:
                     )
                     page.snack_bar.open = True
                     page.update()
+            finally:
+                set_is_connecting(False)
 
-        if state.colab_connected and state.active_session_name:
+        if is_connecting:
+            colab_indicator = ft.Container(
+                content=ft.Row(
+                    [
+                        ft.ProgressRing(width=12, height=12, stroke_width=2),
+                        ft.Text(
+                            "Connecting…",
+                            size=tokens.FONT_XS,
+                            color=ft.Colors.PRIMARY,
+                        ),
+                    ],
+                    spacing=tokens.SPACE_XXS,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                ),
+                padding=ft.Padding(
+                    tokens.SPACE_SM, tokens.SPACE_XXS, tokens.SPACE_SM, tokens.SPACE_XXS
+                ),
+                border_radius=tokens.RADIUS_SM,
+                bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY),
+                margin=ft.Margin(0, 0, 4, 0),
+            )
+        elif state.colab_connected and state.active_session_name:
             colab_indicator = ft.Container(
                 content=ft.Row(
                     [
@@ -237,6 +264,7 @@ def AppShell() -> Control:
             state.session_hardware,
             state.credits_remaining,
             state.theme_mode,
+            is_connecting,
         ],
     )
 
