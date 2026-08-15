@@ -89,36 +89,52 @@ async def submit_prompt_async(
                     on_cell_change()
                     await run_cell_fn(cell["id"])
 
-        # Concurrently generate AI executive narration and follow-up suggestions
+        # Concurrently generate AI executive narration and follow-up suggestions for the completed cell
         async def _narrate_and_suggest(c):
             import asyncio
 
             try:
                 stdout_str = ""
+                result_str = ""
                 for out in c.get("outputs", []):
-                    if out.get("output_type") == "stream":
+                    otype = out.get("output_type") or out.get("type", "")
+                    if otype == "stream":
                         stdout_str += out.get("text", "")
-                    elif out.get("data", {}).get("text/plain"):
-                        stdout_str += str(out["data"]["text/plain"])
+                    elif otype in ("execute_result", "display_data"):
+                        data = out.get("data", {})
+                        if "text/plain" in data:
+                            result_str += str(data["text/plain"])
 
-                desc_task = ai_service.describe_result(
-                    initial_desc=schema_json.get("description", "Dataset Analysis"),
-                    res_data={"prompt": prompt, "code": code, "stdout": stdout_str},
+                init_desc = schema_json.get("description", "Dataset Analysis")
+                res_data = {
+                    "prompt": prompt,
+                    "code": code,
+                    "stdout": stdout_str,
+                    "result": result_str,
+                }
+
+                ctx = "\n".join(
+                    cell_item.get("prompt") or cell_item.get("source", "")[:80]
+                    for cell_item in state.notebook_cells
+                    if cell_item.get("type") == "code"
                 )
-                sugg_task = ai_service.suggest(schema_json)
+
+                desc_task = ai_service.describe_result(init_desc, res_data)
+                sugg_task = ai_service.suggest(
+                    schema_json,
+                    initial_description=init_desc,
+                    analysis_context=ctx,
+                )
                 narration, suggs = await asyncio.gather(desc_task, sugg_task)
                 c["narration"] = narration
                 c["suggestions"] = suggs
+                state.suggestions = suggs
                 on_cell_change()
             except Exception as ex:
-                logger.warning("Post-execution narration failed: %s", ex)
+                logger.warning("Post-execution narration & suggestion failed: %s", ex)
 
         if page:
             page.run_task(_narrate_and_suggest, cell)
-
-        # Refresh global suggestions
-        if page and fetch_suggestions_fn:
-            page.run_task(fetch_suggestions_fn)
 
     except Exception as e:
         logger.error("Prompt submission failed: %s", e)

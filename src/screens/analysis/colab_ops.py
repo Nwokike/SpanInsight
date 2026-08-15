@@ -144,6 +144,55 @@ async def run_cell_async(
         _flush_output_to_ui(refs, cell, page)
         on_cell_change()
 
+        # Trigger AI executive narration and suggestions for the completed cell
+        if cell.get("outputs"):
+            last_out = cell["outputs"][-1]
+            if last_out.get("output_type") != "error":
+
+                async def _post_exec_ai(c):
+                    import asyncio
+
+                    try:
+                        from services.ai import analysis as ai_service
+
+                        stdout_str = ""
+                        result_str = ""
+                        for out in c.get("outputs", []):
+                            otype = out.get("output_type") or out.get("type", "")
+                            if otype == "stream":
+                                stdout_str += out.get("text", "")
+                            elif otype in ("execute_result", "display_data"):
+                                data = out.get("data", {})
+                                if "text/plain" in data:
+                                    result_str += str(data["text/plain"])
+
+                        res_data = {
+                            "prompt": c.get("prompt") or c.get("source", ""),
+                            "code": c.get("source", ""),
+                            "stdout": stdout_str,
+                            "result": result_str,
+                        }
+                        ctx = "\n".join(
+                            cell_item.get("prompt") or cell_item.get("source", "")[:80]
+                            for cell_item in state.notebook_cells
+                            if cell_item.get("type") == "code"
+                        )
+                        schema = getattr(state, "active_schema_json", {}) or {}
+                        desc_task = ai_service.describe_result(
+                            "Dataset Analysis", res_data
+                        )
+                        sugg_task = ai_service.suggest(schema, analysis_context=ctx)
+                        narration, suggs = await asyncio.gather(desc_task, sugg_task)
+                        c["narration"] = narration
+                        c["suggestions"] = suggs
+                        state.suggestions = suggs
+                        on_cell_change()
+                    except Exception:
+                        pass
+
+                if page:
+                    page.run_task(_post_exec_ai, cell)
+
 
 def _flush_output_to_ui(refs_dict: dict, c: dict, page: ft.Page):
     """Helper to push updated cell outputs to ListView refs safely."""
