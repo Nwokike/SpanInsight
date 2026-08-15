@@ -68,13 +68,13 @@ def build_add_cell_row(on_add_cell, visible: bool) -> ft.Container:
         content=ft.Row(
             controls=[
                 ft.TextButton(
-                    "+ Code",
+                    "Code",
                     icon=ft.Icons.CODE_ROUNDED,
                     on_click=lambda _: on_add_cell("code"),
                     style=ft.ButtonStyle(padding=ft.Padding(12, 6, 12, 6)),
                 ),
                 ft.TextButton(
-                    "+ Markdown",
+                    "Markdown",
                     icon=ft.Icons.TEXT_FIELDS_ROUNDED,
                     on_click=lambda _: on_add_cell("markdown"),
                     style=ft.ButtonStyle(padding=ft.Padding(12, 6, 12, 6)),

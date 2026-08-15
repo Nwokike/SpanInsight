@@ -436,7 +436,7 @@ def build_insight_card(
                                     spacing=tokens.SPACE_XS,
                                 ),
                                 ft.TextButton(
-                                    "▶ Run",
+                                    "Run",
                                     icon=ft.Icons.PLAY_ARROW_ROUNDED,
                                     style=ft.ButtonStyle(color=theme.SUCCESS),
                                     on_click=lambda _: (

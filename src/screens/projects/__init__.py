@@ -152,7 +152,7 @@ def ProjectsScreen() -> ft.Control:
                     alignment=ft.Alignment.CENTER,
                 ),
                 ft.TextButton(
-                    "+ New",
+                    "New Project",
                     icon=ft.Icons.ADD_ROUNDED,
                     style=ft.ButtonStyle(color=theme.PRIMARY),
                     on_click=_on_create_new,
