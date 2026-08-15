@@ -121,6 +121,21 @@ def suggest_load_code(file_name: str) -> str:
     if ext in (".h5", ".hdf5"):
         return f'import pandas as pd\ndf = pd.read_hdf("{path}")\nprint(f"Loaded {{len(df):,}} rows × {{len(df.columns)}} cols")\ndf.head()'
 
+    if ext == ".dta":
+        return f'import pandas as pd\ndf = pd.read_stata("{path}")\nprint(f"Loaded {{len(df):,}} rows × {{len(df.columns)}} cols")\ndf.head()'
+
+    if ext == ".sav":
+        return f'import pandas as pd\ndf = pd.read_spss("{path}")\nprint(f"Loaded {{len(df):,}} rows × {{len(df.columns)}} cols")\ndf.head()'
+
+    if ext == ".sas7bdat":
+        return f'import pandas as pd\ndf = pd.read_sas("{path}")\nprint(f"Loaded {{len(df):,}} rows × {{len(df.columns)}} cols")\ndf.head()'
+
+    if ext in (".npy", ".npz"):
+        return f'import numpy as np\ndata = np.load("{path}")\nprint(f"Loaded NumPy array: {{data.shape if hasattr(data, \'shape\') else list(data.files)}}")'
+
+    if ext == ".zip":
+        return f'import zipfile\nwith zipfile.ZipFile("{path}", "r") as z:\n    z.extractall("/content")\n    print("Extracted files:", z.namelist()[:10])'
+
     if ext in (".png", ".jpg", ".jpeg"):
         return f'from PIL import Image\nimport matplotlib.pyplot as plt\nimg = Image.open("{path}")\nplt.imshow(img)\nplt.axis("off")\nplt.title("{file_name}")\nplt.show()'
 

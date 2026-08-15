@@ -41,6 +41,7 @@ def build_cells_container(
                 on_retry_ai=lambda p, _cid=cid: (
                     on_suggestion_selected(p) if on_suggestion_selected else None
                 ),
+                on_change=on_cell_change,
             )
             cell_controls.append(card)
         else:

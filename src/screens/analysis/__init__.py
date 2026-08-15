@@ -9,6 +9,7 @@ import flet as ft
 from flet import Control
 
 from components.dataset_overview_card import build_dataset_overview_card
+from components.file_import_card import build_file_import_card
 from components.project_switcher import build_project_switcher
 from components.suggestion_chips import build_suggestion_chips
 from core import theme, tokens
@@ -16,7 +17,6 @@ from core.constants import STORAGE_NOTEBOOKS
 from core.state import state
 from screens.analysis.autopilot_bar import build_autopilot_bar
 from screens.analysis.cell_list import build_add_cell_row, build_cells_container
-from screens.analysis.empty_state import build_empty_state
 from screens.analysis.fab_menu import build_analysis_fab
 from screens.analysis.handlers import (
     connect_colab_async,
@@ -76,15 +76,73 @@ def AnalysisScreen() -> Control:
 
     ft.use_effect(_on_mount, [state.active_project_id])
 
+    async def _auto_reload_from_cache(cached_path):
+        if not session_name:
+            return
+        try:
+            from services.file_service import suggest_load_code
+
+            file_name = cached_path.name
+            remote_path = f"/content/{file_name}"
+            await colab.upload(str(cached_path), remote_path, session_name)
+            load_code = suggest_load_code(file_name)
+            await colab.exec_code(load_code, session_name=session_name)
+
+            schema_code = (
+                "import json\n"
+                "try:\n"
+                "  _schema = {\n"
+                '    "shape": list(df.shape),\n'
+                '    "columns": list(df.columns),\n'
+                '    "dtypes": {str(k): str(v) for k, v in df.dtypes.items()},\n'
+                '    "summary": df.describe(include="all").to_dict(),\n'
+                '    "head": df.head(5).to_dict(orient="records"),\n'
+                '    "nulls": df.isnull().sum().to_dict(),\n'
+                "  }\n"
+                "  print('__SPANINSIGHT_SCHEMA_START__')\n"
+                "  print(json.dumps(_schema, default=str))\n"
+                "  print('__SPANINSIGHT_SCHEMA_END__')\n"
+                "except Exception:\n"
+                "  pass\n"
+            )
+            res = await colab.exec_code(schema_code, session_name=session_name)
+            raw_text = ""
+            if res and isinstance(res, dict):
+                for out in res.get("outputs", []):
+                    if out.get("output_type") == "stream":
+                        raw_text += out.get("text", "")
+                    elif out.get("data", {}).get("text/plain"):
+                        raw_text += str(out["data"]["text/plain"])
+
+            if "__SPANINSIGHT_SCHEMA_START__" in raw_text:
+                json_part = (
+                    raw_text.split("__SPANINSIGHT_SCHEMA_START__")[1]
+                    .split("__SPANINSIGHT_SCHEMA_END__")[0]
+                    .strip()
+                )
+                parsed = json.loads(json_part)
+                set_schema_json(parsed)
+                set_cells_version(cells_version + 1)
+        except Exception as ex:
+            logger.warning("Auto-reload dataset from cache failed: %s", ex)
+
     async def _load_notebook():
         try:
             if projects and state.active_project_id:
                 proj = await projects.get_project(state.active_project_id)
                 if proj:
                     state.notebook_cells = list(proj.get("notebook_cells", []))
+                    if proj.get("dataset_name"):
+                        state.active_project_dataset = proj["dataset_name"]
                     if proj.get("schema_json"):
                         set_schema_json(proj["schema_json"])
                     set_cells_version(cells_version + 1)
+
+                    from services.dataset_cache import get_cached_path
+
+                    cached = get_cached_path(state.active_project_id)
+                    if cached and not proj.get("schema_json") and session_name:
+                        page.run_task(_auto_reload_from_cache, cached)
                     return
             if storage:
                 raw = await storage.get(STORAGE_NOTEBOOKS)
@@ -108,6 +166,8 @@ def AnalysisScreen() -> Control:
                 if proj:
                     proj["notebook_cells"] = state.notebook_cells
                     proj["session_name"] = state.active_session_name
+                    if state.active_project_dataset:
+                        proj["dataset_name"] = state.active_project_dataset
                     if schema_json:
                         proj["schema_json"] = schema_json
                     await projects.save_project(proj)
@@ -371,6 +431,44 @@ def AnalysisScreen() -> Control:
         on_project_selected=lambda p: set_cells_version(cells_version + 1),
     )
 
+    dataset_label = state.active_project_dataset or (
+        schema_json.get("name") if schema_json else ""
+    )
+    dataset_indicator = ft.Container()
+    if dataset_label:
+        dataset_indicator = ft.Container(
+            content=ft.Row(
+                [
+                    ft.Icon(
+                        ft.Icons.DATASET_ROUNDED,
+                        size=14,
+                        color=theme.ACCENT,
+                    ),
+                    ft.Text(
+                        dataset_label,
+                        size=tokens.FONT_XS,
+                        weight=ft.FontWeight.W_600,
+                        color=theme.ACCENT,
+                        max_lines=1,
+                        overflow=ft.TextOverflow.ELLIPSIS,
+                    ),
+                    ft.IconButton(
+                        icon=ft.Icons.REFRESH_ROUNDED,
+                        icon_size=14,
+                        tooltip="Change Dataset",
+                        on_click=lambda _: page.run_task(_pick_and_upload_file),
+                        style=ft.ButtonStyle(padding=2),
+                    ),
+                ],
+                spacing=tokens.SPACE_XXS,
+            ),
+            padding=ft.Padding(
+                tokens.SPACE_SM, tokens.SPACE_XXS, tokens.SPACE_SM, tokens.SPACE_XXS
+            ),
+            border_radius=tokens.RADIUS_SM,
+            bgcolor=ft.Colors.with_opacity(0.08, theme.ACCENT),
+        )
+
     top_bar = ft.Column(
         controls=[
             ft.Container(
@@ -378,7 +476,7 @@ def AnalysisScreen() -> Control:
                     controls=[
                         project_chip,
                         ft.Row(
-                            [mode_toggle_btn, session_chip],
+                            [dataset_indicator, mode_toggle_btn, session_chip],
                             spacing=tokens.SPACE_XS,
                         ),
                     ],
@@ -418,18 +516,11 @@ def AnalysisScreen() -> Control:
         visible=bool(state.notebook_cells) or is_expert_mode,
     )
 
-    empty_prompt = build_empty_state(
-        on_import=lambda _: page.run_task(_pick_and_upload_file),
-        on_autopilot=lambda _: page.run_task(
-            run_autopilot_async,
-            session_name,
-            schema_json,
-            credits,
-            page,
-            _add_cell,
-            _run_cell,
-        ),
-        has_schema=bool(schema_json),
+    has_dataset = bool(schema_json) or bool(state.notebook_cells)
+
+    import_area = build_file_import_card(
+        on_pick=lambda: page.run_task(_pick_and_upload_file),
+        is_loading=is_generating,
     )
 
     feed_controls = []
@@ -454,10 +545,8 @@ def AnalysisScreen() -> Control:
         feed_controls.extend(cell_controls)
         feed_controls.append(add_cell_row)
 
-    has_content = bool(state.notebook_cells) or bool(schema_json)
-
     scrollable_feed = ft.ListView(
-        controls=feed_controls if (has_content and feed_controls) else [empty_prompt],
+        controls=feed_controls if (has_dataset and feed_controls) else [import_area],
         expand=True,
         spacing=tokens.SPACE_SM,
         padding=ft.Padding(
@@ -470,7 +559,7 @@ def AnalysisScreen() -> Control:
     gen_indicator = build_gen_indicator(is_generating)
 
     chips_section = ft.Container(visible=False)
-    if suggestions:
+    if suggestions and has_dataset:
         chips_section = ft.Container(
             content=build_suggestion_chips(
                 suggestions=suggestions,

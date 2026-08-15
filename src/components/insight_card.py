@@ -27,13 +27,16 @@ def build_insight_card(
     on_pin_report: Callable[[dict], None] | None = None,
     on_suggestion_selected: Callable[[str], None] | None = None,
     on_retry_ai: Callable[[str], None] | None = None,
+    on_change: Callable[[], None] | None = None,
 ) -> ft.Container:
-    """Build a comprehensive SpanInsight Insight Card."""
+    """Build a comprehensive SpanInsight Insight Card with state-driven drawers."""
     prompt = block.get("prompt") or block.get("name") or f"Analysis #{index + 1}"
     code = block.get("code") or block.get("source") or ""
     is_failed = block.get("failed", False)
     is_pinned = block.get("pinned", False)
     is_running = block.get("is_running", False)
+    show_raw = block.get("_show_raw", False)
+    show_code = block.get("_show_code", False)
 
     controls: list[ft.Control] = []
 
@@ -192,43 +195,40 @@ def build_insight_card(
             )
         )
 
-    # ── 4. Collapsible Raw Output / Terminal Drawer ─────────────
+    # ── 4. Collapsible Raw Output Drawer (State-driven) ─────────
     if stdout_text and stdout_text != str(result_val).strip():
-        raw_output_visible = [False]
-        raw_output_box = ft.Container(
-            content=parse_ansi_to_flet_text(stdout_text, default_size=tokens.FONT_XS),
-            padding=tokens.SPACE_SM,
-            bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
-            border_radius=tokens.RADIUS_SM,
-            visible=False,
-        )
 
         def _toggle_raw_output(_):
-            raw_output_visible[0] = not raw_output_visible[0]
-            raw_output_box.visible = raw_output_visible[0]
-            raw_toggle_btn.icon = (
-                ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
-                if raw_output_visible[0]
-                else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED
-            )
-            raw_toggle_btn.text = (
-                "Hide Raw Output" if raw_output_visible[0] else "View Raw Output"
-            )
-            if page:
-                page.update()
+            block["_show_raw"] = not show_raw
+            if on_change:
+                on_change()
 
         raw_toggle_btn = ft.TextButton(
-            "View Raw Output",
-            icon=ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED,
+            "Hide Raw Output" if show_raw else "View Raw Output",
+            icon=ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
+            if show_raw
+            else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED,
             style=ft.ButtonStyle(color=ft.Colors.ON_SURFACE_VARIANT),
             on_click=_toggle_raw_output,
         )
+
+        drawer_controls = [
+            ft.Row([raw_toggle_btn], alignment=ft.MainAxisAlignment.START)
+        ]
+        if show_raw:
+            raw_output_box = ft.Container(
+                content=parse_ansi_to_flet_text(
+                    stdout_text, default_size=tokens.FONT_XS
+                ),
+                padding=tokens.SPACE_SM,
+                bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+                border_radius=tokens.RADIUS_SM,
+            )
+            drawer_controls.append(raw_output_box)
+
         controls.append(
             ft.Column(
-                [
-                    ft.Row([raw_toggle_btn], alignment=ft.MainAxisAlignment.START),
-                    raw_output_box,
-                ],
+                drawer_controls,
                 spacing=tokens.SPACE_XXS,
             )
         )
@@ -267,110 +267,108 @@ def build_insight_card(
             )
         )
 
-    # ── 6. Collapsible Code Drawer ──────────────────────────────
+    # ── 6. Collapsible Code Drawer (State-driven) ───────────────
     if code:
-        code_visible = [False]
-        code_field_ref = ft.Ref[ft.TextField]()
-
-        code_terminal = ft.Container(
-            content=ft.Column(
-                [
-                    ft.Row(
-                        [
-                            ft.Row(
-                                [
-                                    ft.Container(
-                                        width=10,
-                                        height=10,
-                                        border_radius=5,
-                                        bgcolor="#FF5F56",
-                                    ),
-                                    ft.Container(
-                                        width=10,
-                                        height=10,
-                                        border_radius=5,
-                                        bgcolor="#FFBD2E",
-                                    ),
-                                    ft.Container(
-                                        width=10,
-                                        height=10,
-                                        border_radius=5,
-                                        bgcolor="#28C840",
-                                    ),
-                                    ft.Text(
-                                        "analysis.py",
-                                        size=11,
-                                        color=ft.Colors.ON_SURFACE_VARIANT,
-                                    ),
-                                ],
-                                spacing=tokens.SPACE_XS,
-                            ),
-                            ft.TextButton(
-                                "▶ Run",
-                                icon=ft.Icons.PLAY_ARROW_ROUNDED,
-                                style=ft.ButtonStyle(color=theme.SUCCESS),
-                                on_click=lambda _: (
-                                    on_run_code(
-                                        code_field_ref.current.value
-                                        if code_field_ref.current
-                                        else code
-                                    )
-                                    if on_run_code
-                                    else None
-                                ),
-                            ),
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    ),
-                    ft.TextField(
-                        ref=code_field_ref,
-                        value=code,
-                        multiline=True,
-                        min_lines=2,
-                        max_lines=15,
-                        text_size=tokens.FONT_SM,
-                        text_style=ft.TextStyle(
-                            font_family="RobotoMono",
-                            color=ft.Colors.ON_SURFACE,
-                        ),
-                        border=ft.InputBorder.NONE,
-                        bgcolor=ft.Colors.TRANSPARENT,
-                        cursor_color=theme.PRIMARY,
-                    ),
-                ],
-                spacing=tokens.SPACE_XXS,
-            ),
-            padding=tokens.SPACE_SM,
-            bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
-            border_radius=tokens.RADIUS_SM,
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.12, ft.Colors.ON_SURFACE)),
-            visible=False,
-        )
 
         def _toggle_code(_):
-            code_visible[0] = not code_visible[0]
-            code_terminal.visible = code_visible[0]
-            code_toggle_btn.icon = (
-                ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
-                if code_visible[0]
-                else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED
-            )
-            code_toggle_btn.text = "Hide Code" if code_visible[0] else "View Code"
-            if page:
-                page.update()
+            block["_show_code"] = not show_code
+            if on_change:
+                on_change()
 
         code_toggle_btn = ft.TextButton(
-            "View Code",
-            icon=ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED,
+            "Hide Code" if show_code else "View Code",
+            icon=ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
+            if show_code
+            else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED,
             style=ft.ButtonStyle(color=ft.Colors.ON_SURFACE_VARIANT),
             on_click=_toggle_code,
         )
+
+        code_drawer_controls = [
+            ft.Row([code_toggle_btn], alignment=ft.MainAxisAlignment.START)
+        ]
+        if show_code:
+            code_field_ref = ft.Ref[ft.TextField]()
+            code_terminal = ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Row(
+                            [
+                                ft.Row(
+                                    [
+                                        ft.Container(
+                                            width=10,
+                                            height=10,
+                                            border_radius=5,
+                                            bgcolor="#FF5F56",
+                                        ),
+                                        ft.Container(
+                                            width=10,
+                                            height=10,
+                                            border_radius=5,
+                                            bgcolor="#FFBD2E",
+                                        ),
+                                        ft.Container(
+                                            width=10,
+                                            height=10,
+                                            border_radius=5,
+                                            bgcolor="#28C840",
+                                        ),
+                                        ft.Text(
+                                            "analysis.py",
+                                            size=11,
+                                            color=ft.Colors.ON_SURFACE_VARIANT,
+                                        ),
+                                    ],
+                                    spacing=tokens.SPACE_XS,
+                                ),
+                                ft.TextButton(
+                                    "▶ Run",
+                                    icon=ft.Icons.PLAY_ARROW_ROUNDED,
+                                    style=ft.ButtonStyle(color=theme.SUCCESS),
+                                    on_click=lambda _: (
+                                        on_run_code(
+                                            code_field_ref.current.value
+                                            if code_field_ref.current
+                                            else code
+                                        )
+                                        if on_run_code
+                                        else None
+                                    ),
+                                ),
+                            ],
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        ),
+                        ft.TextField(
+                            ref=code_field_ref,
+                            value=code,
+                            multiline=True,
+                            min_lines=2,
+                            max_lines=15,
+                            text_size=tokens.FONT_SM,
+                            text_style=ft.TextStyle(
+                                font_family="RobotoMono",
+                                color=ft.Colors.ON_SURFACE,
+                            ),
+                            border=ft.InputBorder.NONE,
+                            bgcolor=ft.Colors.TRANSPARENT,
+                            cursor_color=theme.PRIMARY,
+                        ),
+                    ],
+                    spacing=tokens.SPACE_XXS,
+                ),
+                padding=tokens.SPACE_SM,
+                bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+                border_radius=tokens.RADIUS_SM,
+                border=ft.Border.all(
+                    1, ft.Colors.with_opacity(0.12, ft.Colors.ON_SURFACE)
+                ),
+            )
+            code_drawer_controls.append(code_terminal)
+
         controls.append(
             ft.Column(
-                [
-                    ft.Row([code_toggle_btn], alignment=ft.MainAxisAlignment.START),
-                    code_terminal,
-                ],
+                code_drawer_controls,
                 spacing=tokens.SPACE_XXS,
             )
         )

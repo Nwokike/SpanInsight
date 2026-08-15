@@ -9,7 +9,7 @@ import os
 import flet as ft
 
 from core import tokens
-from core.constants import ALLOWED_EXTENSIONS, COST_AUTOPILOT, COST_CUSTOM_PROMPT
+from core.constants import COST_AUTOPILOT, COST_CUSTOM_PROMPT
 from core.state import state
 
 logger = logging.getLogger("AutopilotHandlers")
@@ -156,14 +156,18 @@ async def pick_and_upload_file_async(
     picker = page.file_picker
     result = await picker.pick_files(
         allow_multiple=False,
-        file_type=ft.FilePickerFileType.CUSTOM,
-        allowed_extensions=list(ALLOWED_EXTENSIONS),
-        dialog_title="Select Data File",
+        dialog_title="Select Dataset or Scientific Data File",
     )
 
     if result and result[0].path:
         picked = result[0]
         set_is_generating(True)
+
+        from services.dataset_cache import cache_file
+
+        if state.active_project_id:
+            cache_file(state.active_project_id, picked.path)
+        state.active_project_dataset = picked.name
 
         # File size formatted string
         size_str = ""
@@ -221,6 +225,7 @@ async def pick_and_upload_file_async(
             _update_status("Loading dataset & generating preview…")
             load_code = suggest_load_code(picked.name)
             cell = add_cell_fn("code", load_code)
+            cell["prompt"] = f"Load Dataset: {picked.name}"
             set_is_generating(False)
             await run_cell_fn(cell["id"])
 
@@ -232,7 +237,7 @@ async def pick_and_upload_file_async(
                 '    "shape": list(df.shape),\n'
                 '    "columns": list(df.columns),\n'
                 '    "dtypes": {str(k): str(v) for k, v in df.dtypes.items()},\n'
-                '    "describe": df.describe(include="all").to_dict(),\n'
+                '    "summary": df.describe(include="all").to_dict(),\n'
                 '    "head": df.head(5).to_dict(orient="records"),\n'
                 '    "nulls": df.isnull().sum().to_dict(),\n'
                 "  }\n"
@@ -261,8 +266,17 @@ async def pick_and_upload_file_async(
                 )
                 try:
                     parsed = json.loads(json_part)
+                    from services.ai import analysis as ai_service
+
+                    try:
+                        parsed["description"] = await ai_service.describe_dataset(
+                            parsed
+                        )
+                        parsed["suggestions"] = await ai_service.suggest(parsed)
+                    except Exception as ai_err:
+                        logger.debug("Initial AI schema description failed: %s", ai_err)
                     set_schema_json(parsed)
-                    if page:
+                    if page and fetch_suggestions_fn:
                         page.run_task(fetch_suggestions_fn)
                 except Exception as ex:
                     logger.warning("Schema parsing failed: %s", ex)
