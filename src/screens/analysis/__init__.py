@@ -14,7 +14,6 @@ from components.file_import_card import build_file_import_card
 from components.project_switcher import build_project_switcher
 from components.suggestion_chips import build_suggestion_chips
 from core import theme, tokens
-from core.constants import STORAGE_NOTEBOOKS
 from core.state import state
 from screens.analysis.autopilot_bar import build_autopilot_bar
 from screens.analysis.cell_list import build_add_cell_row, build_cells_container
@@ -49,7 +48,6 @@ def AnalysisScreen() -> Control:
     page = ft.context.page
 
     colab = services.colab
-    storage = services.storage
     credits = services.credits
     projects = services.projects
 
@@ -155,41 +153,41 @@ def AnalysisScreen() -> Control:
                 proj = await projects.get_project(state.active_project_id)
                 if proj:
                     state.notebook_cells = list(proj.get("notebook_cells", []))
-                    if proj.get("dataset_name"):
-                        state.active_project_dataset = proj["dataset_name"]
-                    if proj.get("schema_json"):
-                        set_schema_json(proj["schema_json"])
+                    dataset = proj.get("primary_dataset") or proj.get(
+                        "dataset_name", ""
+                    )
+                    state.active_project_dataset = dataset
+                    schema = proj.get("schema_json", {})
+                    set_schema_json(schema)
+                    if schema.get("suggestions"):
+                        set_suggestions(schema["suggestions"])
+                    else:
+                        set_suggestions([])
                     set_cells_version(cells_version + 1)
 
                     from services.dataset_cache import get_cached_path
 
                     cached = get_cached_path(state.active_project_id)
-                    if cached and not proj.get("schema_json") and session_name:
+                    if cached and not schema and session_name:
                         page.run_task(_auto_reload_from_cache, cached)
                     return
-            if storage:
-                raw = await storage.get(STORAGE_NOTEBOOKS)
-                if raw:
-                    data = json.loads(raw)
-                    if isinstance(data, list) and data:
-                        state.notebook_cells = data
-                        set_cells_version(cells_version + 1)
+            # If no active project or project was deleted, keep state cleanly isolated
+            state.clear_notebook()
+            set_schema_json({})
+            set_suggestions([])
+            set_cells_version(cells_version + 1)
         except Exception as e:
             logger.warning("Failed to load notebook: %s", e)
 
     async def _save_notebook():
         try:
-            if storage:
-                await storage.set(
-                    STORAGE_NOTEBOOKS,
-                    json.dumps(state.notebook_cells, default=str),
-                )
             if projects and state.active_project_id:
                 proj = await projects.get_project(state.active_project_id)
                 if proj:
                     proj["notebook_cells"] = state.notebook_cells
                     proj["session_name"] = state.active_session_name
                     if state.active_project_dataset:
+                        proj["primary_dataset"] = state.active_project_dataset
                         proj["dataset_name"] = state.active_project_dataset
                     if schema_json:
                         proj["schema_json"] = schema_json

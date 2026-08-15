@@ -104,6 +104,11 @@ class AppState:
         """Reset notebook state for a new session."""
         self.notebook_cells = []
         self.current_notebook_name = ""
+        self.active_project_dataset = ""
+        self.current_df = None
+        self.current_df_name = ""
+        self.current_df_rows = 0
+        self.current_df_columns = []
         self.suggestions = []
         self.autopilot_progress = ""
 
@@ -111,8 +116,15 @@ class AppState:
         """Load a project entity into active state."""
         self.active_project_id = project.get("id", "")
         self.active_project_name = project.get("name", "")
-        self.active_project_dataset = project.get("primary_dataset", "")
+        self.active_project_dataset = project.get("primary_dataset") or project.get(
+            "dataset_name", ""
+        )
         self.notebook_cells = list(project.get("notebook_cells", []))
+        self.suggestions = list(project.get("schema_json", {}).get("suggestions", []))
+        self.current_df = None
+        self.current_df_name = ""
+        self.current_df_rows = 0
+        self.current_df_columns = []
         if project.get("hardware"):
             self.session_hardware = project["hardware"]
         if project.get("session_name"):

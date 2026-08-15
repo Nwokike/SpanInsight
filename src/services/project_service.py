@@ -148,6 +148,13 @@ class ProjectService:
         await self._storage.delete(f"project_{project_id}")
         await self._storage.delete(f"notebook_{project_id}")
 
+        try:
+            from services.dataset_cache import delete_cache
+
+            delete_cache(project_id)
+        except Exception:
+            pass
+
         projects = await self.list_projects()
         projects = [p for p in projects if p["id"] != project_id]
         await self._storage.set(

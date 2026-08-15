@@ -123,6 +123,16 @@ def HomeScreen() -> ft.Control:
         )
         page.show_dialog(dialog)
 
+    async def _on_quick_start_analysis(autopilot: bool = False):
+        if services.projects:
+            existing = await services.projects.list_projects()
+            name = f"Project {len(existing) + 1}"
+            new_p = await services.projects.create_project(name=name)
+            state.load_project(new_p)
+        else:
+            state.clear_notebook()
+        controller.start_analysis(autopilot=autopilot)
+
     # ── Quick actions ───────────────────────────────────────────
     quick_actions = ft.Container(
         content=ft.Column(
@@ -140,8 +150,10 @@ def HomeScreen() -> ft.Control:
                             title="Analyze Data",
                             subtitle="AI + Colab",
                             color=theme.PRIMARY,
-                            on_click=lambda e: controller.start_analysis(
-                                autopilot=False
+                            on_click=lambda _: (
+                                page.run_task(_on_quick_start_analysis, False)
+                                if page
+                                else controller.start_analysis(autopilot=False)
                             ),
                         ),
                         action_card(
@@ -149,8 +161,10 @@ def HomeScreen() -> ft.Control:
                             title="Autopilot",
                             subtitle="Auto-report",
                             color=theme.ACCENT,
-                            on_click=lambda e: controller.start_analysis(
-                                autopilot=True
+                            on_click=lambda _: (
+                                page.run_task(_on_quick_start_analysis, True)
+                                if page
+                                else controller.start_analysis(autopilot=True)
                             ),
                         ),
                     ],
