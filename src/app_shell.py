@@ -50,7 +50,11 @@ def AppShell() -> Control:
         if not page or not page.views:
             return
 
-        if not state.app_ready or not state.onboarding_done:
+        if (
+            not state.app_ready
+            or not state.onboarding_done
+            or state.active_subview == "projects"
+        ):
             if page.views[0].navigation_bar is not None:
                 page.views[0].navigation_bar = None
             if page.views[0].appbar is not None:
@@ -257,6 +261,7 @@ def AppShell() -> Control:
         [
             state.app_ready,
             state.current_tab,
+            state.active_subview,
             state.onboarding_done,
             state.is_authenticated,
             state.colab_connected,
@@ -289,6 +294,10 @@ def AppShell() -> Control:
         from screens.onboarding_screen import OnboardingScreen
 
         screen = OnboardingScreen()
+    elif state.active_subview == "projects":
+        from screens.projects import ProjectsScreen
+
+        screen = ProjectsScreen(key=ft.ValueKey("projects"))
     else:
         if state.current_tab == 1:
             from screens.analysis import AnalysisScreen

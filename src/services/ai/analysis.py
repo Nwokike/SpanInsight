@@ -166,10 +166,15 @@ def _compress_schema(schema_json: dict) -> dict:
     return compressed
 
 
-async def generate_code(
+async def generate_code_meta(
     prompt: str, schema_json: dict, analysis_context: str = ""
-) -> str:
-    """Generate executable Python code for the user's analysis request."""
+) -> dict:
+    """Generate executable Python code for the user's analysis request with reasoning metadata."""
+    import time
+
+    from .client import extract_reasoning
+
+    start_time = time.perf_counter()
     context_section = ""
     if analysis_context:
         context_section = (
@@ -192,15 +197,31 @@ async def generate_code(
 
     try:
         data = await call_gateway(TASK_CODE, messages)
+        duration = time.perf_counter() - start_time
         content = extract_content(data)
+        thought = extract_reasoning(data)
         code = extract_block_by_pattern(content, is_json=False)
-        return code
+        model = data.get("model") or data.get("_spaninsight_model_used", "unknown")
+        return {
+            "code": code,
+            "thought": thought,
+            "duration": duration,
+            "model": model,
+        }
     except httpx.HTTPError as e:
         logger.error("Network error during code generation: %s", e)
         raise
     except Exception as e:
         logger.error("Code generation failed: %s", e)
-        return ""
+        return {"code": "", "thought": "", "duration": 0.0, "model": "error"}
+
+
+async def generate_code(
+    prompt: str, schema_json: dict, analysis_context: str = ""
+) -> str:
+    """Generate executable Python code for the user's analysis request."""
+    res = await generate_code_meta(prompt, schema_json, analysis_context)
+    return res.get("code", "")
 
 
 async def generate_corrected_code(

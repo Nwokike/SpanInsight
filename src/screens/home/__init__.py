@@ -60,6 +60,69 @@ def HomeScreen() -> ft.Control:
             state.load_project(new_p)
             controller.navigate_tab(1)
 
+    def _show_delete_dialog(p: dict):
+        pname = p.get("name", "Untitled Project")
+        pid = p.get("id", "")
+
+        def _confirm_delete(_):
+            async def _delete_task():
+                page.pop_dialog()
+                try:
+                    if services.projects:
+                        await services.projects.delete_project(pid)
+                    if state.active_project_id == pid:
+                        existing = await services.projects.list_projects()
+                        if existing:
+                            full = await services.projects.get_project(
+                                existing[0]["id"]
+                            )
+                            if full:
+                                state.load_project(full)
+                        else:
+                            new_p = await services.projects.create_project(
+                                name="Project 1"
+                            )
+                            state.load_project(new_p)
+                    await _load_projects_effect()
+                    page.snack_bar = ft.SnackBar(
+                        ft.Text(f"🗑️ Project '{pname}' deleted")
+                    )
+                    page.snack_bar.open = True
+                    page.update()
+                except Exception as ex:
+                    logger.error("Delete project failed: %s", ex)
+
+            page.run_task(_delete_task)
+
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.DELETE_FOREVER_ROUNDED, color=theme.ERROR),
+                    ft.Text("Delete Project", weight=ft.FontWeight.BOLD),
+                ],
+                spacing=tokens.SPACE_XS,
+            ),
+            content=ft.Text(
+                f"Are you sure you want to delete '{pname}'?\n"
+                "All notebook cells and local cache for this project will be permanently removed.",
+                size=tokens.FONT_SM,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda _: page.pop_dialog()),
+                ft.FilledButton(
+                    "Delete",
+                    style=ft.ButtonStyle(
+                        bgcolor=theme.ERROR,
+                        color=ft.Colors.WHITE,
+                    ),
+                    on_click=_confirm_delete,
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        page.show_dialog(dialog)
+
     # ── Quick actions ───────────────────────────────────────────
     quick_actions = ft.Container(
         content=ft.Column(
@@ -301,8 +364,12 @@ def HomeScreen() -> ft.Control:
             quick_actions,
             build_recent_projects_section(
                 projects,
-                lambda p: page.run_task(_on_open_project, p) if page else None,
-                lambda _: page.run_task(_on_create_new_project) if page else None,
+                on_open=lambda p: page.run_task(_on_open_project, p) if page else None,
+                on_create_new=lambda _: (
+                    page.run_task(_on_create_new_project) if page else None
+                ),
+                on_delete=_show_delete_dialog,
+                on_view_all=lambda _: controller.open_projects_screen(),
             ),
             _create_home_ad(),
             cloud_banner,

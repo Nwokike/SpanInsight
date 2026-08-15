@@ -151,6 +151,13 @@ def build_insight_card(
     )
     controls.append(header_row)
 
+    # ── 1.5. Collapsible AI Chain-of-Thought Process ─────────────
+    from components.thought_accordion import build_thought_accordion
+
+    thought_ctrl = build_thought_accordion(block, on_change=on_change)
+    if thought_ctrl:
+        controls.append(thought_ctrl)
+
     # ── 2. Running Spinner ────────────────────────────────────────
     if is_running:
         controls.append(

@@ -123,22 +123,25 @@ def build_prompt_bar(
     )
 
 
-def build_gen_indicator(is_generating: bool) -> ft.Container:
-    """Subtle spinner and caption shown while AI generates Python code."""
+def build_gen_indicator(
+    is_generating: bool,
+    stage_text: str = "",
+    duration: float = 0.0,
+) -> ft.Control:
+    """Live AI agent progress pill shown while reasoning, generating, and executing."""
+    from components.agent_progress_pill import build_agent_progress_pill
+
     if not is_generating:
         return ft.Container(visible=False)
 
+    pill = build_agent_progress_pill(
+        is_active=is_generating,
+        stage_text=stage_text or "Reasoning & analyzing data…",
+        duration=duration,
+    )
+    if not pill:
+        return ft.Container(visible=False)
     return ft.Container(
-        content=ft.Row(
-            controls=[
-                ft.ProgressRing(width=14, height=14, stroke_width=2),
-                ft.Text(
-                    "AI analyzing & executing on Colab…",
-                    size=tokens.FONT_XS,
-                    color=ft.Colors.ON_SURFACE_VARIANT,
-                ),
-            ],
-            spacing=tokens.SPACE_SM,
-        ),
+        content=pill,
         padding=ft.Padding(tokens.SPACE_MD, tokens.SPACE_XS, tokens.SPACE_MD, 0),
     )

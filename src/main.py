@@ -137,6 +137,8 @@ class AppController:
             toggle_theme=self._toggle_theme,
             check_update=self._startup_checks,
             show_snack=self.show_snack,
+            open_projects_screen=self._open_projects_screen,
+            close_projects_screen=self._close_projects_screen,
         )
 
         # ── Mount component tree ────────────────────────────────
@@ -153,8 +155,19 @@ class AppController:
         )
         logger.info("SpanInsight application shell mounted")
 
+    def _open_projects_screen(self):
+        state.active_subview = "projects"
+        if self.page:
+            self.page.update()
+
+    def _close_projects_screen(self):
+        state.active_subview = ""
+        if self.page:
+            self.page.update()
+
     def navigate_tab(self, idx: int):
         """Navigate to a specific tab index."""
+        state.active_subview = ""
         state.current_tab = idx
 
     def show_snack(self, message: str):
@@ -168,6 +181,7 @@ class AppController:
 
     def _start_analysis(self, autopilot: bool = False):
         """Switch to analysis tab, optionally in autopilot mode."""
+        state.active_subview = ""
         state.autopilot_enabled = autopilot
         state.current_tab = 1
         state.trigger_file_picker = True

@@ -30,6 +30,8 @@ class ControllerMethods:
     check_update: Callable[[], Awaitable[None]] = _noop_async
     open_url: Callable[[str], Awaitable[None]] = _noop_async
     show_snack: Callable[[str], None] = _noop_sync
+    open_projects_screen: Callable[[], None] = _noop_sync
+    close_projects_screen: Callable[[], None] = _noop_sync
 
 
 ControllerMethodsCtx = ft.create_context(ControllerMethods())

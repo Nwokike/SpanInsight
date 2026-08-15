@@ -75,6 +75,7 @@ class AppState:
 
     # ── Navigation & UI ─────────────────────────────────────────────
     current_tab: int = 0  # 0=Home, 1=Analysis, 2=Forms, 3=Reports, 4=Settings
+    active_subview: str = ""  # e.g. "projects"
     is_loading: bool = False
     is_online: bool = True
     app_ready: bool = False  # False until _initial_route completes

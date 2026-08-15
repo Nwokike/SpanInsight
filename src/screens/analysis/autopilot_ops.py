@@ -59,7 +59,8 @@ async def submit_prompt_async(
 
         from services.ai import analysis as ai_service
 
-        code = await ai_service.generate_code(prompt, schema_json)
+        meta = await ai_service.generate_code_meta(prompt, schema_json)
+        code = meta.get("code", "")
         if not code:
             if page:
                 page.snack_bar = ft.SnackBar(
@@ -72,6 +73,9 @@ async def submit_prompt_async(
 
         cell = add_cell_fn("code", code)
         cell["prompt"] = prompt
+        cell["thought"] = meta.get("thought", "")
+        cell["thought_duration"] = meta.get("duration", 0.0)
+        cell["model"] = meta.get("model", "")
         set_is_generating(False)
         await run_cell_fn(cell["id"])
 
@@ -402,15 +406,20 @@ async def run_autopilot_async(
             if not prompt:
                 break
 
-            code = await ai_service.generate_code(
+            meta = await ai_service.generate_code_meta(
                 prompt,
                 schema_json,
                 analysis_context="\n".join(h.get("prompt", "") for h in history),
             )
+            code = meta.get("code", "")
             if not code:
                 continue
 
             cell = add_cell_fn("code", code)
+            cell["prompt"] = prompt
+            cell["thought"] = meta.get("thought", "")
+            cell["thought_duration"] = meta.get("duration", 0.0)
+            cell["model"] = meta.get("model", "")
             await run_cell_fn(cell["id"])
 
             success = True

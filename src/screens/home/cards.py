@@ -115,7 +115,7 @@ def step_row(number: str, title: str, desc: str) -> ft.Row:
 
 
 def project_card(project: dict, on_open, on_delete=None) -> ft.Container:
-    """Card item displaying project metadata, dataset name, hardware, and cell count."""
+    """Renders a single project summary card."""
     import datetime
 
     updated_at = project.get("updated_at", 0)
@@ -125,56 +125,71 @@ def project_card(project: dict, on_open, on_delete=None) -> ft.Container:
     except Exception:
         time_str = ""
 
-    return ft.Container(
-        content=ft.Row(
+    card_controls = [
+        ft.Container(
+            content=ft.Icon(ft.Icons.ANALYTICS_ROUNDED, size=24, color=theme.PRIMARY),
+            width=44,
+            height=44,
+            border_radius=tokens.RADIUS_MD,
+            bgcolor=ft.Colors.with_opacity(0.1, theme.PRIMARY),
+            alignment=ft.Alignment.CENTER,
+        ),
+        ft.Column(
             controls=[
-                ft.Container(
-                    content=ft.Icon(
-                        ft.Icons.ANALYTICS_ROUNDED, size=24, color=theme.PRIMARY
-                    ),
-                    width=44,
-                    height=44,
-                    border_radius=tokens.RADIUS_MD,
-                    bgcolor=ft.Colors.with_opacity(0.1, theme.PRIMARY),
-                    alignment=ft.Alignment.CENTER,
+                ft.Text(
+                    project.get("name", "Untitled Project"),
+                    size=tokens.FONT_SM,
+                    weight=ft.FontWeight.W_600,
+                    max_lines=1,
+                    overflow="ellipsis",
                 ),
-                ft.Column(
-                    controls=[
-                        ft.Text(
-                            project.get("name", "Untitled Project"),
-                            size=tokens.FONT_SM,
-                            weight=ft.FontWeight.W_600,
-                            max_lines=1,
-                            overflow="ellipsis",
-                        ),
-                        ft.Text(
-                            f"{project.get('primary_dataset') or 'Empty notebook'} · {project.get('cell_count', 0)} cells · {time_str}",
-                            size=tokens.FONT_XS,
-                            color=ft.Colors.ON_SURFACE_VARIANT,
-                            max_lines=1,
-                            overflow="ellipsis",
-                        ),
-                    ],
-                    spacing=2,
-                    expand=True,
-                ),
-                ft.Container(
-                    content=ft.Text(
-                        project.get("hardware", "CPU"),
-                        size=tokens.FONT_XXS,
-                        weight=ft.FontWeight.W_600,
-                        color=theme.PRIMARY,
-                    ),
-                    padding=ft.Padding(6, 2, 6, 2),
-                    border_radius=tokens.RADIUS_SM,
-                    bgcolor=ft.Colors.with_opacity(0.1, theme.PRIMARY),
-                ),
-                ft.Icon(
-                    ft.Icons.CHEVRON_RIGHT_ROUNDED,
-                    size=20,
+                ft.Text(
+                    f"{project.get('primary_dataset') or 'Empty notebook'} · {project.get('cell_count', 0)} cells · {time_str}",
+                    size=tokens.FONT_XS,
                     color=ft.Colors.ON_SURFACE_VARIANT,
+                    max_lines=1,
+                    overflow="ellipsis",
                 ),
             ],
+            spacing=2,
+            expand=True,
+        ),
+        ft.Container(
+            content=ft.Text(
+                project.get("hardware", "CPU"),
+                size=tokens.FONT_XXS,
+                weight=ft.FontWeight.W_600,
+                color=theme.PRIMARY,
+            ),
+            padding=ft.Padding(6, 2, 6, 2),
+            border_radius=tokens.RADIUS_SM,
+            bgcolor=ft.Colors.with_opacity(0.1, theme.PRIMARY),
+        ),
+    ]
+
+    if on_delete:
+        card_controls.append(
+            ft.IconButton(
+                icon=ft.Icons.DELETE_OUTLINE_ROUNDED,
+                icon_size=18,
+                icon_color=theme.ERROR,
+                tooltip="Delete Project",
+                on_click=lambda e: on_delete(project),
+                style=ft.ButtonStyle(padding=2),
+            )
+        )
+    else:
+        card_controls.append(
+            ft.Icon(
+                ft.Icons.CHEVRON_RIGHT_ROUNDED,
+                size=20,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+            )
+        )
+
+    return ft.Container(
+        content=ft.Row(
+            controls=card_controls,
             spacing=tokens.SPACE_MD,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
@@ -188,9 +203,9 @@ def project_card(project: dict, on_open, on_delete=None) -> ft.Container:
 
 
 def build_recent_projects_section(
-    projects: list[dict], on_open, on_create_new
+    projects: list[dict], on_open, on_create_new, on_delete=None, on_view_all=None
 ) -> ft.Container:
-    """Renders recent projects list on the Home screen."""
+    """Renders recent projects list (up to 5 items) on the Home screen."""
     controls = [
         ft.Row(
             controls=[
@@ -198,10 +213,22 @@ def build_recent_projects_section(
                     "Recent Projects", size=tokens.FONT_MD, weight=ft.FontWeight.W_600
                 ),
                 ft.Container(expand=True),
-                ft.TextButton(
-                    "+ New Project",
-                    style=ft.ButtonStyle(color=theme.PRIMARY),
-                    on_click=on_create_new,
+                ft.Row(
+                    [
+                        ft.TextButton(
+                            "View All",
+                            style=ft.ButtonStyle(color=ft.Colors.ON_SURFACE_VARIANT),
+                            on_click=on_view_all,
+                        )
+                        if on_view_all and len(projects) > 0
+                        else ft.Container(),
+                        ft.TextButton(
+                            "+ New Project",
+                            style=ft.ButtonStyle(color=theme.PRIMARY),
+                            on_click=on_create_new,
+                        ),
+                    ],
+                    spacing=tokens.SPACE_XXS,
                 ),
             ],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -221,8 +248,8 @@ def build_recent_projects_section(
             )
         )
     else:
-        for p in projects[:4]:  # Show top 4 recent
-            controls.append(project_card(p, on_open))
+        for p in projects[:5]:  # Show top 5 recent
+            controls.append(project_card(p, on_open, on_delete=on_delete))
             controls.append(ft.Container(height=tokens.SPACE_XS))
 
     return ft.Container(
