@@ -7,7 +7,13 @@ import flet as ft
 from core import theme, tokens
 
 from .ai_box import build_ai_edit_box
-from .field_card import FIELD_TYPES, build_field_card, new_field
+from .field_card import (
+    FIELD_TYPES,
+    HAS_OPTIONS,
+    TYPE_ICONS,
+    build_field_card,
+    new_field,
+)
 
 
 def build_form_editor(
@@ -144,4 +150,12 @@ def build_form_editor(
     return controls
 
 
-__all__ = ["FIELD_TYPES", "build_field_card", "build_form_editor", "new_field"]
+__all__ = [
+    "FIELD_TYPES",
+    "HAS_OPTIONS",
+    "TYPE_ICONS",
+    "build_ai_edit_box",
+    "build_field_card",
+    "build_form_editor",
+    "new_field",
+]
