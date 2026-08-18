@@ -97,6 +97,12 @@ class ReportService:
 
     async def delete_report(self, report_id: str) -> bool:
         reports = await self._load_all()
+        target = next((r for r in reports if r["id"] == report_id), None)
+        if target and target.get("share_id"):
+            try:
+                await self.delete_public_report(target["share_id"])
+            except Exception as ex:
+                logger.warning("Cloud report cleanup on delete failed: %s", ex)
         original_len = len(reports)
         reports = [r for r in reports if r["id"] != report_id]
         if len(reports) < original_len:
@@ -145,14 +151,21 @@ class ReportService:
                 )
                 return None
 
+            existing_id = report.get("share_id") or (
+                report.get("id") if report.get("id", "").startswith("rep_") else None
+            )
+            payload = {
+                "project_id": resolved_project_id,
+                "report_json": report_json,
+                "is_public": report.get("is_public", False),
+            }
+            if existing_id:
+                payload["id"] = existing_id
+
             resp = await request_with_retry(
                 "POST",
                 f"{API_BASE_URL}/reports",
-                json={
-                    "project_id": resolved_project_id,
-                    "report_json": report_json,
-                    "is_public": report.get("is_public", False),
-                },
+                json=payload,
                 timeout=15.0,
             )
             if resp.status_code == 201:
@@ -221,6 +234,30 @@ class ReportService:
         except Exception as e:
             logger.warning("Failed to fetch featured reports: %s", e)
             return []
+
+    async def send_liveness_heartbeat(self) -> None:
+        """Ping gateway with locally active featured reports to renew their liveness lease."""
+        try:
+            reports = await self._load_all()
+            featured_ids = [
+                r["share_id"]
+                for r in reports
+                if r.get("is_public") and r.get("share_id")
+            ]
+            if not featured_ids:
+                return
+            await request_with_retry(
+                "POST",
+                f"{API_BASE_URL}/reports/heartbeat",
+                json={"active_report_ids": featured_ids},
+                timeout=10.0,
+            )
+            logger.info(
+                "Sent liveness heartbeat for %d active featured report(s)",
+                len(featured_ids),
+            )
+        except Exception as e:
+            logger.debug("Featured reports liveness heartbeat ping failed: %s", e)
 
     @staticmethod
     def _generate_id() -> str:

@@ -66,8 +66,10 @@ class AppController:
         self.storage = StorageService(page)
         self.credit_service = CreditService(page, self.storage)
         from services.project_service import ProjectService
+        from services.report_service import ReportService
 
         self.project_service = ProjectService(self.storage)
+        self.report_service = ReportService(self.storage)
         self.ad_service = AdService(page)
         await self.ad_service.gather_consent()
 
@@ -400,6 +402,13 @@ class AppController:
                     )
         except Exception:
             pass
+
+        # Send liveness heartbeat for active featured reports
+        try:
+            if self.report_service:
+                await self.report_service.send_liveness_heartbeat()
+        except Exception as _hbe:
+            logger.debug("Liveness heartbeat failed: %s", _hbe)
 
 
 async def main(page: ft.Page):
