@@ -26,16 +26,40 @@ async def submit_prompt_async(
     set_is_generating,
     set_prompt_text,
     on_cell_change,
+    colab=None,
 ):
     """Handle natural-language AI query, generate Python, and execute."""
     if not prompt.strip():
         return
-    if not session_name:
-        if page:
-            show_snack(page, "Connect to Colab first", error=True)
-        return
+
+    from screens.analysis.colab_ops import (
+        connect_colab_async,
+        ensure_active_dataset_in_kernel,
+    )
+
+    # 1. Guarantee a live Colab connection before spending credits or generating code
+    active_sess = state.active_session_name or session_name
+    if not active_sess or not state.colab_connected:
+        if colab:
+            if page:
+                show_snack(page, "🔄 Connecting to Colab session first…", duration=2500)
+            await connect_colab_async(colab, page, lambda _: None)
+            active_sess = state.active_session_name
+            if active_sess:
+                await ensure_active_dataset_in_kernel(colab, active_sess)
+        if not active_sess:
+            if page:
+                show_snack(
+                    page,
+                    "Colab is not connected. Please connect to a session in the header first.",
+                    error=True,
+                )
+            return
 
     set_is_generating(True)
+    state.is_analyzing = True
+    state.analysis_stage = 2
+    state.analysis_stage_text = "AI reasoning & formulating analysis…"
     set_prompt_text("")
 
     try:
@@ -59,12 +83,17 @@ async def submit_prompt_async(
                 )
             return
 
+        state.analysis_stage = 3
+        state.analysis_stage_text = "Synthesizing specialized Python code…"
+
         cell = add_cell_fn("code", code)
         cell["prompt"] = prompt
         cell["thought"] = meta.get("thought", "")
         cell["thought_duration"] = meta.get("duration", 0.0)
         cell["model"] = meta.get("model", "")
-        set_is_generating(False)
+
+        state.analysis_stage = 4
+        state.analysis_stage_text = "Executing in Colab kernel & rendering visuals…"
         await run_cell_fn(cell["id"])
 
     except asyncio.CancelledError:
@@ -78,6 +107,9 @@ async def submit_prompt_async(
             except Exception:
                 pass
     finally:
+        state.analysis_stage = 0
+        state.analysis_stage_text = ""
+        state.is_analyzing = False
         try:
             set_is_generating(False)
         except Exception:

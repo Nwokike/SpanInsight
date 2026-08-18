@@ -64,6 +64,10 @@ class AppState:
     active_schema_json: dict = None  # synced by AnalysisScreen for cross-module use
     analysis_blocks: list = None
     is_analyzing: bool = False
+    analysis_stage: int = (
+        0  # 0=idle, 1=schema, 2=reasoning, 3=code, 4=executing, 5=narrating, 6=healing
+    )
+    analysis_stage_text: str = ""
     autopilot_enabled: bool = True
     autopilot_cancelled: bool = False
     autopilot_running: bool = False

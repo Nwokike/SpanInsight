@@ -20,16 +20,82 @@ def AgentProgressPill(
 
     is_expanded, set_is_expanded = ft.use_state(False)
 
-    display_stage = stage_text or "Reasoning & analyzing data…"
+    from core.state import state
+
+    current_stage = getattr(state, "analysis_stage", 2)
+    display_stage = (
+        state.analysis_stage_text
+        or stage_text
+        or (
+            "Inspecting dataset schema & context…"
+            if current_stage == 1
+            else "Reasoning & formulating analysis…"
+            if current_stage == 2
+            else "Synthesizing specialized Python code…"
+            if current_stage == 3
+            else "Executing in Colab kernel…"
+            if current_stage == 4
+            else "Compiling executive summary & takeaways…"
+            if current_stage == 5
+            else "🩹 AI self-healing execution error…"
+            if current_stage == 6
+            else "AI Agent working…"
+        )
+    )
     duration_str = f" ({duration:.1f}s)" if duration > 0 else ""
 
     if not steps:
+        s1 = (
+            "done"
+            if current_stage >= 2
+            else "running"
+            if current_stage == 1
+            else "pending"
+        )
+        s2 = (
+            "done"
+            if current_stage >= 3
+            else "running"
+            if current_stage == 2
+            else "pending"
+        )
+        s3 = (
+            "done"
+            if current_stage >= 4
+            else "running"
+            if current_stage == 3
+            else "pending"
+        )
+        s4 = (
+            "done"
+            if current_stage >= 5
+            else "running"
+            if current_stage in (4, 6)
+            else "pending"
+        )
+        s5 = (
+            "done"
+            if current_stage == 0
+            else "running"
+            if current_stage == 5
+            else "pending"
+        )
+
         steps = [
-            {"text": "Inspect dataset schema & statistics", "status": "done"},
-            {"text": "Deep reasoning & analytical formulation", "status": "running"},
-            {"text": "Generate specialized Python code", "status": "pending"},
-            {"text": "Execute in Colab kernel & render visuals", "status": "pending"},
+            {"text": "Inspect dataset schema & context", "status": s1},
+            {"text": "Deep AI reasoning & query formulation", "status": s2},
+            {"text": "Synthesize specialized Python analysis", "status": s3},
+            {
+                "text": "Execute in Colab kernel & render visuals",
+                "status": "running" if current_stage == 6 else s4,
+            },
+            {"text": "Executive takeaways & insights", "status": s5},
         ]
+        if current_stage == 6:
+            steps.insert(
+                4,
+                {"text": "🩹 AI self-healing execution error", "status": "running"},
+            )
 
     # Render timeline steps
     step_rows = []

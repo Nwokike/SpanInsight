@@ -236,9 +236,10 @@ def AnalysisScreen() -> Control:
         return cell
 
     async def _run_cell(cell_id: str):
+        live_sess = state.active_session_name or session_name
         await run_cell_async(
             cell_id,
-            session_name,
+            live_sess,
             colab,
             page,
             cell_refs_map,
@@ -495,6 +496,7 @@ def AnalysisScreen() -> Control:
                 set_is_generating,
                 set_prompt_text,
                 _on_cell_change,
+                colab=colab,
             )
         finally:
             # Observable set notifies subscribers → may touch a destroyed

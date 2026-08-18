@@ -135,8 +135,31 @@ async def run_cell_async(
 ):
     """Execute a single notebook cell and stream outputs to the UI."""
     cell = next((c for c in state.notebook_cells if c["id"] == cell_id), None)
-    if not cell or not session_name:
+    if not cell:
         return
+
+    # Guarantee an active, live Colab session
+    active_sess = state.active_session_name or session_name
+    if not active_sess:
+        if colab:
+            if page:
+                from core.utils import show_snack
+
+                show_snack(page, "🔄 Connecting to Colab session first…", duration=2500)
+            await connect_colab_async(colab, page, lambda _: None)
+            active_sess = state.active_session_name
+            if active_sess:
+                await ensure_active_dataset_in_kernel(colab, active_sess)
+        if not active_sess:
+            if page:
+                from core.utils import show_snack
+
+                show_snack(
+                    page,
+                    "Colab is not connected. Please connect to a session first.",
+                    error=True,
+                )
+            return
 
     code = cell.get("source", "").strip()
     if not code:
@@ -210,6 +233,10 @@ async def run_cell_async(
         from services.ai import analysis as ai_service
         from services.colab.output_utils import extract_error_text
 
+        state.analysis_stage = 6
+        state.analysis_stage_text = (
+            f"🩹 AI self-healing code execution (attempt {attempt + 1}/2)…"
+        )
         state.autopilot_progress = f"🩹 Self-healing code (attempt {attempt + 1}/2)…"
         if page:
             from core.utils import show_snack
@@ -243,12 +270,14 @@ async def run_cell_async(
 
     MAX_HEAL_ATTEMPTS = 2
     can_heal = bool(cell.get("prompt"))
-    session_used = session_name
+    session_used = active_sess
 
     try:
         heal_attempt = 0
         while True:
             try:
+                state.analysis_stage = 4
+                state.analysis_stage_text = "Executing in Colab kernel…"
                 await _exec_once(session_used)
             except Exception as exec_err:
                 if not _session_expired(str(exec_err)):
@@ -288,35 +317,56 @@ async def run_cell_async(
                 "output_type": "error",
                 "ename": type(e).__name__,
                 "evalue": err_msg,
-                "traceback": [err_msg],
+                "traceback": [f"{type(e).__name__}: {err_msg}"],
             }
         ]
         cell["failed"] = True
+        _flush_output_to_ui(refs, cell, page)
     finally:
+        set_is_executing(False)
         cell["is_running"] = False
+        on_cell_change()
+
+        # Re-enable the run button
         try:
-            set_is_executing(False)
+            if refs.get("play_btn") and refs["play_btn"].current:
+                refs["play_btn"].current.disabled = False
+                refs["play_btn"].current.update()
+            if refs.get("stop_row") and refs["stop_row"].current:
+                refs["stop_row"].current.visible = False
+                refs["stop_row"].current.update()
         except Exception:
-            # Session may already be destroyed during app shutdown
-            pass
-        try:
-            _flush_output_to_ui(refs, cell, page)
-            on_cell_change()
-        except Exception:
             pass
 
-        # Trigger AI executive narration and suggestions for the completed cell
-        # (load cells and autopilot steps run their own describe flows).
-        # Double-guarded: the flag OR the load-prompt prefix skips narration.
-        is_load_cell = str(cell.get("prompt", "")).startswith("Load Dataset:")
-        if cell.get("outputs") and not cell.get("skip_narration") and not is_load_cell:
-            last_out = cell["outputs"][-1]
-            if last_out.get("output_type") != "error":
+        # Post-execution narration: generate AI description + next suggestions
+        # ONLY if the cell succeeded and is an actual analysis cell.
+        if not cell.get("failed", False):
+            src_stripped = cell.get("source", "").strip()
+            prompt_str = str(cell.get("prompt", ""))
+            is_load_cell = (
+                cell.get("skip_narration", False)
+                or prompt_str.startswith("Load Dataset:")
+                or cell.get("is_initial_load", False)
+                or src_stripped.startswith(
+                    "import pandas as pd\nimport numpy as np\n\ndf = "
+                )
+                or (
+                    src_stripped.startswith("import pandas as pd")
+                    and "read_csv(" in src_stripped
+                    and len(src_stripped.splitlines()) <= 5
+                )
+            )
 
-                async def _post_exec_ai(c):
-                    import asyncio
+            if not is_load_cell:
 
+                async def _post_exec_ai(c: dict):
                     try:
+                        state.analysis_stage = 5
+                        state.analysis_stage_text = (
+                            "Compiling executive summary & takeaways…"
+                        )
+                        import asyncio
+
                         from services.ai import analysis as ai_service
 
                         stdout_str = ""
@@ -362,9 +412,21 @@ async def run_cell_async(
                             pass
                     except Exception as ai_ex:
                         logger.warning("Post-execution narration failed: %s", ai_ex)
+                    finally:
+                        state.analysis_stage = 0
+                        state.analysis_stage_text = ""
+                        state.is_analyzing = False
 
                 if page:
                     page.run_task(_post_exec_ai, cell)
+                else:
+                    state.analysis_stage = 0
+                    state.analysis_stage_text = ""
+                    state.is_analyzing = False
+        else:
+            state.analysis_stage = 0
+            state.analysis_stage_text = ""
+            state.is_analyzing = False
 
 
 def _flush_output_to_ui(refs_dict: dict, c: dict, page: ft.Page):

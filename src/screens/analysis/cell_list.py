@@ -41,9 +41,7 @@ def build_cells_container(
                 on_run_code=lambda code, _cid=cid: on_run_cell(_cid),
                 on_pin_report=on_pin_report,
                 on_suggestion_selected=on_suggestion_selected,
-                on_retry_ai=lambda p, _cid=cid: (
-                    on_suggestion_selected(p) if on_suggestion_selected else None
-                ),
+                on_retry_ai=lambda p, _cid=cid: on_run_cell(_cid),
                 on_change=on_cell_change,
             )
             cell_controls.append(card)
