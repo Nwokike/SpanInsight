@@ -46,8 +46,6 @@ def SettingsScreen() -> ft.Control:
     services = ft.use_context(ServiceCtx)
     ft.use_context(ControllerMethodsCtx)
 
-    terminal_output, set_terminal_output = ft.use_state("")
-    terminal_visible, set_terminal_visible = ft.use_state(False)
     cli_version = ft.use_memo(_get_cli_version, [])
 
     # ── Helpers ──────────────────────────────────────────────────
@@ -110,25 +108,47 @@ def SettingsScreen() -> ft.Control:
 
     # ── Colab account ───────────────────────────────────────────
     async def _sign_out(e=None):
-        from core.constants import STORAGE_ONBOARDING_DONE
+        def close_dialog(confirmed):
+            async def _close(ev):
+                page.pop_dialog()
+                if confirmed:
+                    from core.constants import STORAGE_ONBOARDING_DONE
 
-        if services.colab:
-            await services.colab.clear_token()
-        if services.storage:
-            await services.storage.delete(STORAGE_ONBOARDING_DONE)
-        state.onboarding_done = False
-        state.is_authenticated = False
-        state.colab_authenticated = False
-        state.auth_email = ""
-        state.colab_connected = False
-        state.active_session_name = ""
-        state.active_sessions = []
-        state.current_tab = 0
-        if page:
-            from core.utils import show_snack
+                    if services.colab:
+                        await services.colab.clear_token()
+                    if services.storage:
+                        await services.storage.delete(STORAGE_ONBOARDING_DONE)
+                    state.onboarding_done = False
+                    state.is_authenticated = False
+                    state.colab_authenticated = False
+                    state.auth_email = ""
+                    state.colab_connected = False
+                    state.active_session_name = ""
+                    state.active_sessions = []
+                    state.current_tab = 0
+                    if page:
+                        from core.utils import show_snack
 
-            show_snack(page, "Signed out successfully", duration=2000)
-            page.update()
+                        show_snack(page, "Signed out successfully", duration=2000)
+                        page.update()
+
+            return _close
+
+        dialog = ft.AlertDialog(
+            title=ft.Text("Sign Out?"),
+            content=ft.Text(
+                "Are you sure you want to sign out? You will need to re-authenticate with Google."
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=close_dialog(False)),
+                ft.FilledButton(
+                    "Sign Out",
+                    style=ft.ButtonStyle(bgcolor=theme.ERROR),
+                    on_click=close_dialog(True),
+                ),
+            ],
+        )
+        page.show_dialog(dialog)
 
     async def _check_auth(e=None):
         if not services.colab:
@@ -229,44 +249,6 @@ def SettingsScreen() -> ft.Control:
 
             show_snack(page, f"Cache clear failed: {ex}", error=True)
 
-    # ── Debug terminal ──────────────────────────────────────────
-    async def _run_debug(e=None):
-        if not services.colab or not state.active_session_name:
-            set_terminal_output("No active session. Start one from the Notebook tab.")
-            set_terminal_visible(True)
-            return
-
-        set_terminal_output("Running diagnostics...")
-        set_terminal_visible(True)
-
-        try:
-            code = (
-                "import sys, os\n"
-                "print(f'Python: {sys.version}')\n"
-                "print(f'CWD: {os.getcwd()}')\n"
-                "print(f'Files: {os.listdir(\"/content\")[:10]}')\n"
-                "try:\n"
-                "    import torch; print(f'PyTorch: {torch.__version__}, CUDA: {torch.cuda.is_available()}')\n"
-                "except: print('PyTorch: not installed')\n"
-                "try:\n"
-                "    import tensorflow as tf; print(f'TF: {tf.__version__}')\n"
-                "except: print('TF: not installed')"
-            )
-            outputs = await services.colab.exec_code(
-                code, state.active_session_name, timeout=15.0
-            )
-            text_parts = []
-            for o in outputs:
-                if o.get("output_type") == "stream":
-                    text_parts.append(o.get("text", ""))
-                elif o.get("output_type") == "error":
-                    text_parts.append(f"ERROR: {o.get('ename')}: {o.get('evalue')}")
-
-            res = "".join(text_parts) or "No output"
-            set_terminal_output(res)
-        except Exception as ex:
-            set_terminal_output(f"Error: {ex}")
-
     # ── Banner ad helper ────────────────────────────────────────
     def _ad():
         if page and page.platform in (ft.PagePlatform.ANDROID, ft.PagePlatform.IOS):
@@ -332,11 +314,8 @@ def SettingsScreen() -> ft.Control:
             on_click=lambda e: _show_credits(),
         )
     )
-    controls.extend(
-        build_debug_section(
-            terminal_output, terminal_visible, lambda e: page.run_task(_run_debug, e)
-        )
-    )
+    controls.extend(build_debug_section(page, services.colab, state.active_session_name))
+
     controls.extend(
         build_data_section(
             lambda e: page.run_task(on_clear_data, e),

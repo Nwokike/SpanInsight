@@ -73,6 +73,7 @@ class AppController:
         from services.colab import ColabService
 
         self.colab_service = ColabService()
+        self.colab_service.on_session_lost = self._on_session_lost
         page.run_task(self.colab_service.init)
 
         # Register global FilePicker service
@@ -330,6 +331,17 @@ class AppController:
             cleanup_stale()
         except Exception as _ce:
             logger.debug("Stale cache cleanup failed: %s", _ce)
+
+    def _on_session_lost(self, session_name: str):
+        if state.active_session_name == session_name:
+            state.colab_connected = False
+            state.active_session_name = None
+            try:
+                from core.utils import show_snack
+                show_snack(self.page, "Colab connection lost.", success=False)
+                self.page.update()
+            except Exception:
+                pass
 
     async def _startup_checks(self):
         """Check API health and version requirements."""

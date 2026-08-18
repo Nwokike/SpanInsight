@@ -277,6 +277,16 @@ def AppShell() -> Control:
             bgcolor=ft.Colors.TRANSPARENT,
         )
 
+        if (
+            state.current_tab != 1
+            or not state.is_authenticated
+            or not state.colab_connected
+        ):
+            try:
+                page.views[0].floating_action_button = None
+            except Exception:
+                pass
+
         try:
             page.update()
         except Exception:

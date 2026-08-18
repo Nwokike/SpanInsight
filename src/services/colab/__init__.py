@@ -24,6 +24,7 @@ class ColabService:
         self._cancel_event = threading.Event()
         self._keep_alive_tasks: dict[str, asyncio.Task] = {}
         self.default_stdin_hook: Callable | None = None
+        self.on_session_lost: Callable[[str], None] | None = None
 
     @property
     def is_available(self) -> bool:
@@ -308,5 +309,8 @@ class ColabService:
                 if code is not None and 400 <= code < 500:
                     consecutive_4xx += 1
                     if consecutive_4xx >= 2:
+                        logger.warning("Session %s lost (4xx). Stopping keep_alive.", session_name)
+                        if self.on_session_lost:
+                            self.on_session_lost(session_name)
                         break
             await asyncio.sleep(60)

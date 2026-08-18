@@ -67,6 +67,8 @@ async def exec_code_impl(
 
             if is_terminal_error(e):
                 st.prune_session(session_name)
+                if service.on_session_lost:
+                    service.on_session_lost(session_name)
                 raise ValueError("Session lost (404/401). It may have timed out.")
             raise
 

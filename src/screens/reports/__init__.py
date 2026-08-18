@@ -201,7 +201,7 @@ def ReportsScreen() -> ft.Control:
             ft.Container(
                 visible=show_editor,
                 content=ft.Column(
-                    controls=[
+                    controls=(
                         build_report_editor(
                             blocks=editor_blocks,
                             title=draft_title,
@@ -281,9 +281,10 @@ def ReportsScreen() -> ft.Control:
                             share_btn_ref=share_btn_ref,
                             view_live_btn_ref=view_live_btn_ref,
                         )
-                    ]
-                    if show_editor
-                    else []
+                        if show_editor
+                        else []
+                    ),
+                    scroll=ft.ScrollMode.AUTO,
                 ),
                 expand=True,
             ),
