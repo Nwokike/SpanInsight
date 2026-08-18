@@ -221,37 +221,22 @@ def build_notebook_cell(
     # ── Code Cell ────────────────────────────────────────────────
     output_controls = parse_cell_outputs(cell)
 
-    # Dynamic height calculation based on raw text lines
-    raw_output_text = ""
-    for out in outputs:
-        if isinstance(out, dict):
-            otype = out.get("output_type") or out.get("type", "")
-            if otype == "stream":
-                raw_output_text += str(out.get("text", "")) + "\n"
-            elif otype == "error":
-                raw_output_text += "\n".join(out.get("traceback", [])) + "\n"
-            elif otype in ("execute_result", "display_data"):
-                raw_output_text += str(out.get("data", {}).get("text/plain", "")) + "\n"
-
-    line_count = (
-        max(raw_output_text.count("\n") + 1, 1)
-        if raw_output_text.strip()
-        else (6 if output_controls else 0)
-    )
-    calc_height = min(max(line_count * 20 + 24, 60), 380) if output_controls else None
-
     output_panel = ft.Container(
         ref=output_panel_ref,
         content=ft.Column(
             controls=[
                 ft.Container(
-                    content=ft.ListView(
+                    content=ft.Column(
                         ref=output_ref,
                         controls=output_controls,
                         spacing=tokens.SPACE_XXS,
-                        auto_scroll=False,
                     ),
-                    height=calc_height,
+                    padding=ft.Padding(
+                        tokens.SPACE_SM,
+                        tokens.SPACE_SM,
+                        tokens.SPACE_SM,
+                        tokens.SPACE_SM,
+                    ),
                 ),
                 ft.Row(
                     controls=[

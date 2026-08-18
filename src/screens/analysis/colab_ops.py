@@ -162,6 +162,7 @@ async def run_cell_async(
         _flush_output_to_ui(refs, cell, page)
 
     async def _exec_once(sess: str):
+        output_buffer.clear()
         # Re-read source on every attempt so healed code actually executes
         src = cell.get("source", "").strip()
         timeout = state.default_timeout or COLAB_DEFAULT_TIMEOUT
@@ -209,6 +210,7 @@ async def run_cell_async(
         from services.ai import analysis as ai_service
         from services.colab.output_utils import extract_error_text
 
+        state.autopilot_progress = f"🩹 Self-healing code (attempt {attempt + 1}/2)…"
         if page:
             from core.utils import show_snack
 
@@ -219,9 +221,10 @@ async def run_cell_async(
             )
 
         error_text = extract_error_text(cell.get("outputs", [])) or "Unknown error"
+        prompt_desc = cell.get("prompt") or cell.get("source", "")
         try:
             corrected = await ai_service.generate_corrected_code(
-                cell.get("prompt", ""),
+                prompt_desc,
                 cell.get("source", ""),
                 error_text,
                 state.active_schema_json or {},
@@ -229,10 +232,11 @@ async def run_cell_async(
         except Exception as ex:
             logger.warning("Self-healing code generation failed: %s", ex)
             return False
-        if not corrected or corrected == cell.get("source", ""):
+        if not corrected or corrected.strip() == cell.get("source", "").strip():
             return False
         cell["source"] = corrected
         cell["outputs"] = []
+        output_buffer.clear()
         cell["heal_count"] = attempt + 1
         on_cell_change()
         return True
