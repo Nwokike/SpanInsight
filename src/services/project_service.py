@@ -29,19 +29,75 @@ class ProjectService:
         self._storage = storage
 
     async def list_projects(self) -> list[dict]:
-        """Fetch all projects, sorted by updated_at descending."""
+        """Fetch all non-empty projects, sorted by updated_at descending."""
         raw = await self._storage.get(STORAGE_PROJECTS_INDEX)
         if not raw:
             return []
         try:
             projects = json.loads(raw)
             if isinstance(projects, list):
-                projects.sort(key=lambda p: p.get("updated_at", 0), reverse=True)
-                return projects
+                # Filter out empty ghost projects (0 cells and no dataset)
+                valid_projects = [
+                    p
+                    for p in projects
+                    if (
+                        p.get("cell_count", 0) > 0
+                        or bool(p.get("primary_dataset"))
+                        or bool(p.get("dataset_name"))
+                    )
+                ]
+                valid_projects.sort(key=lambda p: p.get("updated_at", 0), reverse=True)
+                return valid_projects
             return []
         except Exception as e:
             logger.warning("Failed to parse projects index: %s", e)
             return []
+
+    async def cleanup_empty_projects(self) -> int:
+        """Purge empty ghost projects from storage and sanitize the index."""
+        raw = await self._storage.get(STORAGE_PROJECTS_INDEX)
+        if not raw:
+            return 0
+        try:
+            projects = json.loads(raw)
+            if not isinstance(projects, list):
+                return 0
+            cleaned = []
+            purged = 0
+            for p in projects:
+                pid = p.get("id")
+                has_content = (
+                    p.get("cell_count", 0) > 0
+                    or bool(p.get("primary_dataset"))
+                    or bool(p.get("dataset_name"))
+                )
+                if not has_content:
+                    # Double-check full record
+                    full_p = await self.get_project(pid)
+                    if full_p and (
+                        len(full_p.get("notebook_cells", [])) > 0
+                        or bool(full_p.get("primary_dataset"))
+                    ):
+                        has_content = True
+                        p["cell_count"] = len(full_p.get("notebook_cells", []))
+                        p["primary_dataset"] = full_p.get("primary_dataset", "")
+
+                if has_content:
+                    cleaned.append(p)
+                else:
+                    purged += 1
+                    if pid:
+                        await self._storage.delete(f"project_{pid}")
+                        await self._storage.delete(f"notebook_{pid}")
+            if purged > 0:
+                await self._storage.set(
+                    STORAGE_PROJECTS_INDEX, json.dumps(cleaned, default=str)
+                )
+                logger.info("Purged %d empty ghost projects from storage index", purged)
+            return purged
+        except Exception as e:
+            logger.warning("Failed during cleanup_empty_projects: %s", e)
+            return 0
 
     async def get_project(self, project_id: str) -> dict | None:
         """Fetch project details including full notebook cells."""
@@ -112,21 +168,31 @@ class ProjectService:
             f"project_{project_id}", json.dumps(project_meta, default=str)
         )
 
-        # Update summary in index
+        # Only register in projects index if project has real content
+        has_content = (
+            len(cells) > 0
+            or bool(project.get("primary_dataset"))
+            or bool(project.get("dataset_name"))
+            or bool(project.get("schema_json"))
+        )
+
         projects = await self.list_projects()
         updated_index = []
         found = False
         for p in projects:
             if p["id"] == project_id:
-                p["name"] = project["name"]
-                p["primary_dataset"] = project.get("primary_dataset", "")
-                p["hardware"] = project.get("hardware", "CPU")
-                p["updated_at"] = project["updated_at"]
-                p["session_name"] = project.get("session_name", "")
-                p["cell_count"] = len(cells)
+                if has_content:
+                    p["name"] = project["name"]
+                    p["primary_dataset"] = project.get("primary_dataset", "")
+                    p["hardware"] = project.get("hardware", "CPU")
+                    p["updated_at"] = project["updated_at"]
+                    p["session_name"] = project.get("session_name", "")
+                    p["cell_count"] = len(cells)
+                    updated_index.append(p)
                 found = True
-            updated_index.append(p)
-        if not found:
+            else:
+                updated_index.append(p)
+        if not found and has_content:
             updated_index.insert(
                 0,
                 {

@@ -43,12 +43,13 @@ def build_project_switcher(
 
         async def _create_new(_=None):
             _close()
-            existing_list = await project_service.list_projects()
-            name = f"Project {len(existing_list) + 1}"
-            new_p = await project_service.create_project(name=name)
-            state.load_project(new_p)
+            state.clear_notebook()
+            state.active_project_id = ""
+            state.active_project_name = "Untitled Analysis"
             if on_project_selected:
-                on_project_selected(new_p)
+                on_project_selected(
+                    {"id": "", "name": "Untitled Analysis", "notebook_cells": []}
+                )
             if page:
                 page.update()
 

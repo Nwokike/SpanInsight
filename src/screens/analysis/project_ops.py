@@ -104,22 +104,46 @@ async def load_notebook(
 
 
 async def save_notebook(projects, schema_json: dict, suggestions: list):
-    """Persist the current notebook, schema, and suggestions to disk."""
+    """Persist the current notebook, schema, and suggestions to disk only when content exists."""
     try:
-        if projects and state.active_project_id:
-            proj = await projects.get_project(state.active_project_id)
-            if proj:
-                proj["notebook_cells"] = state.notebook_cells
-                proj["session_name"] = state.active_session_name
-                if state.active_project_dataset:
-                    proj["primary_dataset"] = state.active_project_dataset
-                    proj["dataset_name"] = state.active_project_dataset
-                current_schema = schema_json or state.active_schema_json
-                if current_schema:
-                    proj["schema_json"] = current_schema
-                if suggestions:
-                    proj["suggestions"] = suggestions
-                await projects.save_project(proj)
+        if not projects:
+            return
+        has_content = (
+            bool(state.notebook_cells)
+            or bool(state.active_project_dataset)
+            or bool(state.active_schema_json)
+        )
+        if not has_content:
+            return
+
+        if not state.active_project_id:
+            # We are on an in-memory draft that now has content - create real project entity
+            ds_name = state.active_project_dataset or "Analysis"
+            base_name = Path(ds_name).stem if ds_name else "Analysis"
+            new_p = await projects.create_project(
+                name=base_name,
+                primary_dataset=state.active_project_dataset,
+                hardware=state.session_hardware,
+                initial_cells=state.notebook_cells,
+                schema_json=schema_json or state.active_schema_json,
+            )
+            state.active_project_id = new_p["id"]
+            state.active_project_name = new_p["name"]
+            return
+
+        proj = await projects.get_project(state.active_project_id)
+        if proj:
+            proj["notebook_cells"] = state.notebook_cells
+            proj["session_name"] = state.active_session_name
+            if state.active_project_dataset:
+                proj["primary_dataset"] = state.active_project_dataset
+                proj["dataset_name"] = state.active_project_dataset
+            current_schema = schema_json or state.active_schema_json
+            if current_schema:
+                proj["schema_json"] = current_schema
+            if suggestions:
+                proj["suggestions"] = suggestions
+            await projects.save_project(proj)
     except Exception as e:
         logger.warning("Failed to save notebook: %s", e)
 
@@ -135,18 +159,15 @@ async def create_new_project(
     set_cells_version,
     cells_version: int,
 ):
-    """Create a fresh project and switch active state to it."""
-    if not projects:
-        return
+    """Reset workspace to a fresh empty draft without eager database persistence."""
     cancel_pending_save_fn()
-    existing_list = await projects.list_projects()
-    name = f"Project {len(existing_list) + 1}"
-    new_p = await projects.create_project(name=name, hardware=state.session_hardware)
-    state.load_project(new_p)
-    set_active_project_id(new_p["id"])
-    set_active_project_name(name)
+    state.clear_notebook()
+    state.active_project_id = ""
+    state.active_project_name = "Untitled Analysis"
+    set_active_project_id("")
+    set_active_project_name("Untitled Analysis")
     set_schema({})
     set_suggestions([])
     set_cells_version(cells_version + 1)
     if page:
-        show_snack(page, f"✨ Created {name}", success=True)
+        show_snack(page, "✨ New analysis draft started", success=True)

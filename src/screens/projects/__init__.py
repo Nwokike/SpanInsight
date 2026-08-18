@@ -50,13 +50,11 @@ def ProjectsScreen() -> ft.Control:
                 controller.navigate_tab(1)
 
     async def _on_create_new(_=None):
-        if services.projects:
-            existing = await services.projects.list_projects()
-            name = f"Project {len(existing) + 1}"
-            new_p = await services.projects.create_project(name=name)
-            state.load_project(new_p)
-            controller.close_projects_screen()
-            controller.navigate_tab(1)
+        state.clear_notebook()
+        state.active_project_id = ""
+        state.active_project_name = "Untitled Analysis"
+        controller.close_projects_screen()
+        controller.navigate_tab(1)
 
     def _show_delete_dialog(p: dict):
         pname = p.get("name", "Untitled Project")
@@ -78,10 +76,9 @@ def ProjectsScreen() -> ft.Control:
                             if full:
                                 state.load_project(full)
                         else:
-                            new_p = await services.projects.create_project(
-                                name="Project 1"
-                            )
-                            state.load_project(new_p)
+                            state.clear_notebook()
+                            state.active_project_id = ""
+                            state.active_project_name = "Untitled Analysis"
                     await _fetch_projects()
                     from core.utils import show_snack
 

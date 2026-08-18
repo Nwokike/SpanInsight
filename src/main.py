@@ -337,13 +337,19 @@ class AppController:
         # Signal AppShell that boot is complete
         state.app_ready = True
 
-        # Prune stale locally-cached dataset files (no-op if cache is empty)
+        # Prune stale locally-cached dataset files & empty ghost projects
         try:
             from services.dataset_cache import cleanup_stale
 
             cleanup_stale()
         except Exception as _ce:
             logger.debug("Stale cache cleanup failed: %s", _ce)
+
+        try:
+            if self.project_service:
+                await self.project_service.cleanup_empty_projects()
+        except Exception as _pe:
+            logger.debug("Project cleanup failed: %s", _pe)
 
     def _on_session_lost(self, session_name: str):
         if state.active_session_name == session_name:

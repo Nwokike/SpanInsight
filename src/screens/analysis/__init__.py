@@ -365,6 +365,18 @@ def AnalysisScreen() -> Control:
         [app_state.pending_dataset_load, session_name],
     )
 
+    # ── Auto-trigger file picker when requested from Home/Quick Start ──
+    async def _check_trigger_file_picker():
+        if app_state.trigger_file_picker:
+            app_state.trigger_file_picker = False
+            await asyncio.sleep(0.1)
+            await _pick_and_upload_file()
+
+    ft.use_effect(
+        _check_trigger_file_picker,
+        [app_state.trigger_file_picker, session_name],
+    )
+
     # ── Prompt & File actions ────────────────────────────────────
     async def _submit_prompt(p: str):
         if state.is_analyzing or state.autopilot_running:
@@ -428,30 +440,46 @@ def AnalysisScreen() -> Control:
                 _run_cell,
             ),
         )
-        if projects and state.active_project_id and state.active_project_dataset:
+        if projects and state.active_project_dataset:
             try:
-                proj = await projects.get_project(state.active_project_id)
-                if proj and (
-                    proj["name"].startswith("Analysis ")
-                    or proj["name"].startswith("Project ")
-                ):
-                    d_stem = Path(state.active_project_dataset).stem
-                    all_p = await projects.list_projects()
-                    similar = [
-                        p
-                        for p in all_p
-                        if p.get("primary_dataset") == state.active_project_dataset
-                    ]
-                    new_name = (
-                        d_stem if len(similar) <= 1 else f"{d_stem} ({len(similar)})"
+                d_stem = Path(state.active_project_dataset).stem
+                all_p = await projects.list_projects()
+                similar = [
+                    p
+                    for p in all_p
+                    if p.get("primary_dataset") == state.active_project_dataset
+                ]
+                new_name = (
+                    d_stem if len(similar) <= 1 else f"{d_stem} ({len(similar) + 1})"
+                )
+
+                if not state.active_project_id:
+                    new_p = await projects.create_project(
+                        name=new_name,
+                        primary_dataset=state.active_project_dataset,
+                        hardware=state.session_hardware,
+                        initial_cells=state.notebook_cells,
+                        schema_json=schema_json or state.active_schema_json,
                     )
-                    proj["name"] = new_name
+                    state.active_project_id = new_p["id"]
                     state.active_project_name = new_name
+                    set_active_project_id(new_p["id"])
                     set_active_project_name(new_name)
-                    await projects.save_project(proj)
-                    set_cells_version(cells_version + 1)
+                else:
+                    proj = await projects.get_project(state.active_project_id)
+                    if proj and (
+                        proj["name"].startswith("Analysis ")
+                        or proj["name"].startswith("Project ")
+                        or proj["name"] == "Untitled Analysis"
+                    ):
+                        proj["name"] = new_name
+                        proj["primary_dataset"] = state.active_project_dataset
+                        state.active_project_name = new_name
+                        set_active_project_name(new_name)
+                        await projects.save_project(proj)
+                set_cells_version(cells_version + 1)
             except Exception as ex:
-                logger.debug("Project auto-rename: %s", ex)
+                logger.debug("Project auto-rename/create: %s", ex)
 
     # ── FAB Sync ────────────────────────────────────────────────
     def _sync_fab():

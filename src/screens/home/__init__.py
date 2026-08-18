@@ -53,12 +53,10 @@ def HomeScreen() -> ft.Control:
                 controller.navigate_tab(1)
 
     async def _on_create_new_project(_=None):
-        if services.projects:
-            existing = await services.projects.list_projects()
-            name = f"Project {len(existing) + 1}"
-            new_p = await services.projects.create_project(name=name)
-            state.load_project(new_p)
-            controller.navigate_tab(1)
+        state.clear_notebook()
+        state.active_project_id = ""
+        state.active_project_name = "Untitled Analysis"
+        controller.navigate_tab(1)
 
     def _show_delete_dialog(p: dict):
         pname = p.get("name", "Untitled Project")
@@ -79,10 +77,9 @@ def HomeScreen() -> ft.Control:
                             if full:
                                 state.load_project(full)
                         else:
-                            new_p = await services.projects.create_project(
-                                name="Project 1"
-                            )
-                            state.load_project(new_p)
+                            state.clear_notebook()
+                            state.active_project_id = ""
+                            state.active_project_name = "Untitled Analysis"
                     await _load_projects_effect()
                     from core.utils import show_snack
 
@@ -122,13 +119,9 @@ def HomeScreen() -> ft.Control:
         page.show_dialog(dialog)
 
     async def _on_quick_start_analysis(autopilot: bool = False):
-        if services.projects:
-            existing = await services.projects.list_projects()
-            name = f"Project {len(existing) + 1}"
-            new_p = await services.projects.create_project(name=name)
-            state.load_project(new_p)
-        else:
-            state.clear_notebook()
+        state.clear_notebook()
+        state.active_project_id = ""
+        state.active_project_name = "Untitled Analysis"
         controller.start_analysis(autopilot=autopilot)
 
     # ── Quick actions ───────────────────────────────────────────
