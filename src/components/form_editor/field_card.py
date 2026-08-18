@@ -1,0 +1,181 @@
+"""Individual field card component for the form editor."""
+
+from __future__ import annotations
+
+import flet as ft
+
+from core import theme
+
+FIELD_TYPES = [
+    "text",
+    "textarea",
+    "number",
+    "email",
+    "select",
+    "radio",
+    "checkbox",
+    "date",
+    "phone",
+    "url",
+    "rating",
+]
+
+TYPE_ICONS = {
+    "text": ft.Icons.SHORT_TEXT_ROUNDED,
+    "textarea": ft.Icons.NOTES_ROUNDED,
+    "number": ft.Icons.NUMBERS_ROUNDED,
+    "email": ft.Icons.EMAIL_ROUNDED,
+    "select": ft.Icons.LIST_ROUNDED,
+    "radio": ft.Icons.RADIO_BUTTON_CHECKED_ROUNDED,
+    "checkbox": ft.Icons.CHECK_BOX_ROUNDED,
+    "date": ft.Icons.CALENDAR_TODAY_ROUNDED,
+    "phone": ft.Icons.PHONE_ROUNDED,
+    "url": ft.Icons.LINK_ROUNDED,
+    "rating": ft.Icons.STAR_ROUNDED,
+}
+
+HAS_OPTIONS = {"select", "radio", "checkbox"}
+
+
+def new_field(schema: list[dict], ftype="text") -> dict:
+    """Create a blank field dict with a unique label."""
+    existing_labels = {f["label"].lower() for f in schema}
+    base_label = "New Field"
+    if base_label.lower() not in existing_labels:
+        label = base_label
+    else:
+        counter = 1
+        while True:
+            candidate = f"{base_label} {counter}"
+            if candidate.lower() not in existing_labels:
+                label = candidate
+                break
+            counter += 1
+
+    return {
+        "name": label.lower().replace(" ", "_"),
+        "label": label,
+        "type": ftype,
+        "required": False,
+        "options": [],
+    }
+
+
+def build_field_card(
+    field: dict,
+    index: int,
+    total: int,
+    on_change,
+    on_move,
+    on_delete,
+    schema: list[dict] | None = None,
+) -> ft.Container:
+    """Render one editable field card."""
+
+    def _update(key, val):
+        field[key] = val
+        if key == "label":
+            base_name = val.lower().replace(" ", "_")
+            name = base_name
+            if schema:
+                existing_names = {
+                    schema[i]["name"] for i in range(len(schema)) if i != index
+                }
+                if name in existing_names:
+                    counter = 1
+                    while f"{base_name}_{counter}" in existing_names:
+                        counter += 1
+                    name = f"{base_name}_{counter}"
+            field["name"] = name
+        if key == "type":
+            on_change()
+
+    def _update_options(val: str):
+        field["options"] = [o.strip() for o in val.split(",") if o.strip()]
+
+    type_options = [ft.DropdownOption(key=t, text=t.upper()) for t in FIELD_TYPES]
+
+    controls = [
+        ft.Row(
+            [
+                ft.Icon(
+                    TYPE_ICONS.get(field["type"], ft.Icons.TEXT_FIELDS),
+                    size=16,
+                    color=theme.ACCENT,
+                ),
+                ft.TextField(
+                    value=field["label"],
+                    border="none",
+                    text_size=14,
+                    text_style=ft.TextStyle(weight=ft.FontWeight.W_500),
+                    expand=True,
+                    content_padding=ft.Padding(4, 0, 4, 0),
+                    on_change=lambda e: _update("label", e.control.value),
+                ),
+                ft.Dropdown(
+                    value=field["type"],
+                    width=110,
+                    text_size=11,
+                    options=type_options,
+                    border_radius=8,
+                    content_padding=ft.Padding(8, 0, 8, 0),
+                    on_select=lambda e: _update("type", e.data),
+                ),
+                ft.Switch(
+                    value=field.get("required", False),
+                    label="Req",
+                    label_text_style=ft.TextStyle(size=10),
+                    on_change=lambda e: _update("required", e.control.value),
+                ),
+            ],
+            spacing=4,
+            vertical_alignment="center",
+        ),
+    ]
+
+    if field["type"] in HAS_OPTIONS:
+        controls.append(
+            ft.TextField(
+                value=", ".join(field.get("options", [])),
+                hint_text="Option 1, Option 2, Option 3...",
+                text_size=12,
+                border_radius=8,
+                max_lines=2,
+                on_change=lambda e: _update_options(e.control.value),
+            )
+        )
+
+    controls.append(
+        ft.Row(
+            [
+                ft.IconButton(
+                    ft.Icons.ARROW_UPWARD_ROUNDED,
+                    icon_size=16,
+                    disabled=index == 0,
+                    on_click=lambda e, idx=index: on_move(idx, -1),
+                ),
+                ft.IconButton(
+                    ft.Icons.ARROW_DOWNWARD_ROUNDED,
+                    icon_size=16,
+                    disabled=index == total - 1,
+                    on_click=lambda e, idx=index: on_move(idx, 1),
+                ),
+                ft.Container(expand=True),
+                ft.IconButton(
+                    ft.Icons.DELETE_OUTLINE_ROUNDED,
+                    icon_size=16,
+                    icon_color=theme.ERROR,
+                    on_click=lambda e, idx=index: on_delete(idx),
+                ),
+            ],
+            spacing=0,
+        )
+    )
+
+    return ft.Container(
+        content=ft.Column(controls, spacing=6),
+        padding=12,
+        border_radius=10,
+        bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ON_SURFACE),
+        border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+    )

@@ -334,7 +334,7 @@ def AppShell() -> Control:
             alignment=ft.Alignment.CENTER,
         )
     elif not state.onboarding_done:
-        from screens.onboarding_screen import OnboardingScreen
+        from screens.onboarding import OnboardingScreen
 
         screen = OnboardingScreen()
     elif state.active_subview == "projects":

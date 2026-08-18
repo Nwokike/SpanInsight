@@ -10,7 +10,10 @@ from screens.reports.report_ops import (
     on_import,
     on_open_report,
     on_save,
+)
+from screens.reports.sharing_ops import (
     on_share,
+    on_toggle_featured,
     on_view_live,
 )
 
@@ -23,6 +26,7 @@ __all__ = [
     "on_open_report",
     "on_save",
     "on_share",
+    "on_toggle_featured",
     "on_view_live",
     "on_voice_toggle",
 ]
