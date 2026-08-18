@@ -172,6 +172,10 @@ def ReportsScreen() -> ft.Control:
             d = active_report.copy()
             d["data"]["is_public"] = v
             set_active_report(d)
+        if page:
+            page.run_task(
+                handlers.on_toggle_featured, page, ui_state, report_service, v
+            )
 
     return ft.Column(
         controls=[

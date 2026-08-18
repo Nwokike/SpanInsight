@@ -140,9 +140,14 @@ async def suggest(
         content = extract_content(data)
         cleaned = extract_block_by_pattern(content, is_json=True)
         cleaned = re.sub(r'"icon"\s*:\s*([^"\s,{}]+)', r'"icon": "\1"', cleaned)
+        cleaned = re.sub(
+            r"\\U([0-9a-fA-F]{8})",
+            lambda m: chr(int(m.group(1), 16)),
+            cleaned,
+        )
         try:
-            suggestions = json.loads(cleaned)
-        except ValueError:
+            suggestions = json.loads(cleaned, strict=False)
+        except Exception:
             # Reasoning models sometimes emit a broken string mid-array —
             # salvage the complete objects instead of losing every suggestion.
             salvaged = _salvage_json_objects(cleaned)

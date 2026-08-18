@@ -189,6 +189,24 @@ class ReportService:
             logger.error("Renew share error: %s", e)
             return False
 
+    async def delete_public_report(self, share_id: str) -> bool:
+        """Delete a shared or featured report from cloud R2 storage."""
+        if not share_id:
+            return False
+        try:
+            from services.api_client import get_client
+
+            client = get_client()
+            resp = await client.request(
+                "DELETE",
+                f"{API_BASE_URL}/reports/{share_id}",
+                timeout=10.0,
+            )
+            return resp.status_code == 200
+        except Exception as e:
+            logger.error("Delete public report error: %s", e)
+            return False
+
     async def get_featured_reports(self) -> list[dict]:
         """Fetch list of public/community featured reports from gateway."""
         try:

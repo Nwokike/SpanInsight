@@ -243,6 +243,18 @@ class AppController:
             STORAGE_ONBOARDING_DONE,
         )
 
+        # Restore or generate persistent user_uuid
+        try:
+            saved_uuid = await self.storage.get("spaninsight_user_uuid")
+            if not saved_uuid:
+                import uuid
+
+                saved_uuid = f"usr_{uuid.uuid4().hex[:12]}"
+                await self.storage.set("spaninsight_user_uuid", saved_uuid)
+            state.user_uuid = saved_uuid
+        except Exception as e:
+            logger.warning("User UUID restore failed: %s", e)
+
         # Restore hardware defaults from storage
         try:
             saved_gpu = await self.storage.get(STORAGE_DEFAULT_GPU)

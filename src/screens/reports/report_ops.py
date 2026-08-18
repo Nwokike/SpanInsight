@@ -153,6 +153,78 @@ async def on_share(page: ft.Page, ui_state, report_service, ad_service):
         ui_state.rebuild()
 
 
+async def on_toggle_featured(
+    page: ft.Page, ui_state, report_service, is_featured: bool
+):
+    """Real-time handler when user flips 'Feature on spaninsight.com' toggle."""
+    report = ui_state.active_report["data"]
+    if not report:
+        return
+
+    ui_state.is_public["value"] = is_featured
+    ui_state.rebuild()
+
+    from core.utils import show_snack
+
+    if is_featured:
+        if page:
+            show_snack(page, "Publishing to spaninsight.com...", duration=2000)
+        report["blocks"] = list(ui_state.editor_blocks)
+        report["title"] = ui_state.draft_title["value"]
+        report["description"] = ui_state.draft_desc["value"]
+        report["is_arranged"] = True
+        report["is_public"] = True
+
+        share_url = await report_service.share_report(report, state.user_uuid)
+        if share_url:
+            report["share_url"] = share_url
+            if page:
+                show_snack(
+                    page,
+                    "Featured on spaninsight.com! Live in community gallery.",
+                    success=True,
+                    duration=4000,
+                )
+        else:
+            ui_state.is_public["value"] = False
+            ui_state.rebuild()
+            if page:
+                show_snack(
+                    page,
+                    "Failed to feature report. Please check connection.",
+                    error=True,
+                )
+    else:
+        # User toggled OFF: delete from public gallery
+        share_id = report.get("share_id", "")
+        if page:
+            show_snack(page, "Removing from spaninsight.com...", duration=2000)
+
+        if share_id and report_service:
+            await report_service.delete_public_report(share_id)
+
+        report["is_public"] = False
+        report["share_id"] = ""
+        report["share_url"] = ""
+        if report_service:
+            await report_service.update_report(
+                report["id"],
+                {
+                    "is_public": False,
+                    "share_id": "",
+                    "share_url": "",
+                },
+            )
+        if page:
+            show_snack(
+                page,
+                "Removed from spaninsight.com public gallery.",
+                success=True,
+                duration=3000,
+            )
+    ui_state.rebuild()
+
+
 def on_back(page: ft.Page, ui_state, report_service):
     """Navigate back from report editor to dashboard."""
     ui_state.editor_active["value"] = False
