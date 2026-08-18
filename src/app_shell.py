@@ -193,8 +193,13 @@ def AppShell() -> Control:
                 ),
                 border_radius=tokens.RADIUS_SM,
                 bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY),
-                tooltip=f"Colab Connected: {state.active_session_name} ({state.session_hardware})",
+                tooltip=f"Colab Connected: {state.active_session_name} ({state.session_hardware}) — Tap for status",
                 margin=ft.Margin(0, 0, 4, 0),
+                on_click=lambda _: __import__(
+                    "components.colab_status_dialog"
+                ).colab_status_dialog.show_colab_status_dialog(
+                    page, services.colab, state.active_session_name
+                ),
             )
         else:
             colab_indicator = ft.Container(

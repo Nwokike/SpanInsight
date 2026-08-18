@@ -83,9 +83,7 @@ async def on_open_report(page: ft.Page, ui_state, report: dict, report_service):
 async def on_save(page: ft.Page, ui_state, report_service):
     """Persist changes to the active report in local storage."""
     ui_state.is_saving["value"] = True
-    if ui_state.save_btn_ref.current:
-        ui_state.save_btn_ref.current.disabled = True
-        ui_state.save_btn_ref.current.update()
+    ui_state.rebuild()
 
     try:
         if report_service and ui_state.active_report["data"]:
@@ -111,9 +109,7 @@ async def on_save(page: ft.Page, ui_state, report_service):
             show_snack(page, f"Save failed: {e}", error=True, duration=3000)
     finally:
         ui_state.is_saving["value"] = False
-        if ui_state.save_btn_ref.current:
-            ui_state.save_btn_ref.current.disabled = False
-            ui_state.save_btn_ref.current.update()
+        ui_state.rebuild()
 
 
 async def on_share(page: ft.Page, ui_state, report_service, ad_service):
@@ -122,9 +118,7 @@ async def on_share(page: ft.Page, ui_state, report_service, ad_service):
         return
 
     ui_state.is_sharing["value"] = True
-    if ui_state.share_btn_ref.current:
-        ui_state.share_btn_ref.current.disabled = True
-        ui_state.share_btn_ref.current.update()
+    ui_state.rebuild()
 
     try:
         if ad_service:
@@ -139,7 +133,7 @@ async def on_share(page: ft.Page, ui_state, report_service, ad_service):
         if page:
             if url:
                 try:
-                    await page.clipboard.set(url)
+                    await page.set_clipboard_async(url)
                 except Exception:
                     pass
                 from core.utils import show_snack
@@ -158,9 +152,7 @@ async def on_share(page: ft.Page, ui_state, report_service, ad_service):
         logger.error("Share failed: %s", e)
     finally:
         ui_state.is_sharing["value"] = False
-        if ui_state.share_btn_ref.current:
-            ui_state.share_btn_ref.current.disabled = False
-            ui_state.share_btn_ref.current.update()
+        ui_state.rebuild()
 
 
 def on_back(page: ft.Page, ui_state, report_service):
@@ -280,9 +272,7 @@ async def on_view_live(page: ft.Page, ui_state, report_service, ad_service):
         return
 
     ui_state.is_viewing_live["value"] = True
-    if ui_state.view_live_btn_ref.current:
-        ui_state.view_live_btn_ref.current.disabled = True
-        ui_state.view_live_btn_ref.current.update()
+    ui_state.rebuild()
 
     try:
         if report_service:
@@ -318,9 +308,7 @@ async def on_view_live(page: ft.Page, ui_state, report_service, ad_service):
             show_snack(page, f"View live failed: {e}", error=True, duration=3000)
     finally:
         ui_state.is_viewing_live["value"] = False
-        if ui_state.view_live_btn_ref.current:
-            ui_state.view_live_btn_ref.current.disabled = False
-            ui_state.view_live_btn_ref.current.update()
+        ui_state.rebuild()
 
 
 async def on_delete_report(page: ft.Page, ui_state, report_id: str, report_service):

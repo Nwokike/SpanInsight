@@ -314,7 +314,7 @@ def SettingsScreen() -> ft.Control:
             on_click=lambda e: _show_credits(),
         )
     )
-    controls.extend(build_debug_section(page, services.colab, state.active_session_name))
+    controls.extend(build_debug_section(page))
 
     controls.extend(
         build_data_section(

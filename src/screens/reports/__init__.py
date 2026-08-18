@@ -241,7 +241,11 @@ def ReportsScreen() -> ft.Control:
                             on_back=lambda: handlers.on_back(
                                 page, ui_state, report_service
                             ),
-                            on_import=lambda: handlers.on_import(page, ui_state),
+                            on_import=lambda: (
+                                page.run_task(handlers.on_import, page, ui_state)
+                                if page
+                                else None
+                            ),
                             on_ai_edit=lambda action, text: (
                                 page.run_task(
                                     handlers.on_ai_edit, page, ui_state, action, text

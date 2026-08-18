@@ -99,93 +99,48 @@ def build_logs_dialog(page: ft.Page) -> ft.AlertDialog:
     )
 
 
-def build_debug_section(page: ft.Page, colab=None, active_session_name: str | None = None) -> list[ft.Control]:
-    """Activity Terminal and Diagnostics setting card."""
+def build_debug_section(page: ft.Page) -> list[ft.Control]:
+    """Activity Terminal setting card with live memory counter."""
     logs_count = len(MemoryLogHandler.get_logs())
 
     def _open_terminal(e=None):
         if page:
             page.show_dialog(build_logs_dialog(page))
 
-    def _open_colab_status(e=None):
-        if page and colab and active_session_name:
-            import components.colab_status_dialog as colab_status
-            colab_status.show_colab_status_dialog(page, colab, active_session_name)
-        else:
-            from core.utils import show_snack
-            show_snack(page, "Colab session is not connected", success=False)
-
     return [
         section_header("Development & Debug"),
         glass_card(
-            ft.Column(
+            ft.Row(
                 controls=[
-                    ft.Row(
+                    ft.Icon(
+                        ft.Icons.TERMINAL_ROUNDED,
+                        size=tokens.ICON_LG,
+                        color=theme.PRIMARY,
+                    ),
+                    ft.Column(
                         controls=[
-                            ft.Icon(
-                                ft.Icons.CLOUD_DONE_ROUNDED,
-                                size=tokens.ICON_LG,
-                                color=theme.PRIMARY,
+                            ft.Text(
+                                "Live Activity Terminal",
+                                size=tokens.FONT_MD,
+                                weight=ft.FontWeight.W_500,
                             ),
-                            ft.Column(
-                                controls=[
-                                    ft.Text(
-                                        "Colab VM Status",
-                                        size=tokens.FONT_MD,
-                                        weight=ft.FontWeight.W_500,
-                                    ),
-                                    ft.Text(
-                                        "Run diagnostics on the active session",
-                                        size=tokens.FONT_XS,
-                                        color=ft.Colors.ON_SURFACE_VARIANT,
-                                    ),
-                                ],
-                                spacing=tokens.SPACE_XXS,
-                                expand=True,
-                            ),
-                            ft.FilledTonalButton(
-                                content=ft.Text("Status"),
-                                icon=ft.Icons.PLAY_ARROW_ROUNDED,
-                                on_click=_open_colab_status,
+                            ft.Text(
+                                f"{logs_count} entries in memory",
+                                size=tokens.FONT_XS,
+                                color=ft.Colors.ON_SURFACE_VARIANT,
                             ),
                         ],
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        spacing=tokens.SPACE_LG,
+                        spacing=tokens.SPACE_XXS,
+                        expand=True,
                     ),
-                    ft.Divider(height=tokens.SPACE_SM, color=ft.Colors.with_opacity(0.05, ft.Colors.ON_SURFACE)),
-                    ft.Row(
-                        controls=[
-                            ft.Icon(
-                                ft.Icons.TERMINAL_ROUNDED,
-                                size=tokens.ICON_LG,
-                                color=theme.PRIMARY,
-                            ),
-                            ft.Column(
-                                controls=[
-                                    ft.Text(
-                                        "Live Activity Terminal",
-                                        size=tokens.FONT_MD,
-                                        weight=ft.FontWeight.W_500,
-                                    ),
-                                    ft.Text(
-                                        f"{logs_count} entries in memory",
-                                        size=tokens.FONT_XS,
-                                        color=ft.Colors.ON_SURFACE_VARIANT,
-                                    ),
-                                ],
-                                spacing=tokens.SPACE_XXS,
-                                expand=True,
-                            ),
-                            ft.FilledTonalButton(
-                                content=ft.Text("Open"),
-                                icon=ft.Icons.TERMINAL_ROUNDED,
-                                on_click=_open_terminal,
-                            ),
-                        ],
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        spacing=tokens.SPACE_LG,
+                    ft.FilledTonalButton(
+                        content=ft.Text("Open"),
+                        icon=ft.Icons.TERMINAL_ROUNDED,
+                        on_click=_open_terminal,
                     ),
-                ]
-            )
+                ],
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=tokens.SPACE_LG,
+            ),
         ),
     ]
