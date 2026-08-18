@@ -132,7 +132,7 @@ async def publish_form_async(
             set_draft_schema([])
             set_prompt_text("")
             if page:
-                from core.utils import show_snack
+                from core.utils import set_clipboard, show_snack
 
                 show_snack(
                     page,
@@ -140,10 +140,7 @@ async def publish_form_async(
                     success=True,
                     duration=tokens.SNACK_DURATION_EXTENDED_MS,
                 )
-            try:
-                await page.set_clipboard_async(result["url"])
-            except Exception:
-                pass
+                await set_clipboard(page, result["url"])
             await load_forms_fn()
         else:
             show_error("Publish failed. Please check connection or try again.")

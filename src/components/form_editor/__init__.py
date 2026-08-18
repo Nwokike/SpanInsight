@@ -83,12 +83,13 @@ def build_form_editor(
     def _move(idx, direction):
         j = idx + direction
         if 0 <= j < total:
-            schema[idx], schema[j] = schema[j], schema[idx]
-            on_schema_changed()
+            new_s = [dict(f) for f in schema]
+            new_s[idx], new_s[j] = new_s[j], new_s[idx]
+            on_schema_changed(new_s)
 
     def _delete(idx):
-        schema.pop(idx)
-        on_schema_changed()
+        new_s = [dict(f) for i, f in enumerate(schema) if i != idx]
+        on_schema_changed(new_s)
 
     for i, field in enumerate(schema):
         controls.append(
@@ -111,9 +112,8 @@ def build_form_editor(
             content=ft.OutlinedButton(
                 "Add Field",
                 icon=ft.Icons.ADD_ROUNDED,
-                on_click=lambda e: (
-                    schema.append(new_field(schema)),
-                    on_schema_changed(),
+                on_click=lambda e: on_schema_changed(
+                    [*[dict(f) for f in schema], new_field(schema)]
                 ),
                 style=ft.ButtonStyle(
                     shape=ft.RoundedRectangleBorder(radius=tokens.RADIUS_MD),

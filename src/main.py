@@ -89,6 +89,10 @@ class AppController:
         page.services.append(connectivity)
         page.connectivity = connectivity
 
+        # Register Clipboard service
+        clipboard = ft.Clipboard()
+        page.services.append(clipboard)
+
         # Restore theme preference
         from core.constants import STORAGE_THEME
 

@@ -53,6 +53,29 @@ def show_snack(
         logger.warning("Failed to show snack dialog: %s", ex)
 
 
+async def set_clipboard(page: ft.Page | None, text: str) -> bool:
+    """Safely copy string text to system clipboard in Flet 0.86+.
+
+    Args:
+        page: The Flet page instance.
+        text: The string to store on the clipboard.
+
+    Returns:
+        True if copied successfully, False otherwise.
+    """
+    if not text:
+        return False
+    try:
+        if page and hasattr(page, "clipboard") and page.clipboard:
+            await page.clipboard.set(text)
+            return True
+        await ft.Clipboard().set(text)
+        return True
+    except Exception as ex:
+        logger.error("Failed to copy to clipboard: %s", ex)
+        return False
+
+
 def parse_version(version_str: str) -> tuple[int, ...]:
     """Parse a semver string into a comparable tuple.
 

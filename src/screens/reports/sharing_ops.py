@@ -33,10 +33,9 @@ async def on_share(page: ft.Page, ui_state, report_service, ad_service):
         url = await report_service.share_report(report, state.user_uuid)
         if page:
             if url:
-                try:
-                    await page.set_clipboard_async(url)
-                except Exception:
-                    pass
+                from core.utils import set_clipboard
+
+                await set_clipboard(page, url)
                 show_snack(
                     page,
                     "Link copied to clipboard! (Expires in 7 days)",

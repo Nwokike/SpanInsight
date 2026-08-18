@@ -129,9 +129,9 @@ def render_raw_output_drawer(
         if not page:
             return
         try:
-            await page.set_clipboard_async(raw_output_full)
-            from core.utils import show_snack
+            from core.utils import set_clipboard, show_snack
 
+            await set_clipboard(page, raw_output_full)
             show_snack(
                 page,
                 "📋 Raw output copied to clipboard!",

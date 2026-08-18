@@ -24,9 +24,9 @@ def build_logs_dialog(page: ft.Page) -> ft.AlertDialog:
 
     async def _copy(e=None):
         try:
-            await page.set_clipboard_async(log_text.value)
-            from core.utils import show_snack
+            from core.utils import set_clipboard, show_snack
 
+            await set_clipboard(page, log_text.value)
             show_snack(page, "Logs copied to clipboard", success=True)
         except Exception:
             pass

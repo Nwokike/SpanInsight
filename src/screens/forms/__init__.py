@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 
 import flet as ft
@@ -193,15 +194,11 @@ def FormsScreen() -> ft.Control:
 
     async def on_copy_link(form_id: str):
         from core.constants import FORMS_PUBLIC_BASE_URL
+        from core.utils import set_clipboard, show_snack
 
         url = f"{FORMS_PUBLIC_BASE_URL}/{form_id}"
-        try:
-            await page.set_clipboard_async(url)
-        except Exception:
-            pass
+        await set_clipboard(page, url)
         if page:
-            from core.utils import show_snack
-
             show_snack(
                 page,
                 "Link copied!",
@@ -219,33 +216,38 @@ def FormsScreen() -> ft.Control:
                     page,
                     f"Extended to {new_exp[:10]}",
                     success=True,
-                    duration=tokens.SNACK_DURATION_NORMAL_MS,
+                    duration=tokens.SNACK_DURATION_SHORT_MS,
                 )
+            form = active_form.copy()
+            form["expires_at"] = new_exp
+            set_active_form(dict(form))
             await _load_forms()
         else:
             _show_error("Failed to renew.")
 
-    def on_analyze_responses(form: dict):
-        responses = form.get("_responses", [])
+    def on_analyze_responses(form_data: dict):
+        responses = form_data.get("_responses", [])
         if not responses:
-            _show_error("No responses to analyze.")
+            _show_error("No responses to analyze yet.")
             return
-        import json as _json
-        import uuid
 
-        rows = [r["data"] for r in responses]
-        rows_json = _json.dumps(rows[:200], default=str)
+        form_title = form_data.get("title", "Survey")
         code = (
-            f"import pandas as pd\n"
+            f"# Analysis for: {form_title}\n"
+            f"# Responses collected: {len(responses)}\n"
             f"import json\n\n"
-            f"data = json.loads('''{rows_json}''')\n"
-            f"df = pd.DataFrame(data)\n"
-            f'print(f"Loaded {{len(df)}} responses, {{len(df.columns)}} fields")\n'
-            f"df.head()"
+            f"responses_data = {json.dumps(responses, indent=2)}\n"
+            f"df = pd.DataFrame(responses_data)\n"
+            f"print(f'Survey: {form_title}')\n"
+            f"print(f'Total Responses: {{len(df)}}')\n"
+            f"print(df.describe(include=\"all\"))\n"
         )
-        form_title = form.get("title", "Survey")
-        if services.projects:
 
+        has_active_project = (
+            state.active_project_id and state.active_project_id != "default"
+        )
+        if not has_active_project:
+            import uuid
             async def _create_survey_project():
                 proj = await services.projects.create_project(
                     name=f"{form_title} Analysis",
@@ -276,7 +278,7 @@ def FormsScreen() -> ft.Control:
                 schema=draft_schema,
                 title=draft_title,
                 description=draft_desc,
-                on_schema_changed=lambda: set_draft_schema(list(draft_schema)),
+                on_schema_changed=set_draft_schema,
                 on_title_changed=set_draft_title,
                 on_desc_changed=set_draft_desc,
                 on_publish=lambda: (

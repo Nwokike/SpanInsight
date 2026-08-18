@@ -87,11 +87,21 @@ def build_field_card(
                         counter += 1
                     name = f"{base_name}_{counter}"
             field["name"] = name
-        if key == "type":
+        if schema is not None:
+            new_s = [dict(f) for f in schema]
+            if 0 <= index < len(new_s):
+                new_s[index] = dict(field)
+            on_change(new_s)
+        else:
             on_change()
 
     def _update_options(val: str):
         field["options"] = [o.strip() for o in val.split(",") if o.strip()]
+        if schema is not None:
+            new_s = [dict(f) for f in schema]
+            if 0 <= index < len(new_s):
+                new_s[index] = dict(field)
+            on_change(new_s)
 
     type_options = [ft.DropdownOption(key=t, text=t.upper()) for t in FIELD_TYPES]
 
