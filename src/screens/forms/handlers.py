@@ -141,14 +141,14 @@ async def publish_form_async(
                     duration=5000,
                 )
             try:
-                await page.clipboard.set(result["url"])
+                await page.set_clipboard_async(result["url"])
             except Exception:
                 pass
             await load_forms_fn()
         else:
-            show_error("Publish failed. Check connection.")
+            show_error("Publish failed. Please check connection or try again.")
     except Exception as err:
-        show_error(f"Error: {err}")
+        show_error(f"Publish error: {err}")
     finally:
         set_is_publishing(False)
 
@@ -247,4 +247,3 @@ async def download_csv_async(form: dict, page: ft.Page, show_error):
             )
     except Exception as err:
         show_error(f"Save failed: {err}")
-

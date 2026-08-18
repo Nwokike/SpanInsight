@@ -20,20 +20,19 @@ async def load_reports(page: ft.Page, ui_state, report_service):
     try:
         if report_service:
             loaded = await report_service.list_reports()
-            ui_state.user_reports.clear()
-            ui_state.user_reports.extend(loaded)
+            ui_state.user_reports.set(loaded)
             state.user_reports = loaded
     except Exception as e:
         logger.error("Failed to load reports: %s", e)
-    ui_state.is_loading["value"] = False
-    ui_state.rebuild()
+    finally:
+        ui_state.is_loading["value"] = False
+        ui_state.rebuild()
 
 
 async def on_open_report(page: ft.Page, ui_state, report: dict, report_service):
     """Open existing report in editor and run initial AI arrangement if unarranged."""
     ui_state.active_report["data"] = report
-    ui_state.editor_blocks.clear()
-    ui_state.editor_blocks.extend(report.get("blocks", []))
+    ui_state.editor_blocks.set(report.get("blocks", []))
     ui_state.draft_title["value"] = report.get("title", "")
     ui_state.draft_desc["value"] = report.get("description", "")
     ui_state.is_public["value"] = report.get("is_public", False)
@@ -44,7 +43,7 @@ async def on_open_report(page: ft.Page, ui_state, report: dict, report_service):
         ui_state.rebuild()
         try:
             result = await ai_service.arrange_report(
-                ui_state.editor_blocks,
+                list(ui_state.editor_blocks),
                 report.get("dataset_name", ""),
             )
             if result and "blocks" in result:
@@ -56,8 +55,7 @@ async def on_open_report(page: ft.Page, ui_state, report: dict, report_service):
                         b["prompt"] = ai_block.get("prompt", b.get("prompt", ""))
                         new_blocks.append(b)
                 if len(new_blocks) == len(ui_state.editor_blocks):
-                    ui_state.editor_blocks.clear()
-                    ui_state.editor_blocks.extend(new_blocks)
+                    ui_state.editor_blocks.set(new_blocks)
                 if result.get("title"):
                     ui_state.draft_title["value"] = result["title"]
                 if result.get("description"):

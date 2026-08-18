@@ -14,6 +14,15 @@ from services.api_client import get_client, request_with_retry
 logger = logging.getLogger(__name__)
 
 
+def _resolve_project_id(project_id: str) -> str:
+    """Resolve project_id falling back to state.active_project_id or state.user_uuid."""
+    if project_id and project_id.strip():
+        return project_id.strip()
+    from core.state import state
+
+    return (state.active_project_id or state.user_uuid or "").strip()
+
+
 async def create_form(
     project_id: str,
     title: str,
@@ -21,6 +30,11 @@ async def create_form(
     schema_json: list[dict],
 ) -> dict | None:
     """Create a form under a project via the gateway. Returns {id, url, expires_at} or None."""
+
+    resolved_project_id = _resolve_project_id(project_id)
+    if not resolved_project_id:
+        logger.error("Create form failed: No active project or user identity found.")
+        return None
 
     # Validate schema structure before sending
     if not isinstance(schema_json, list):
@@ -52,7 +66,7 @@ async def create_form(
             return None
 
     payload = {
-        "project_id": project_id,
+        "project_id": resolved_project_id,
         "title": title,
         "description": description,
         "schema_json": schema_json,
@@ -68,7 +82,7 @@ async def create_form(
             data = resp.json()
             logger.info(
                 "Form created under project %s: %s → %s",
-                project_id,
+                resolved_project_id,
                 data["id"],
                 data["url"],
             )
@@ -82,15 +96,16 @@ async def create_form(
         return None
 
 
-async def list_forms(project_id: str) -> list[dict]:
-    """Fetch all forms for a project. Returns list of form dicts."""
-    if not project_id:
+async def list_forms(project_id: str = "") -> list[dict]:
+    """Fetch all forms for a project or user scope. Returns list of form dicts."""
+    resolved_project_id = _resolve_project_id(project_id)
+    if not resolved_project_id:
         return []
     try:
         client = get_client()
         resp = await client.get(
             f"{API_BASE_URL}/forms",
-            params={"project_id": project_id},
+            params={"project_id": resolved_project_id},
             timeout=10.0,
         )
         if resp.status_code == 200:
@@ -103,11 +118,12 @@ async def list_forms(project_id: str) -> list[dict]:
 
 async def get_responses(form_id: str, project_id: str = "") -> dict:
     """Fetch all responses for a form inside a project. Returns {count, responses}."""
+    resolved_project_id = _resolve_project_id(project_id)
     try:
         client = get_client()
         params = {}
-        if project_id:
-            params["project_id"] = project_id
+        if resolved_project_id:
+            params["project_id"] = resolved_project_id
         resp = await client.get(
             f"{API_BASE_URL}/forms/{form_id}/responses",
             params=params,
@@ -123,11 +139,12 @@ async def get_responses(form_id: str, project_id: str = "") -> dict:
 
 async def renew_form(form_id: str, project_id: str = "") -> str | None:
     """Extend form expiry by 7 days. Returns new expires_at or None."""
+    resolved_project_id = _resolve_project_id(project_id)
     try:
         resp = await request_with_retry(
             "POST",
             f"{API_BASE_URL}/forms/{form_id}/renew",
-            json={"project_id": project_id} if project_id else None,
+            json={"project_id": resolved_project_id} if resolved_project_id else None,
             timeout=10.0,
         )
         if resp.status_code == 200:
@@ -140,12 +157,13 @@ async def renew_form(form_id: str, project_id: str = "") -> str | None:
 
 async def delete_form(form_id: str, project_id: str = "") -> bool:
     """Delete a form and all its responses under a project."""
+    resolved_project_id = _resolve_project_id(project_id)
     try:
         client = get_client()
         resp = await client.request(
             "DELETE",
             f"{API_BASE_URL}/forms/{form_id}",
-            json={"project_id": project_id} if project_id else None,
+            json={"project_id": resolved_project_id} if resolved_project_id else None,
             timeout=10.0,
         )
         return resp.status_code == 200

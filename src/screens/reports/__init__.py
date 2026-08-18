@@ -44,6 +44,9 @@ class ListProxy:
     def __getitem__(self, i):
         return self.get_val()[i]
 
+    def set(self, items):
+        self.set_val(list(items))
+
     def clear(self):
         self.set_val([])
 

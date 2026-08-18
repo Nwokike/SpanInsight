@@ -260,7 +260,7 @@ def build_form_editor(
     controls.append(
         ft.Container(
             content=ft.OutlinedButton(
-                "+ Add Field",
+                "Add Field",
                 icon=ft.Icons.ADD_ROUNDED,
                 on_click=lambda e: (
                     schema.append(new_field(schema)),

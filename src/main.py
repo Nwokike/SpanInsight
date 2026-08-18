@@ -338,6 +338,7 @@ class AppController:
             state.active_session_name = None
             try:
                 from core.utils import show_snack
+
                 show_snack(self.page, "Colab connection lost.", success=False)
                 self.page.update()
             except Exception:

@@ -136,11 +136,20 @@ class ReportService:
         try:
             from core.state import state
 
+            resolved_project_id = (
+                state.active_project_id or user_uuid or state.user_uuid or ""
+            ).strip()
+            if not resolved_project_id:
+                logger.error(
+                    "Share report failed: No project_id or user_uuid available"
+                )
+                return None
+
             resp = await request_with_retry(
                 "POST",
                 f"{API_BASE_URL}/reports",
                 json={
-                    "project_id": state.active_project_id,
+                    "project_id": resolved_project_id,
                     "report_json": report_json,
                     "is_public": report.get("is_public", False),
                 },

@@ -135,9 +135,7 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
         )
 
         details_column.controls = [
-            _build_info_row(
-                ft.Icons.TERMINAL_ROUNDED, "Python Version", python_ver
-            ),
+            _build_info_row(ft.Icons.TERMINAL_ROUNDED, "Python Version", python_ver),
             _build_info_row(ft.Icons.FOLDER_OPEN_ROUNDED, "Working Directory", cwd),
             _build_info_row(
                 ft.Icons.MEMORY_ROUNDED,
@@ -147,7 +145,10 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
                 badge_text=cuda_text,
             ),
             _build_info_row(ft.Icons.PSYCHOLOGY_ALT_ROUNDED, "TensorFlow", tf_ver),
-            ft.Divider(height=tokens.SPACE_SM, color=ft.Colors.with_opacity(0.06, ft.Colors.ON_SURFACE)),
+            ft.Divider(
+                height=tokens.SPACE_SM,
+                color=ft.Colors.with_opacity(0.06, ft.Colors.ON_SURFACE),
+            ),
             files_section,
         ]
         try:
@@ -221,7 +222,9 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
             details_column.controls = [
                 ft.Row(
                     controls=[
-                        ft.Icon(ft.Icons.ERROR_OUTLINE_ROUNDED, color=theme.ERROR, size=18),
+                        ft.Icon(
+                            ft.Icons.ERROR_OUTLINE_ROUNDED, color=theme.ERROR, size=18
+                        ),
                         ft.Text(
                             f"Diagnostic failed: {ex}",
                             size=tokens.FONT_SM,
@@ -286,4 +289,3 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
 
     page.show_dialog(dlg)
     page.run_task(_fetch_status)
-

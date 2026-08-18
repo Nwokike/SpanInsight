@@ -190,7 +190,7 @@ def FormsScreen() -> ft.Control:
 
         url = f"{FORMS_PUBLIC_BASE_URL}/{form_id}"
         try:
-            await page.clipboard.set(url)
+            await page.set_clipboard_async(url)
         except Exception:
             pass
         if page:
@@ -262,7 +262,7 @@ def FormsScreen() -> ft.Control:
                 schema=draft_schema,
                 title=draft_title,
                 description=draft_desc,
-                on_schema_changed=lambda: None,
+                on_schema_changed=lambda: set_draft_schema(list(draft_schema)),
                 on_title_changed=set_draft_title,
                 on_desc_changed=set_draft_desc,
                 on_publish=lambda: (
