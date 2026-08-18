@@ -135,6 +135,8 @@ class ReportService:
 
         report_json = {
             "title": report.get("title", "Spaninsight Report"),
+            "description": report.get("description", ""),
+            "dataset_name": report.get("dataset_name", ""),
             "chart_count": len(items),
             "items": items,
         }
