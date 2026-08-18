@@ -17,18 +17,24 @@ from screens.analysis.session_banner import build_session_chip
 def build_mode_switch_bar(is_expert_mode: bool, set_is_expert_mode) -> ft.Container:
     """Segmented Mode Switcher (Insight vs Expert)."""
     insight_bg = theme.PRIMARY if not is_expert_mode else ft.Colors.TRANSPARENT
-    insight_fg = (
-        ft.Colors.WHITE if not is_expert_mode else ft.Colors.ON_SURFACE_VARIANT
-    )
+    insight_fg = ft.Colors.WHITE if not is_expert_mode else ft.Colors.ON_SURFACE_VARIANT
     expert_bg = theme.PRIMARY if is_expert_mode else ft.Colors.TRANSPARENT
     expert_fg = ft.Colors.WHITE if is_expert_mode else ft.Colors.ON_SURFACE_VARIANT
 
     return ft.Container(
-        padding=ft.Padding(2, 2, 2, 2),
-        height=30,
+        padding=ft.Padding(
+            tokens.SPACE_XXS,
+            tokens.SPACE_XXS,
+            tokens.SPACE_XXS,
+            tokens.SPACE_XXS,
+        ),
+        height=tokens.BUTTON_HEIGHT_SM,
         border_radius=tokens.RADIUS_SM,
-        bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE),
-        border=ft.Border.all(1, ft.Colors.with_opacity(0.12, ft.Colors.ON_SURFACE)),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_MUTED, ft.Colors.ON_SURFACE),
+        border=ft.Border.all(
+            tokens.DIVIDER_THICKNESS,
+            ft.Colors.with_opacity(tokens.OPACITY_CONTAINER, ft.Colors.ON_SURFACE),
+        ),
         content=ft.Row(
             controls=[
                 ft.Container(
@@ -36,7 +42,7 @@ def build_mode_switch_bar(is_expert_mode: bool, set_is_expert_mode) -> ft.Contai
                         [
                             ft.Icon(
                                 ft.Icons.AUTO_AWESOME_ROUNDED,
-                                size=12,
+                                size=tokens.ICON_MICRO,
                                 color=insight_fg,
                             ),
                             ft.Text(
@@ -48,20 +54,29 @@ def build_mode_switch_bar(is_expert_mode: bool, set_is_expert_mode) -> ft.Contai
                                 color=insight_fg,
                             ),
                         ],
-                        spacing=3,
+                        spacing=tokens.SPACE_TINY,
                         alignment=ft.MainAxisAlignment.CENTER,
                         tight=True,
                     ),
                     bgcolor=insight_bg,
                     border_radius=tokens.RADIUS_SM,
-                    padding=ft.Padding(8, 3, 8, 3),
+                    padding=ft.Padding(
+                        tokens.SPACE_SM,
+                        tokens.SPACE_TINY,
+                        tokens.SPACE_SM,
+                        tokens.SPACE_TINY,
+                    ),
                     ink=True,
                     on_click=lambda _: set_is_expert_mode(False),
                 ),
                 ft.Container(
                     content=ft.Row(
                         [
-                            ft.Icon(ft.Icons.CODE_ROUNDED, size=12, color=expert_fg),
+                            ft.Icon(
+                                ft.Icons.CODE_ROUNDED,
+                                size=tokens.ICON_MICRO,
+                                color=expert_fg,
+                            ),
                             ft.Text(
                                 "Expert",
                                 size=tokens.FONT_XS,
@@ -71,18 +86,23 @@ def build_mode_switch_bar(is_expert_mode: bool, set_is_expert_mode) -> ft.Contai
                                 color=expert_fg,
                             ),
                         ],
-                        spacing=3,
+                        spacing=tokens.SPACE_TINY,
                         alignment=ft.MainAxisAlignment.CENTER,
                         tight=True,
                     ),
                     bgcolor=expert_bg,
                     border_radius=tokens.RADIUS_SM,
-                    padding=ft.Padding(8, 3, 8, 3),
+                    padding=ft.Padding(
+                        tokens.SPACE_SM,
+                        tokens.SPACE_TINY,
+                        tokens.SPACE_SM,
+                        tokens.SPACE_TINY,
+                    ),
                     ink=True,
                     on_click=lambda _: set_is_expert_mode(True),
                 ),
             ],
-            spacing=2,
+            spacing=tokens.SPACE_XXS,
             tight=True,
         ),
     )
@@ -132,15 +152,15 @@ def open_raw_data_dialog(page: ft.Page | None, schema_json: dict):
                     ft.DataTable(
                         columns=dt_cols,
                         rows=dt_rows,
-                        heading_row_height=36,
-                        data_row_max_height=32,
-                        column_spacing=18,
+                        heading_row_height=tokens.TABLE_HEADING_ROW_HEIGHT,
+                        data_row_max_height=tokens.TABLE_DATA_ROW_HEIGHT,
+                        column_spacing=tokens.TABLE_COLUMN_SPACING,
                     )
                 ],
                 scroll=ft.ScrollMode.AUTO,
             ),
-            width=650,
-            height=260,
+            width=tokens.DIALOG_WIDTH_LG,
+            height=tokens.DIALOG_HEIGHT_SM,
         ),
         actions=[
             ft.TextButton("Close", on_click=lambda _: page.pop_dialog()),
@@ -173,12 +193,17 @@ def build_analysis_top_bar(
         "New Project",
         icon=ft.Icons.ADD_ROUNDED,
         style=ft.ButtonStyle(
-            bgcolor=ft.Colors.with_opacity(0.12, theme.PRIMARY),
+            bgcolor=ft.Colors.with_opacity(tokens.OPACITY_CONTAINER, theme.PRIMARY),
             color=theme.PRIMARY,
             shape=ft.RoundedRectangleBorder(radius=tokens.RADIUS_SM),
-            padding=ft.Padding(10, 4, 10, 4),
+            padding=ft.Padding(
+                tokens.SPACE_MD_SM,
+                tokens.SPACE_XS,
+                tokens.SPACE_MD_SM,
+                tokens.SPACE_XS,
+            ),
         ),
-        height=30,
+        height=tokens.BUTTON_HEIGHT_SM,
         on_click=lambda _: on_new_project(),
     )
 
@@ -192,7 +217,7 @@ def build_analysis_top_bar(
                 [
                     ft.Icon(
                         ft.Icons.DATASET_ROUNDED,
-                        size=14,
+                        size=tokens.ICON_XS,
                         color=theme.ACCENT,
                     ),
                     ft.Text(
@@ -205,20 +230,25 @@ def build_analysis_top_bar(
                     ),
                     ft.IconButton(
                         icon=ft.Icons.REFRESH_ROUNDED,
-                        icon_size=13,
+                        icon_size=tokens.ICON_XS,
                         tooltip="Change Dataset",
                         on_click=lambda _: on_pick_file(),
-                        style=ft.ButtonStyle(padding=2),
+                        style=ft.ButtonStyle(padding=tokens.SPACE_XXS),
                     ),
                 ],
                 spacing=tokens.SPACE_XXS,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 tight=True,
             ),
-            padding=ft.Padding(8, 4, 8, 4),
-            height=30,
+            padding=ft.Padding(
+                tokens.SPACE_SM,
+                tokens.SPACE_XS,
+                tokens.SPACE_SM,
+                tokens.SPACE_XS,
+            ),
+            height=tokens.BUTTON_HEIGHT_SM,
             border_radius=tokens.RADIUS_SM,
-            bgcolor=ft.Colors.with_opacity(0.08, theme.ACCENT),
+            bgcolor=ft.Colors.with_opacity(tokens.OPACITY_MUTED, theme.ACCENT),
         )
 
     mode_switch_bar = build_mode_switch_bar(is_expert_mode, set_is_expert_mode)
@@ -246,12 +276,15 @@ def build_analysis_top_bar(
                     scroll=ft.ScrollMode.ADAPTIVE,
                 ),
                 padding=ft.Padding(
-                    tokens.SPACE_MD, tokens.SPACE_SM, tokens.SPACE_MD, tokens.SPACE_XXS
+                    tokens.SPACE_MD,
+                    tokens.SPACE_SM,
+                    tokens.SPACE_MD,
+                    tokens.SPACE_XXS,
                 ),
             ),
             autopilot_bar,
         ],
-        spacing=0,
+        spacing=tokens.SPACE_NONE,
     )
 
 

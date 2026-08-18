@@ -49,11 +49,13 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
                 weight=ft.FontWeight.BOLD,
                 color=theme.PRIMARY,
             ),
-            padding=ft.Padding(12, 8, 12, 8),
+            padding=ft.Padding(
+                tokens.SPACE_MD, tokens.SPACE_SM, tokens.SPACE_MD, tokens.SPACE_SM
+            ),
             alignment=ft.Alignment.CENTER,
             border_radius=tokens.RADIUS_MD,
-            bgcolor=ft.Colors.with_opacity(0.05, theme.PRIMARY),
-            border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+            bgcolor=ft.Colors.with_opacity(tokens.OPACITY_FAINT, theme.PRIMARY),
+            border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
         )
 
     # 1. DataFrame or Series Table
@@ -72,7 +74,7 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
 
         columns = [
             ft.DataColumn(
-                ft.Text(str(col), size=tokens.FONT_XS - 1, weight=ft.FontWeight.W_600)
+                ft.Text(str(col), size=tokens.FONT_XS, weight=ft.FontWeight.W_600)
             )
             for col in cols_data
         ]
@@ -89,7 +91,7 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
                     ft.DataCell(
                         ft.Text(
                             val_str,
-                            size=tokens.FONT_XS - 1,
+                            size=tokens.FONT_XS,
                             max_lines=1,
                             overflow=ft.TextOverflow.ELLIPSIS,
                         )
@@ -100,14 +102,18 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
         table = ft.DataTable(
             columns=columns,
             rows=rows,
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.1, ft.Colors.ON_SURFACE)),
+            border=ft.Border.all(
+                tokens.DIVIDER_THICKNESS,
+                ft.Colors.with_opacity(tokens.OPACITY_LIGHT, ft.Colors.ON_SURFACE),
+            ),
             border_radius=tokens.RADIUS_MD,
             horizontal_lines=ft.BorderSide(
-                1, ft.Colors.with_opacity(0.06, ft.Colors.ON_SURFACE)
+                tokens.DIVIDER_THICKNESS,
+                ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE),
             ),
             column_spacing=tokens.SPACE_MD,
-            heading_row_height=32,
-            data_row_max_height=30,
+            heading_row_height=tokens.TABLE_DATA_ROW_HEIGHT,
+            data_row_max_height=tokens.TABLE_DATA_ROW_HEIGHT,
         )
 
         total_rows = ser_res.get("total_rows", len(rows_data))
@@ -124,14 +130,19 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
                 ft.Container(
                     content=ft.Text(
                         footer_text,
-                        size=tokens.FONT_XS - 2,
+                        size=tokens.FONT_XXS,
                         color=ft.Colors.ON_SURFACE_VARIANT,
                         italic=True,
                     ),
-                    padding=ft.Padding(4, 0, 0, 0),
+                    padding=ft.Padding(
+                        tokens.SPACE_XS,
+                        tokens.SPACE_NONE,
+                        tokens.SPACE_NONE,
+                        tokens.SPACE_NONE,
+                    ),
                 ),
             ],
-            spacing=4,
+            spacing=tokens.SPACE_XS,
         )
 
     # 2. Dictionary / Metrics
@@ -161,7 +172,7 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
                             [
                                 ft.Text(
                                     label_text,
-                                    size=tokens.FONT_XS - 2,
+                                    size=tokens.FONT_XXS,
                                     color=ft.Colors.ON_SURFACE_VARIANT,
                                     weight=ft.FontWeight.W_600,
                                     max_lines=1,
@@ -174,12 +185,16 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
                                     color=theme.PRIMARY,
                                 ),
                             ],
-                            spacing=1,
+                            spacing=tokens.SPACE_MICRO,
                         ),
-                        padding=8,
+                        padding=tokens.SPACE_SM,
                         border_radius=tokens.RADIUS_SM,
-                        bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ON_SURFACE),
-                        border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+                        bgcolor=ft.Colors.with_opacity(
+                            tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE
+                        ),
+                        border=ft.Border.all(
+                            tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR
+                        ),
                         expand=True,
                     )
                 )
@@ -188,8 +203,8 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
             controls.append(
                 ft.ResponsiveRow(
                     controls=metric_cards,
-                    spacing=6,
-                    run_spacing=6,
+                    spacing=tokens.SPACE_SM_XS,
+                    run_spacing=tokens.SPACE_SM_XS,
                 )
             )
 
@@ -205,7 +220,7 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
                                     [
                                         ft.Icon(
                                             ft.Icons.QUERY_STATS_ROUNDED,
-                                            size=12,
+                                            size=tokens.ICON_MICRO,
                                             color=theme.ACCENT,
                                         ),
                                         ft.Text(
@@ -215,16 +230,16 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
                                             color=theme.ACCENT,
                                         ),
                                     ],
-                                    spacing=4,
+                                    spacing=tokens.SPACE_XS,
                                 ),
                                 sub_vis,
                             ],
-                            spacing=2,
+                            spacing=tokens.SPACE_XXS,
                         )
                     )
 
         if controls:
-            return ft.Column(controls, spacing=8)
+            return ft.Column(controls, spacing=tokens.SPACE_SM)
 
     # 3. Ndarray / List
     if res_type in ("ndarray", "list"):
@@ -238,7 +253,7 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
                 vis = build_serialized_result_visualizer(x)
                 if vis:
                     sub_controls.append(vis)
-            return ft.Column(sub_controls, spacing=6)
+            return ft.Column(sub_controls, spacing=tokens.SPACE_SM_XS)
 
         if len(list_data) <= 12 and all(isinstance(x, (int, float)) for x in list_data):
             chips = []
@@ -247,14 +262,21 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
                 chips.append(
                     ft.Container(
                         content=ft.Text(
-                            val_str, size=tokens.FONT_XS - 1, font_family="RobotoMono"
+                            val_str, size=tokens.FONT_XS, font_family="RobotoMono"
                         ),
-                        padding=ft.Padding(6, 3, 6, 3),
-                        border_radius=4,
-                        bgcolor=ft.Colors.with_opacity(0.06, theme.PRIMARY),
+                        padding=ft.Padding(
+                            tokens.SPACE_SM_XS,
+                            tokens.SPACE_TINY,
+                            tokens.SPACE_SM_XS,
+                            tokens.SPACE_TINY,
+                        ),
+                        border_radius=tokens.RADIUS_XS,
+                        bgcolor=ft.Colors.with_opacity(
+                            tokens.OPACITY_SUBTLE, theme.PRIMARY
+                        ),
                     )
                 )
-            return ft.Row(chips, spacing=4, wrap=True)
+            return ft.Row(chips, spacing=tokens.SPACE_XS, wrap=True)
         else:
             arr_str = ", ".join(
                 f"{x:.4f}" if isinstance(x, float) else str(x) for x in list_data[:50]
@@ -264,12 +286,12 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
             return ft.Container(
                 content=ft.Text(
                     arr_str,
-                    size=tokens.FONT_XS - 1,
+                    size=tokens.FONT_XS,
                     font_family="RobotoMono",
-                    color="#E0E0E0",
+                    color=theme.TERMINAL_TEXT_MUTED,
                 ),
-                padding=8,
-                bgcolor="#0D0D1A",
+                padding=tokens.SPACE_SM,
+                bgcolor=theme.TERMINAL_BG,
                 border_radius=tokens.RADIUS_SM,
             )
 

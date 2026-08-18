@@ -17,8 +17,8 @@ def build_logs_dialog(page: ft.Page) -> ft.AlertDialog:
     log_text = ft.Text(
         value=logs_str,
         font_family="Courier New",
-        size=11,
-        color="#A6E22E",
+        size=tokens.FONT_SM,
+        color=theme.SUCCESS,
         selectable=True,
     )
 
@@ -44,7 +44,7 @@ def build_logs_dialog(page: ft.Page) -> ft.AlertDialog:
             controls=[
                 ft.Icon(
                     ft.Icons.TERMINAL_ROUNDED,
-                    size=22,
+                    size=tokens.ICON_MD_LG,
                     color=theme.PRIMARY,
                 ),
                 ft.Text(
@@ -53,7 +53,7 @@ def build_logs_dialog(page: ft.Page) -> ft.AlertDialog:
                     weight=ft.FontWeight.W_500,
                 ),
             ],
-            spacing=8,
+            spacing=tokens.SPACE_SM,
         ),
         content=ft.Container(
             content=ft.Column(
@@ -68,9 +68,12 @@ def build_logs_dialog(page: ft.Page) -> ft.AlertDialog:
                             controls=[log_text],
                             scroll=ft.ScrollMode.AUTO,
                         ),
-                        bgcolor="#0D0D0D",
+                        bgcolor=theme.TERMINAL_BG,
                         border=ft.Border.all(
-                            1, ft.Colors.with_opacity(0.15, ft.Colors.WHITE)
+                            tokens.DIVIDER_THICKNESS,
+                            ft.Colors.with_opacity(
+                                tokens.OPACITY_BORDER, ft.Colors.WHITE
+                            ),
                         ),
                         border_radius=tokens.RADIUS_MD,
                         padding=tokens.SPACE_MD,
@@ -79,8 +82,8 @@ def build_logs_dialog(page: ft.Page) -> ft.AlertDialog:
                 ],
                 spacing=tokens.SPACE_SM,
             ),
-            width=480,
-            height=400,
+            width=tokens.DIALOG_WIDTH_SM,
+            height=tokens.DIALOG_HEIGHT_MD,
         ),
         actions=[
             ft.TextButton(

@@ -36,7 +36,7 @@ LIGHT_TEXT = "#1A1A2E"
 LIGHT_TEXT_DIM = "#757575"
 
 # ── Surface Cards (solid, crisp Material 3 containers) ──────────────
-GLASS_BG_OPACITY = 0.06  # kept for backward compat in edge cases
+GLASS_BG_OPACITY = 0.06
 GLASS_BORDER_OPACITY = 0.12
 GLASS_BG = ft.Colors.SURFACE_CONTAINER_LOW
 GLASS_BORDER_COLOR = ft.Colors.OUTLINE_VARIANT
@@ -51,10 +51,46 @@ SHADOW_DARK = ft.Colors.with_opacity(0.12, "#000000")
 # ── Semantic additions ──────────────────────────────────────────────
 INFO = "#42A5F5"  # Blue — info badges, Colab status
 
-# ── Terminal / Output ───────────────────────────────────────────────
+# ── Terminal & Output ───────────────────────────────────────────────
 TERMINAL_BG = "#0D0D1A"
+LOG_TERMINAL_BG = "#0D0D0D"
+TERMINAL_CONSOLE_BG = "#0D0D0D"
 TERMINAL_GREEN = "#A6E22E"
 TERMINAL_HEADER = "#1A1A2E"
+TERMINAL_TEXT_MUTED = "#E0E0E0"
+TERMINAL_DOT_RED = "#FF5F56"
+TERMINAL_DOT_YELLOW = "#FFBD2E"
+TERMINAL_DOT_GREEN = "#28C840"
+
+# ── Chart Color Palette ─────────────────────────────────────────────
+CHART_PALETTE = [
+    "#7C4DFF",
+    "#00BFA5",
+    "#FF7043",
+    "#5C9DED",
+    "#EC407A",
+    "#9CCC65",
+]
+
+# ── Standard 16-color ANSI Palette ──────────────────────────────────
+ANSI_COLORS = {
+    0: "#000000",
+    1: "#CC0000",
+    2: "#4E9A06",
+    3: "#C4A000",
+    4: "#3465A4",
+    5: "#75507B",
+    6: "#06989A",
+    7: "#D3D7CF",
+    8: "#555753",
+    9: "#EF2929",
+    10: "#8AE234",
+    11: "#FCE94F",
+    12: "#729FCF",
+    13: "#AD7FA8",
+    14: "#34E2E2",
+    15: "#EEEEEC",
+}
 
 # ── Hardware Badge Colours ──────────────────────────────────────────
 BADGE_CPU = "#78909C"  # Blue-gray for CPU

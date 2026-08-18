@@ -6,7 +6,7 @@ import flet as ft
 
 from components.brand_header import build_brand_header
 from components.refresh_button import build_refresh_button
-from core import theme, utils
+from core import theme, tokens, utils
 from screens.forms.form_card import render_form_card
 
 
@@ -31,13 +31,16 @@ def build_forms_dashboard(
             ft.Container(
                 content=ft.Row(
                     [
-                        ft.ProgressRing(width=16, height=16),
+                        ft.ProgressRing(
+                            width=tokens.PROGRESS_RING_SM,
+                            height=tokens.PROGRESS_RING_SM,
+                        ),
                         ft.Text("Loading forms..."),
                     ],
-                    spacing=10,
-                    alignment="center",
+                    spacing=tokens.SPACE_MD_SM,
+                    alignment=ft.MainAxisAlignment.CENTER,
                 ),
-                padding=20,
+                padding=tokens.SPACE_XL,
             )
         ]
     elif not user_forms:
@@ -47,25 +50,27 @@ def build_forms_dashboard(
                     [
                         ft.Icon(
                             ft.Icons.DYNAMIC_FORM_ROUNDED,
-                            size=48,
-                            color=ft.Colors.with_opacity(0.2, ft.Colors.ON_SURFACE),
+                            size=tokens.ICON_HERO,
+                            color=ft.Colors.with_opacity(
+                                tokens.OPACITY_BORDER, ft.Colors.ON_SURFACE
+                            ),
                         ),
                         ft.Text(
                             "No forms yet",
                             color=ft.Colors.ON_SURFACE_VARIANT,
-                            size=13,
+                            size=tokens.FONT_BODY,
                         ),
                         ft.Text(
                             "Describe a survey topic above to generate your first form.",
-                            size=11,
+                            size=tokens.FONT_SM,
                             color=ft.Colors.ON_SURFACE_VARIANT,
-                            text_align="center",
+                            text_align=ft.TextAlign.CENTER,
                         ),
                     ],
-                    spacing=8,
-                    horizontal_alignment="center",
+                    spacing=tokens.SPACE_SM,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=40,
+                padding=tokens.ICON_CONTAINER_SIZE,
                 alignment=ft.Alignment.CENTER,
             )
         ]
@@ -88,22 +93,27 @@ def build_forms_dashboard(
                 [
                     ft.Text(
                         "SPONSORED",
-                        size=8,
+                        size=tokens.FONT_XXS,
                         weight=ft.FontWeight.W_700,
                         color=ft.Colors.ON_SURFACE_VARIANT,
                         style=ft.TextStyle(letter_spacing=1),
                     ),
                     utils.get_banner_ad(),
                 ],
-                horizontal_alignment="center",
-                spacing=4,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=tokens.SPACE_XS,
             ),
             alignment=ft.Alignment.CENTER,
-            padding=8,
-            border_radius=12,
+            padding=tokens.SPACE_SM,
+            border_radius=tokens.RADIUS_MD,
             bgcolor=theme.GLASS_BG,
-            border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
-            margin=ft.Margin(20, 4, 20, 10),
+            border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
+            margin=ft.Margin(
+                tokens.SPACE_XL,
+                tokens.SPACE_XS,
+                tokens.SPACE_XL,
+                tokens.SPACE_MD_SM,
+            ),
         )
 
     return ft.Column(
@@ -112,20 +122,24 @@ def build_forms_dashboard(
             ft.Container(
                 content=ft.Column(
                     [
-                        ft.Text("Create a Survey", weight="bold", size=16),
+                        ft.Text(
+                            "Create a Survey",
+                            weight="bold",
+                            size=tokens.FONT_HEADING,
+                        ),
                         ft.Text(
                             "Describe your questionnaire, we will generate it, and you can edit before publishing.",
-                            size=12,
+                            size=tokens.FONT_BODY_SM,
                             color=ft.Colors.ON_SURFACE_VARIANT,
                         ),
-                        ft.Container(height=8),
+                        ft.Container(height=tokens.SPACE_SM),
                         ft.Row(
                             [
                                 ft.TextField(
                                     value=prompt_text,
                                     hint_text="e.g. A questionnaire on employee satisfaction",
                                     expand=True,
-                                    border_radius=12,
+                                    border_radius=tokens.RADIUS_MD,
                                     max_lines=3,
                                     min_lines=1,
                                     on_change=lambda e: set_prompt_text(
@@ -138,7 +152,7 @@ def build_forms_dashboard(
                                     [
                                         ft.Text(
                                             value=f"00:{recording_time:02d} / 01:00",
-                                            size=11,
+                                            size=tokens.FONT_SM,
                                             color=theme.ERROR,
                                             weight="bold",
                                             visible=is_recording,
@@ -155,8 +169,8 @@ def build_forms_dashboard(
                                             disabled=is_creating,
                                         ),
                                     ],
-                                    spacing=2,
-                                    vertical_alignment="center",
+                                    spacing=tokens.SPACE_XXS,
+                                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
                                 ),
                                 ft.IconButton(
                                     icon=ft.Icons.SEND_ROUNDED,
@@ -165,45 +179,65 @@ def build_forms_dashboard(
                                     disabled=is_creating or is_recording,
                                 ),
                             ],
-                            spacing=4,
-                            vertical_alignment="center",
+                            spacing=tokens.SPACE_XS,
+                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
                         ft.ProgressBar(visible=is_creating or is_transcribing),
                         ft.Row(
                             [
-                                ft.ProgressRing(width=16, height=16, stroke_width=2),
+                                ft.ProgressRing(
+                                    width=tokens.PROGRESS_RING_SM,
+                                    height=tokens.PROGRESS_RING_SM,
+                                    stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
+                                ),
                                 ft.Text(
                                     "Transcribing your voice...",
-                                    size=12,
+                                    size=tokens.FONT_BODY_SM,
                                     color=theme.ACCENT,
                                 ),
                             ],
-                            spacing=8,
-                            alignment="center",
+                            spacing=tokens.SPACE_SM,
+                            alignment=ft.MainAxisAlignment.CENTER,
                             visible=is_transcribing,
                         ),
                     ],
-                    spacing=4,
+                    spacing=tokens.SPACE_XS,
                 ),
-                padding=16,
-                margin=ft.Margin(20, 0, 20, 10),
-                border_radius=16,
+                padding=tokens.SPACE_LG,
+                margin=ft.Margin(
+                    tokens.SPACE_XL,
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_XL,
+                    tokens.SPACE_MD_SM,
+                ),
+                border_radius=tokens.RADIUS_LG,
                 bgcolor=theme.GLASS_BG,
-                border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+                border=ft.Border.all(
+                    tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR
+                ),
             ),
             _build_ad_banner(),
             ft.Container(
                 content=ft.Row(
                     [
-                        ft.Text("Your Forms", weight="bold", size=16),
+                        ft.Text(
+                            "Your Forms",
+                            weight="bold",
+                            size=tokens.FONT_HEADING,
+                        ),
                         build_refresh_button(on_click=on_refresh),
                     ],
-                    alignment="spaceBetween",
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 ),
-                padding=ft.Padding(20, 16, 20, 4),
+                padding=ft.Padding(
+                    tokens.SPACE_XL,
+                    tokens.SPACE_LG,
+                    tokens.SPACE_XL,
+                    tokens.SPACE_XS,
+                ),
             ),
             ft.Column(controls=form_list_content),
             _build_ad_banner(),
-            ft.Container(height=100),
+            ft.Container(height=tokens.INPUT_WIDTH_SM),
         ]
     )

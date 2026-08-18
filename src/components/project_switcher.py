@@ -65,7 +65,7 @@ def build_project_switcher(
                         color=theme.PRIMARY
                         if is_active
                         else ft.Colors.ON_SURFACE_VARIANT,
-                        size=18,
+                        size=tokens.ICON_MD,
                     ),
                     title=ft.Text(
                         p.get("name", "Untitled"),
@@ -79,7 +79,9 @@ def build_project_switcher(
                         size=tokens.FONT_XXS,
                         color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
-                    trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT_ROUNDED, size=16),
+                    trailing=ft.Icon(
+                        ft.Icons.CHEVRON_RIGHT_ROUNDED, size=tokens.ICON_SM
+                    ),
                     on_click=lambda _, pid=proj_id: page.run_task(_select_project, pid),
                     shape=ft.RoundedRectangleBorder(radius=tokens.RADIUS_SM),
                 )
@@ -116,9 +118,13 @@ def build_project_switcher(
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             content=ft.Container(
-                content=ft.Column(items, scroll="auto", spacing=tokens.SPACE_XXS),
-                width=360,
-                height=320,
+                content=ft.Column(
+                    items,
+                    scroll=ft.ScrollMode.AUTO,
+                    spacing=tokens.SPACE_XXS,
+                ),
+                width=tokens.DIALOG_WIDTH_SM,
+                height=tokens.DIALOG_HEIGHT_SM,
             ),
             actions=[ft.TextButton("Close", on_click=_close)],
         )
@@ -127,7 +133,11 @@ def build_project_switcher(
     return ft.Container(
         content=ft.Row(
             controls=[
-                ft.Icon(ft.Icons.FOLDER_SHARED_ROUNDED, size=14, color=theme.PRIMARY),
+                ft.Icon(
+                    ft.Icons.FOLDER_SHARED_ROUNDED,
+                    size=tokens.ICON_XS,
+                    color=theme.PRIMARY,
+                ),
                 ft.Text(
                     active_name,
                     size=tokens.FONT_XS,
@@ -136,16 +146,22 @@ def build_project_switcher(
                     max_lines=1,
                     overflow=ft.TextOverflow.ELLIPSIS,
                 ),
-                ft.Icon(ft.Icons.ARROW_DROP_DOWN_ROUNDED, size=16, color=theme.PRIMARY),
+                ft.Icon(
+                    ft.Icons.ARROW_DROP_DOWN_ROUNDED,
+                    size=tokens.ICON_SM,
+                    color=theme.PRIMARY,
+                ),
             ],
-            spacing=3,
+            spacing=tokens.SPACE_TINY,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             tight=True,
         ),
-        padding=ft.Padding(8, 4, 8, 4),
-        height=30,
+        padding=ft.Padding(
+            tokens.SPACE_SM, tokens.SPACE_XS, tokens.SPACE_SM, tokens.SPACE_XS
+        ),
+        height=tokens.BUTTON_HEIGHT_SM,
         border_radius=tokens.RADIUS_SM,
-        bgcolor=ft.Colors.with_opacity(0.08, theme.PRIMARY),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_MUTED, theme.PRIMARY),
         on_click=lambda e: page.run_task(_show_switcher_modal) if page else None,
         ink=True,
     )

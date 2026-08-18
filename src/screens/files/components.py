@@ -46,7 +46,7 @@ def build_no_session_view(on_go_to_analysis) -> ft.Control:
             [
                 ft.Icon(
                     ft.Icons.CLOUD_OFF_ROUNDED,
-                    size=64,
+                    size=tokens.ICON_HERO_LG,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
                 ft.Text(
@@ -82,8 +82,10 @@ def build_empty_dir_view(on_upload) -> ft.Control:
             [
                 ft.Icon(
                     ft.Icons.FOLDER_OPEN_ROUNDED,
-                    size=56,
-                    color=ft.Colors.with_opacity(0.2, ft.Colors.ON_SURFACE),
+                    size=tokens.ICON_HERO_LG,
+                    color=ft.Colors.with_opacity(
+                        tokens.OPACITY_BORDER, ft.Colors.ON_SURFACE
+                    ),
                 ),
                 ft.Text(
                     "Empty directory",
@@ -118,7 +120,12 @@ def build_breadcrumbs(
             "/",
             on_click=lambda _: nav_fn("/content"),
             style=ft.ButtonStyle(
-                padding=ft.Padding(4, 2, 4, 2),
+                padding=ft.Padding(
+                    tokens.SPACE_XS,
+                    tokens.SPACE_XXS,
+                    tokens.SPACE_XS,
+                    tokens.SPACE_XXS,
+                ),
                 color=theme.PRIMARY,
             ),
         )
@@ -139,13 +146,18 @@ def build_breadcrumbs(
                 part,
                 on_click=lambda _, p=curr: nav_fn(p),
                 style=ft.ButtonStyle(
-                    padding=ft.Padding(4, 2, 4, 2),
+                    padding=ft.Padding(
+                        tokens.SPACE_XS,
+                        tokens.SPACE_XXS,
+                        tokens.SPACE_XS,
+                        tokens.SPACE_XXS,
+                    ),
                     color=theme.PRIMARY,
                 ),
             )
         )
     return ft.Row(
         controls=controls,
-        spacing=0,
+        spacing=tokens.SPACE_NONE,
         scroll=ft.ScrollMode.AUTO,
     )

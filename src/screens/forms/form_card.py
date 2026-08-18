@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 import flet as ft
 
-from core import theme
+from core import theme, tokens
 
 
 def render_form_card(form: dict, on_view) -> ft.Container:
@@ -28,47 +28,56 @@ def render_form_card(form: dict, on_view) -> ft.Container:
                         ft.Text(
                             form["title"],
                             weight="bold",
-                            size=14,
+                            size=tokens.FONT_MD,
                             max_lines=1,
-                            overflow="ellipsis",
+                            overflow=ft.TextOverflow.ELLIPSIS,
                         ),
                         ft.Row(
                             [
                                 ft.Container(
                                     content=ft.Text(
                                         status_text,
-                                        size=9,
+                                        size=tokens.FONT_XS,
                                         color=status_color,
                                         weight="bold",
                                     ),
-                                    padding=ft.Padding(6, 2, 6, 2),
-                                    border_radius=4,
-                                    bgcolor=ft.Colors.with_opacity(0.1, status_color),
+                                    padding=ft.Padding(
+                                        tokens.SPACE_SM_XS,
+                                        tokens.SPACE_XXS,
+                                        tokens.SPACE_SM_XS,
+                                        tokens.SPACE_XXS,
+                                    ),
+                                    border_radius=tokens.RADIUS_XS,
+                                    bgcolor=ft.Colors.with_opacity(
+                                        tokens.OPACITY_LIGHT, status_color
+                                    ),
                                 ),
                                 ft.Text(
                                     f"{form.get('response_count', 0)} responses",
-                                    size=11,
+                                    size=tokens.FONT_SM,
                                     color=ft.Colors.ON_SURFACE_VARIANT,
                                 ),
                             ],
-                            spacing=8,
+                            spacing=tokens.SPACE_SM,
                         ),
                     ],
-                    spacing=4,
+                    spacing=tokens.SPACE_XS,
                     expand=True,
                 ),
                 ft.IconButton(
                     ft.Icons.ARROW_FORWARD_IOS_ROUNDED,
-                    icon_size=16,
+                    icon_size=tokens.ICON_SM,
                     on_click=lambda e: on_view(form),
                 ),
             ]
         ),
-        padding=14,
-        border_radius=12,
+        padding=tokens.BUTTON_PADDING_MD,
+        border_radius=tokens.RADIUS_MD,
         bgcolor=theme.GLASS_BG,
-        border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
-        margin=ft.Margin(20, 0, 20, 8),
+        border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
+        margin=ft.Margin(
+            tokens.SPACE_XL, tokens.SPACE_NONE, tokens.SPACE_XL, tokens.SPACE_SM
+        ),
         on_click=lambda e: on_view(form),
         ink=True,
     )

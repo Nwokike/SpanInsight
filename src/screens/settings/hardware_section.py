@@ -53,7 +53,7 @@ def build_hardware_section(
                                     ft.dropdown.Option(k, v)
                                     for k, v in ACCELERATOR_OPTIONS
                                 ],
-                                width=195,
+                                width=tokens.DROPDOWN_WIDTH_LG,
                                 border_radius=tokens.RADIUS_MD,
                                 text_size=tokens.FONT_SM,
                                 on_select=on_accelerator_change,
@@ -99,7 +99,7 @@ def build_hardware_section(
                                     ft.dropdown.Option(str(t), f"{t}s")
                                     for t in TIMEOUT_OPTIONS
                                 ],
-                                width=90,
+                                width=tokens.DROPDOWN_WIDTH_SM,
                                 border_radius=tokens.RADIUS_MD,
                                 text_size=tokens.FONT_SM,
                                 on_select=on_timeout_change,

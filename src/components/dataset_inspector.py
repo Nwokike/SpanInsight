@@ -134,14 +134,17 @@ def show_dataset_inspector(
                         weight=ft.FontWeight.W_600,
                     ),
                     ft.Column(
-                        col_tiles, scroll="auto", spacing=tokens.SPACE_XXS, expand=True
+                        col_tiles,
+                        scroll=ft.ScrollMode.AUTO,
+                        spacing=tokens.SPACE_XXS,
+                        expand=True,
                     ),
                 ],
                 spacing=tokens.SPACE_XS,
                 expand=True,
             ),
-            width=380,
-            height=420,
+            width=tokens.DIALOG_WIDTH_MD,
+            height=tokens.DIALOG_HEIGHT_MD,
         ),
         actions=[
             ft.TextButton("Close", on_click=_close),

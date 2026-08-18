@@ -67,7 +67,9 @@ def build_data_section(
                         ),
                         padding=tokens.SPACE_SM,
                         border_radius=tokens.RADIUS_SM,
-                        bgcolor=ft.Colors.with_opacity(0.1, theme.ACCENT),
+                        bgcolor=ft.Colors.with_opacity(
+                            tokens.OPACITY_LIGHT, theme.ACCENT
+                        ),
                     ),
                     ft.Column(
                         [
@@ -82,7 +84,7 @@ def build_data_section(
                                 color=ft.Colors.ON_SURFACE_VARIANT,
                             ),
                         ],
-                        spacing=1,
+                        spacing=tokens.SPACE_TINY,
                         expand=True,
                     ),
                     ft.TextButton(
@@ -90,7 +92,12 @@ def build_data_section(
                         icon=ft.Icons.DELETE_OUTLINE_ROUNDED,
                         style=ft.ButtonStyle(
                             color=theme.ERROR,
-                            padding=ft.Padding(8, 4, 8, 4),
+                            padding=ft.Padding(
+                                tokens.SPACE_SM,
+                                tokens.SPACE_XS,
+                                tokens.SPACE_SM,
+                                tokens.SPACE_XS,
+                            ),
                         ),
                         on_click=on_clear_dataset_cache,
                         disabled=(cache_count == 0 or on_clear_dataset_cache is None),
@@ -101,11 +108,17 @@ def build_data_section(
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             padding=ft.Padding(
-                tokens.SPACE_MD, tokens.SPACE_SM, tokens.SPACE_MD, tokens.SPACE_SM
+                tokens.SPACE_MD,
+                tokens.SPACE_SM,
+                tokens.SPACE_MD,
+                tokens.SPACE_SM,
             ),
             border_radius=tokens.RADIUS_MD,
-            bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ON_SURFACE),
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE)),
+            bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE),
+            border=ft.Border.all(
+                tokens.DIVIDER_THICKNESS,
+                ft.Colors.with_opacity(tokens.OPACITY_MUTED, ft.Colors.ON_SURFACE),
+            ),
         ),
         setting_tile(
             icon=ft.Icons.SETTINGS_BACKUP_RESTORE_ROUNDED,

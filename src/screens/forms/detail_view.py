@@ -7,7 +7,7 @@ import json
 import flet as ft
 
 from components.form_editor import TYPE_ICONS
-from core import theme, utils
+from core import theme, tokens, utils
 
 
 def build_form_detail_view(
@@ -30,10 +30,20 @@ def build_form_detail_view(
             content=ft.Row(
                 [
                     ft.IconButton(ft.Icons.ARROW_BACK_ROUNDED, on_click=on_back),
-                    ft.Text(form["title"], weight="bold", size=16, expand=True),
+                    ft.Text(
+                        form["title"],
+                        weight="bold",
+                        size=tokens.FONT_HEADING,
+                        expand=True,
+                    ),
                 ]
             ),
-            padding=ft.Padding(20, 0, 20, 0),
+            padding=ft.Padding(
+                tokens.SPACE_XL,
+                tokens.SPACE_NONE,
+                tokens.SPACE_XL,
+                tokens.SPACE_NONE,
+            ),
         )
     )
     resp_count = form.get("_count", form.get("response_count", 0))
@@ -44,32 +54,44 @@ def build_form_detail_view(
                     ft.Row(
                         [
                             ft.Icon(
-                                ft.Icons.PEOPLE_ROUNDED, size=16, color=theme.ACCENT
+                                ft.Icons.PEOPLE_ROUNDED,
+                                size=tokens.ICON_SM,
+                                color=theme.ACCENT,
                             ),
-                            ft.Text(f"{resp_count} responses", weight="w500"),
+                            ft.Text(
+                                f"{resp_count} responses",
+                                weight=ft.FontWeight.W_500,
+                            ),
                         ],
-                        spacing=8,
+                        spacing=tokens.SPACE_SM,
                     ),
                     ft.Row(
                         [
                             ft.Icon(
-                                ft.Icons.TIMER_ROUNDED, size=16, color=theme.WARNING
+                                ft.Icons.TIMER_ROUNDED,
+                                size=tokens.ICON_SM,
+                                color=theme.WARNING,
                             ),
                             ft.Text(
                                 f"Expires: {form.get('expires_at', '')[:10]}",
-                                size=12,
+                                size=tokens.FONT_BODY_SM,
                             ),
                         ],
-                        spacing=8,
+                        spacing=tokens.SPACE_SM,
                     ),
                 ],
-                spacing=8,
+                spacing=tokens.SPACE_SM,
             ),
-            padding=16,
-            margin=ft.Margin(20, 8, 20, 8),
-            border_radius=12,
+            padding=tokens.SPACE_LG,
+            margin=ft.Margin(
+                tokens.SPACE_XL,
+                tokens.SPACE_SM,
+                tokens.SPACE_XL,
+                tokens.SPACE_SM,
+            ),
+            border_radius=tokens.RADIUS_MD,
             bgcolor=theme.GLASS_BG,
-            border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+            border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
         )
     )
 
@@ -96,7 +118,7 @@ def build_form_detail_view(
                         [
                             ft.Icon(
                                 TYPE_ICONS.get(ftype, ft.Icons.TEXT_FIELDS),
-                                size=16,
+                                size=tokens.ICON_SM,
                                 color=theme.ACCENT,
                             ),
                             ft.Column(
@@ -105,66 +127,88 @@ def build_form_detail_view(
                                         [
                                             ft.Text(
                                                 label,
-                                                size=13,
-                                                weight="w500",
+                                                size=tokens.FONT_BODY,
+                                                weight=ft.FontWeight.W_500,
                                                 expand=True,
                                             ),
                                             ft.Container(
                                                 content=ft.Text(
                                                     ftype.upper(),
-                                                    size=9,
+                                                    size=tokens.FONT_XS,
                                                     color=theme.PRIMARY,
                                                     weight="bold",
                                                 ),
-                                                padding=ft.Padding(6, 2, 6, 2),
-                                                border_radius=4,
+                                                padding=ft.Padding(
+                                                    tokens.SPACE_SM_XS,
+                                                    tokens.SPACE_XXS,
+                                                    tokens.SPACE_SM_XS,
+                                                    tokens.SPACE_XXS,
+                                                ),
+                                                border_radius=tokens.RADIUS_XS,
                                                 bgcolor=ft.Colors.with_opacity(
-                                                    0.08, theme.PRIMARY
+                                                    tokens.OPACITY_MUTED,
+                                                    theme.PRIMARY,
                                                 ),
                                             ),
                                             ft.Text(
                                                 "*",
-                                                size=14,
+                                                size=tokens.FONT_MD,
                                                 color=theme.ERROR,
                                                 weight="bold",
                                             )
                                             if required
                                             else ft.Container(),
                                         ],
-                                        spacing=6,
+                                        spacing=tokens.SPACE_SM_XS,
                                     ),
                                     ft.Text(
                                         ", ".join(options[:5]),
-                                        size=10,
+                                        size=tokens.FONT_XS,
                                         color=ft.Colors.ON_SURFACE_VARIANT,
                                         max_lines=1,
-                                        overflow="ellipsis",
+                                        overflow=ft.TextOverflow.ELLIPSIS,
                                     )
                                     if options
                                     else ft.Container(),
                                 ],
-                                spacing=2,
+                                spacing=tokens.SPACE_XXS,
                                 expand=True,
                             ),
                         ],
-                        spacing=10,
-                        vertical_alignment="start",
+                        spacing=tokens.SPACE_MD_SM,
+                        vertical_alignment=ft.CrossAxisAlignment.START,
                     ),
-                    padding=ft.Padding(12, 8, 12, 8),
-                    border_radius=8,
-                    bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE),
+                    padding=ft.Padding(
+                        tokens.SPACE_MD,
+                        tokens.SPACE_SM,
+                        tokens.SPACE_MD,
+                        tokens.SPACE_SM,
+                    ),
+                    border_radius=tokens.RADIUS_SM,
+                    bgcolor=ft.Colors.with_opacity(
+                        tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE
+                    ),
                 )
             )
         controls.append(
             ft.Container(
                 content=ft.Column(
                     [
-                        ft.Text(f"Form Fields ({len(fields)})", weight="bold", size=13),
-                        ft.Column(field_controls, spacing=4),
+                        ft.Text(
+                            f"Form Fields ({len(fields)})",
+                            weight="bold",
+                            size=tokens.FONT_BODY,
+                        ),
+                        ft.Column(field_controls, spacing=tokens.SPACE_XS),
                     ],
-                    spacing=8,
+                    spacing=tokens.SPACE_SM,
                 ),
-                padding=ft.Padding(20, 8, 20, 8),
+                padding=ft.Padding(
+                    tokens.SPACE_XL,
+                    tokens.SPACE_SM,
+                    tokens.SPACE_XL,
+                    tokens.SPACE_SM,
+                ),
             )
         )
 
@@ -180,8 +224,10 @@ def build_form_detail_view(
                                 style=ft.ButtonStyle(
                                     bgcolor=theme.PRIMARY,
                                     color=ft.Colors.WHITE,
-                                    shape=ft.RoundedRectangleBorder(radius=12),
-                                    padding=14,
+                                    shape=ft.RoundedRectangleBorder(
+                                        radius=tokens.RADIUS_MD
+                                    ),
+                                    padding=tokens.BUTTON_PADDING_MD,
                                 ),
                                 on_click=lambda _: on_copy_link(form["id"]),
                             ),
@@ -191,13 +237,15 @@ def build_form_detail_view(
                                 style=ft.ButtonStyle(
                                     bgcolor=theme.PRIMARY,
                                     color=ft.Colors.WHITE,
-                                    shape=ft.RoundedRectangleBorder(radius=12),
-                                    padding=14,
+                                    shape=ft.RoundedRectangleBorder(
+                                        radius=tokens.RADIUS_MD
+                                    ),
+                                    padding=tokens.BUTTON_PADDING_MD,
                                 ),
                                 on_click=lambda _: on_renew(form["id"]),
                             ),
                         ],
-                        spacing=8,
+                        spacing=tokens.SPACE_SM,
                         wrap=True,
                     ),
                     ft.Row(
@@ -208,8 +256,10 @@ def build_form_detail_view(
                                 style=ft.ButtonStyle(
                                     bgcolor=theme.PRIMARY,
                                     color=ft.Colors.WHITE,
-                                    shape=ft.RoundedRectangleBorder(radius=12),
-                                    padding=14,
+                                    shape=ft.RoundedRectangleBorder(
+                                        radius=tokens.RADIUS_MD
+                                    ),
+                                    padding=tokens.BUTTON_PADDING_MD,
                                 ),
                                 on_click=lambda _: on_download_csv(form),
                             ),
@@ -219,13 +269,15 @@ def build_form_detail_view(
                                 style=ft.ButtonStyle(
                                     bgcolor=theme.PRIMARY,
                                     color=ft.Colors.WHITE,
-                                    shape=ft.RoundedRectangleBorder(radius=12),
-                                    padding=14,
+                                    shape=ft.RoundedRectangleBorder(
+                                        radius=tokens.RADIUS_MD
+                                    ),
+                                    padding=tokens.BUTTON_PADDING_MD,
                                 ),
                                 on_click=lambda _: on_analyze(form),
                             ),
                         ],
-                        spacing=8,
+                        spacing=tokens.SPACE_SM,
                         wrap=True,
                     ),
                     ft.TextButton(
@@ -233,14 +285,19 @@ def build_form_detail_view(
                         icon=ft.Icons.DELETE_OUTLINE_ROUNDED,
                         style=ft.ButtonStyle(
                             color=theme.ERROR,
-                            shape=ft.RoundedRectangleBorder(radius=12),
+                            shape=ft.RoundedRectangleBorder(radius=tokens.RADIUS_MD),
                         ),
                         on_click=lambda _: on_delete(form["id"]),
                     ),
                 ],
-                spacing=8,
+                spacing=tokens.SPACE_SM,
             ),
-            padding=ft.Padding(20, 8, 20, 8),
+            padding=ft.Padding(
+                tokens.SPACE_XL,
+                tokens.SPACE_SM,
+                tokens.SPACE_XL,
+                tokens.SPACE_SM,
+            ),
         )
     )
 
@@ -261,32 +318,42 @@ def build_form_detail_view(
                             ft.Text(
                                 f"Latest {min(50, len(responses))} Responses",
                                 weight="bold",
-                                size=13,
+                                size=tokens.FONT_BODY,
                             ),
                             ft.DataTable(
                                 columns=[
-                                    ft.DataColumn(ft.Text(c, size=11)) for c in columns
+                                    ft.DataColumn(ft.Text(c, size=tokens.FONT_SM))
+                                    for c in columns
                                 ],
                                 rows=[
                                     ft.DataRow(
                                         cells=[
                                             ft.DataCell(
-                                                ft.Text(str(row.get(c, "")), size=11)
+                                                ft.Text(
+                                                    str(row.get(c, "")),
+                                                    size=tokens.FONT_SM,
+                                                )
                                             )
                                             for c in columns
                                         ]
                                     )
                                     for row in rows_data
                                 ],
-                                column_spacing=16,
+                                column_spacing=tokens.SPACE_LG,
                                 horizontal_lines=ft.BorderSide(
-                                    0.5, ft.Colors.OUTLINE_VARIANT
+                                    tokens.DIVIDER_THICKNESS,
+                                    ft.Colors.OUTLINE_VARIANT,
                                 ),
                             ),
                         ],
-                        spacing=8,
+                        spacing=tokens.SPACE_SM,
                     ),
-                    padding=ft.Padding(20, 8, 20, 8),
+                    padding=ft.Padding(
+                        tokens.SPACE_XL,
+                        tokens.SPACE_SM,
+                        tokens.SPACE_XL,
+                        tokens.SPACE_SM,
+                    ),
                 )
             )
 
@@ -297,24 +364,31 @@ def build_form_detail_view(
                     [
                         ft.Text(
                             "SPONSORED",
-                            size=8,
+                            size=tokens.FONT_XXS,
                             weight=ft.FontWeight.W_700,
                             color=ft.Colors.ON_SURFACE_VARIANT,
                             style=ft.TextStyle(letter_spacing=1),
                         ),
                         utils.get_banner_ad(),
                     ],
-                    horizontal_alignment="center",
-                    spacing=4,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=tokens.SPACE_XS,
                 ),
                 alignment=ft.Alignment.CENTER,
-                padding=8,
-                border_radius=12,
+                padding=tokens.SPACE_SM,
+                border_radius=tokens.RADIUS_MD,
                 bgcolor=theme.GLASS_BG,
-                border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
-                margin=ft.Margin(20, 8, 20, 8),
+                border=ft.Border.all(
+                    tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR
+                ),
+                margin=ft.Margin(
+                    tokens.SPACE_XL,
+                    tokens.SPACE_SM,
+                    tokens.SPACE_XL,
+                    tokens.SPACE_SM,
+                ),
             )
         )
 
-    controls.append(ft.Container(height=100))
+    controls.append(ft.Container(height=tokens.INPUT_WIDTH_SM))
     return ft.Column(controls)

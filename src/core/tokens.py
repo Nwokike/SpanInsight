@@ -1,49 +1,151 @@
-"""Design system — spacing, radius, typography and sizing tokens.
+"""Design system — spacing, radius, typography, layout dimensions, opacities, and animation tokens.
 
-Every magic number used anywhere in Spaninsight lives here.
-Mirrors the token system used in Fletbot/KTV Player.
+Every numerical constant and sizing token used in SpanInsight lives here.
+Centralized, modular, and easy to maintain.
 """
 
 from __future__ import annotations
 
-# ── Border Radii ────────────────────────────────────────────────────
-RADIUS_XS = 4
-RADIUS_SM = 8
-RADIUS_MD = 12
-RADIUS_LG = 16
-RADIUS_XL = 20
-RADIUS_XXL = 24
-RADIUS_PILL = 100
+import flet as ft
 
 # ── Spacing (padding / margin / gaps) ───────────────────────────────
+SPACE_NONE = 0
+SPACE_MICRO = 1
+SPACE_NANO = 2
 SPACE_XXS = 2
+SPACE_TINY = 3
 SPACE_XS = 4
+SPACE_SM_XS = 6
 SPACE_SM = 8
+SPACE_MD_SM = 10
 SPACE_MD = 12
-SPACE_LG = 20
-SPACE_XL = 24
-SPACE_XXL = 32
-SPACE_XXXL = 48
-SPACE_XXXXL = 56
+SPACE_MD_LG = 14
+SPACE_LG = 16
+SPACE_XL = 20
+SPACE_XXL = 24
+SPACE_XXXL = 32
+SPACE_XXXXL = 48
+SPACE_HERO = 56
 
-# ── Font Sizes ──────────────────────────────────────────────────────
+# ── Typography (Font Sizes) ─────────────────────────────────────────
 FONT_XXS = 8
-FONT_XS = 10
+FONT_XS = 9
+FONT_SM_XS = 10
 FONT_SM = 11
+FONT_BODY_SM = 12
+FONT_BODY = 13
 FONT_MD = 14
+FONT_HEADING_SM = 15
+FONT_HEADING = 16
 FONT_LG = 18
 FONT_XL = 20
-FONT_XXL = 24
+FONT_XXL = 22
+FONT_TITLE_SM = 24
 FONT_TITLE = 28
 FONT_HERO = 36
 
+# ── Corner Radii ────────────────────────────────────────────────────
+RADIUS_XS = 4
+RADIUS_DOT = 5
+RADIUS_SHIMMER = 6
+RADIUS_SM = 8
+RADIUS_MD_SM = 10
+RADIUS_MD = 12
+RADIUS_MD_LG = 14
+RADIUS_LG = 16
+RADIUS_XL = 20
+RADIUS_XXL = 24
+RADIUS_PILL = 999
+
 # ── Icon Sizes ──────────────────────────────────────────────────────
+ICON_MICRO = 12
+ICON_TINY = 13
+ICON_XS = 14
 ICON_SM = 16
 ICON_MD = 18
+ICON_BASE = 20
 ICON_LG = 22
-ICON_XL = 30
-ICON_XXL = 46
-ICON_HERO = 62
+ICON_XL = 24
+ICON_XXL = 28
+ICON_32 = 32
+ICON_36 = 36
+ICON_40 = 40
+ICON_48 = 48
+ICON_HERO = 56
+ICON_MAX = 64
+ICON_HERO_LG = 72
+
+# ── Component Layout Dimensions ─────────────────────────────────────
+INPUT_HEIGHT = 48
+INPUT_WIDTH_SM = 100
+INPUT_WIDTH_MD = 110
+INPUT_WIDTH_LG = 130
+
+BUTTON_HEIGHT_SM = 30
+BUTTON_PADDING_SM = ft.Padding(10, 4, 10, 4)
+BUTTON_PADDING_MD = 14
+
+NAV_BAR_HEIGHT = 70
+CARD_MAX_WIDTH = 600
+DRAWER_WIDTH = 280
+
+DIALOG_WIDTH_SM = 340
+DIALOG_WIDTH_MD = 400
+DIALOG_WIDTH_LG = 650
+DIALOG_HEIGHT_SM = 260
+DIALOG_HEIGHT_MD = 400
+DIALOG_HEIGHT_LG = 480
+
+TABLE_HEADING_ROW_HEIGHT = 36
+TABLE_DATA_ROW_HEIGHT = 32
+TABLE_COLUMN_SPACING = 18
+
+PROGRESS_RING_XS = 14
+PROGRESS_RING_SM = 16
+PROGRESS_RING_MD = 20
+PROGRESS_RING_LG = 24
+PROGRESS_RING_STROKE_THIN = 2
+PROGRESS_RING_STROKE_NORMAL = 3
+
+DOT_INDICATOR_WIDTH_ACTIVE = 20
+DOT_INDICATOR_WIDTH_INACTIVE = 8
+DOT_INDICATOR_HEIGHT = 8
+
+ICON_CONTAINER_SIZE = 40
+ICON_CONTAINER_RADIUS = 10
+ICON_CONTAINER_LG = 72
+
+BRAND_LOGO_WIDTH = 200
+BRAND_LOGO_HEIGHT = 65
+
+DIVIDER_THICKNESS = 1
+DIVIDER_THICKNESS_THICK = 2
+
+PIE_CHART_RADIUS = 80.0
+PIE_CHART_CENTER_RADIUS = 32.0
+
+TERMINAL_DOT_SIZE = 10
+TERMINAL_DOT_RADIUS = 5
+
+RAW_OUTPUT_MAX_HEIGHT = 320
+RAW_OUTPUT_MIN_HEIGHT = 50
+RAW_OUTPUT_LINE_HEIGHT = 18
+
+WINDOW_MIN_WIDTH = 360
+WINDOW_MIN_HEIGHT = 600
+
+# ── Opacity Tokens ──────────────────────────────────────────────────
+OPACITY_SUBTLE = 0.04
+OPACITY_FAINT = 0.05
+OPACITY_MUTED = 0.08
+OPACITY_LIGHT = 0.10
+OPACITY_CONTAINER = 0.12
+OPACITY_BORDER = 0.20
+OPACITY_HIGHLIGHT = 0.22
+OPACITY_DIM = 0.30
+OPACITY_DISABLED = 0.40
+OPACITY_HALF = 0.50
+OPACITY_HEAVY = 0.80
 
 # ── Shadow ──────────────────────────────────────────────────────────
 SHADOW_BLUR = 8
@@ -51,12 +153,18 @@ SHADOW_BLUR_LG = 16
 SHADOW_OFFSET_Y = 2
 SHADOW_OFFSET_Y_LG = 4
 
-# ── Layout ──────────────────────────────────────────────────────────
-NAV_BAR_HEIGHT = 70
-CARD_MAX_WIDTH = 600
-INPUT_HEIGHT = 48
-
-# ── Animation ───────────────────────────────────────────────────────
+# ── Animation Timings & UI Periods (ms / sec) ───────────────────────
 ANIM_FAST_MS = 150
+ANIM_NORMAL_MS = 200
 ANIM_DEFAULT_MS = 300
 ANIM_SLOW_MS = 500
+SHIMMER_PERIOD_MS = 1200
+DEBOUNCE_SAVE_SEC = 2.0
+OUTPUT_THROTTLE_MS = 400
+
+# ── Snackbar Durations (ms) ─────────────────────────────────────────
+SNACK_DURATION_SHORT_MS = 2000
+SNACK_DURATION_NORMAL_MS = 2500
+SNACK_DURATION_MD_MS = 3000
+SNACK_DURATION_LONG_MS = 4000
+SNACK_DURATION_EXTENDED_MS = 5000

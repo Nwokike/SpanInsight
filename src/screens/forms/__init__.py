@@ -8,6 +8,7 @@ import logging
 import flet as ft
 
 from components.form_editor import build_form_editor
+from core import tokens
 from screens.forms.dashboard_view import build_forms_dashboard
 from screens.forms.detail_view import build_form_detail_view
 from screens.forms.handlers import (
@@ -68,7 +69,12 @@ def FormsScreen() -> ft.Control:
         if page:
             from core.utils import show_snack
 
-            show_snack(page, msg, error=True, duration=4000)
+            show_snack(
+                page,
+                msg,
+                error=True,
+                duration=tokens.SNACK_DURATION_EXTENDED_MS,
+            )
 
     def _load_forms():
         return load_forms_async(
@@ -196,7 +202,12 @@ def FormsScreen() -> ft.Control:
         if page:
             from core.utils import show_snack
 
-            show_snack(page, "Link copied!", success=True, duration=2000)
+            show_snack(
+                page,
+                "Link copied!",
+                success=True,
+                duration=tokens.SNACK_DURATION_SHORT_MS,
+            )
 
     async def on_renew_form(form_id: str):
         new_exp = await forms_service.renew_form(form_id, state.active_project_id)
@@ -205,7 +216,10 @@ def FormsScreen() -> ft.Control:
                 from core.utils import show_snack
 
                 show_snack(
-                    page, f"Extended to {new_exp[:10]}", success=True, duration=3000
+                    page,
+                    f"Extended to {new_exp[:10]}",
+                    success=True,
+                    duration=tokens.SNACK_DURATION_NORMAL_MS,
                 )
             await _load_forms()
         else:

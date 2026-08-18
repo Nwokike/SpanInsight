@@ -5,7 +5,7 @@ from __future__ import annotations
 import flet as ft
 
 from components.report_editor.block_card import build_report_block_card
-from core import theme
+from core import theme, tokens
 
 
 def build_report_editor(
@@ -47,28 +47,37 @@ def build_report_editor(
         ft.Container(
             content=ft.Column(
                 [
-                    ft.Text("Edit Report", weight="bold", size=16),
+                    ft.Text(
+                        "Edit Report",
+                        weight="bold",
+                        size=tokens.FONT_HEADING,
+                    ),
                     ft.TextField(
                         value=title,
                         label="Report Title",
-                        border_radius=10,
+                        border_radius=tokens.RADIUS_MD_SM,
                         on_change=lambda e: on_title_changed(e.control.value),
                     ),
                     ft.TextField(
                         value=description,
                         label="Description",
-                        border_radius=10,
+                        border_radius=tokens.RADIUS_MD_SM,
                         max_lines=3,
                         on_change=lambda e: on_desc_changed(e.control.value),
                     ),
                 ],
-                spacing=8,
+                spacing=tokens.SPACE_SM,
             ),
-            padding=20,
-            margin=ft.Margin(20, 10, 20, 4),
-            border_radius=16,
+            padding=tokens.SPACE_XL,
+            margin=ft.Margin(
+                tokens.SPACE_XL,
+                tokens.SPACE_MD_SM,
+                tokens.SPACE_XL,
+                tokens.SPACE_XS,
+            ),
+            border_radius=tokens.RADIUS_LG,
             bgcolor=theme.GLASS_BG,
-            border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+            border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
         )
     )
 
@@ -92,7 +101,12 @@ def build_report_editor(
                 content=build_report_block_card(
                     block, i, total, on_blocks_changed, _move, _delete
                 ),
-                margin=ft.Margin(20, 4, 20, 4),
+                margin=ft.Margin(
+                    tokens.SPACE_XL,
+                    tokens.SPACE_XS,
+                    tokens.SPACE_XL,
+                    tokens.SPACE_XS,
+                ),
             )
         )
 
@@ -103,9 +117,16 @@ def build_report_editor(
                 "Import Block from Analysis",
                 icon=ft.Icons.ADD_CHART_ROUNDED,
                 on_click=lambda e: on_import(),
-                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10)),
+                style=ft.ButtonStyle(
+                    shape=ft.RoundedRectangleBorder(radius=tokens.RADIUS_MD_SM)
+                ),
             ),
-            padding=ft.Padding(20, 4, 20, 4),
+            padding=ft.Padding(
+                tokens.SPACE_XL,
+                tokens.SPACE_XS,
+                tokens.SPACE_XL,
+                tokens.SPACE_XS,
+            ),
         )
     )
 
@@ -115,17 +136,22 @@ def build_report_editor(
         ft.Container(
             content=ft.Column(
                 [
-                    ft.Text("Edit with AI", weight="bold", size=13, color=theme.ACCENT),
+                    ft.Text(
+                        "Edit with AI",
+                        weight="bold",
+                        size=tokens.FONT_BODY,
+                        color=theme.ACCENT,
+                    ),
                     ft.Row(
                         [
                             ft.TextField(
                                 ref=ai_field_ref,
                                 value=ai_prompt_text,
                                 hint_text="e.g. 'Make descriptions more academic', 'Reorder by importance'...",
-                                border_radius=10,
+                                border_radius=tokens.RADIUS_MD_SM,
                                 max_lines=2,
                                 expand=True,
-                                text_size=13,
+                                text_size=tokens.FONT_BODY,
                                 disabled=is_ai_editing or is_recording,
                                 on_change=lambda e: on_ai_edit(
                                     "__set_text__", e.control.value
@@ -136,7 +162,7 @@ def build_report_editor(
                                     ft.Text(
                                         ref=recording_timer_ref,
                                         value=f"00:{recording_time:02d} / 01:00",
-                                        size=11,
+                                        size=tokens.FONT_SM,
                                         color=theme.ERROR,
                                         weight="bold",
                                         visible=is_recording,
@@ -153,8 +179,8 @@ def build_report_editor(
                                         disabled=is_ai_editing,
                                     ),
                                 ],
-                                spacing=2,
-                                vertical_alignment="center",
+                                spacing=tokens.SPACE_XXS,
+                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
                             ),
                             ft.IconButton(
                                 ft.Icons.AUTO_FIX_HIGH_ROUNDED,
@@ -169,26 +195,33 @@ def build_report_editor(
                                 disabled=is_ai_editing or is_recording,
                             ),
                         ],
-                        spacing=4,
-                        vertical_alignment="center",
+                        spacing=tokens.SPACE_XS,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
                     ft.ProgressBar(visible=is_ai_editing or is_transcribing),
                     ft.Row(
                         [
-                            ft.ProgressRing(width=16, height=16, stroke_width=2),
+                            ft.ProgressRing(
+                                width=tokens.PROGRESS_RING_SM,
+                                height=tokens.PROGRESS_RING_SM,
+                                stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
+                            ),
                             ft.Text(
                                 "Transcribing your voice..."
                                 if is_transcribing
                                 else "AI is editing your report...",
-                                size=12,
+                                size=tokens.FONT_BODY_SM,
                                 color=theme.ACCENT,
                             ),
                         ],
-                        spacing=8,
-                        alignment="center",
+                        spacing=tokens.SPACE_SM,
+                        alignment=ft.MainAxisAlignment.CENTER,
                         visible=is_transcribing or is_ai_editing,
                     ),
-                    ft.Divider(height=1, color=theme.GLASS_BORDER_COLOR),
+                    ft.Divider(
+                        height=tokens.DIVIDER_THICKNESS,
+                        color=theme.GLASS_BORDER_COLOR,
+                    ),
                     # Row 1 — Primary actions
                     ft.Row(
                         [
@@ -197,14 +230,17 @@ def build_report_editor(
                                 content=ft.Row(
                                     [
                                         ft.ProgressRing(
-                                            width=12,
-                                            height=12,
-                                            stroke_width=2,
-                                            color="white",
+                                            width=tokens.PROGRESS_RING_XS,
+                                            height=tokens.PROGRESS_RING_XS,
+                                            stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
+                                            color=ft.Colors.WHITE,
                                         ),
-                                        ft.Text("Opening...", size=12),
+                                        ft.Text(
+                                            "Opening...",
+                                            size=tokens.FONT_BODY_SM,
+                                        ),
                                     ],
-                                    spacing=6,
+                                    spacing=tokens.SPACE_SM_XS,
                                 )
                                 if is_viewing_live
                                 else "View Live Report",
@@ -214,15 +250,17 @@ def build_report_editor(
                                 style=ft.ButtonStyle(
                                     bgcolor=theme.PRIMARY,
                                     color=ft.Colors.WHITE,
-                                    shape=ft.RoundedRectangleBorder(radius=12),
-                                    padding=14,
+                                    shape=ft.RoundedRectangleBorder(
+                                        radius=tokens.RADIUS_MD
+                                    ),
+                                    padding=tokens.BUTTON_PADDING_MD,
                                 ),
                                 on_click=lambda e: on_view_live(),
                                 disabled=is_viewing_live or is_ai_editing,
                                 expand=True,
                             ),
                         ],
-                        spacing=8,
+                        spacing=tokens.SPACE_SM,
                     ),
                     # Row 2 — Secondary actions
                     ft.Row(
@@ -231,11 +269,16 @@ def build_report_editor(
                                 content=ft.Row(
                                     [
                                         ft.ProgressRing(
-                                            width=12, height=12, stroke_width=2
+                                            width=tokens.PROGRESS_RING_XS,
+                                            height=tokens.PROGRESS_RING_XS,
+                                            stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
                                         ),
-                                        ft.Text("Back...", size=12),
+                                        ft.Text(
+                                            "Back...",
+                                            size=tokens.FONT_BODY_SM,
+                                        ),
                                     ],
-                                    spacing=6,
+                                    spacing=tokens.SPACE_SM_XS,
                                 )
                                 if is_deleting
                                 else "Back",
@@ -243,8 +286,10 @@ def build_report_editor(
                                 if not is_deleting
                                 else None,
                                 style=ft.ButtonStyle(
-                                    shape=ft.RoundedRectangleBorder(radius=12),
-                                    padding=14,
+                                    shape=ft.RoundedRectangleBorder(
+                                        radius=tokens.RADIUS_MD
+                                    ),
+                                    padding=tokens.BUTTON_PADDING_MD,
                                 ),
                                 on_click=lambda e: on_back(),
                                 disabled=is_deleting,
@@ -254,14 +299,17 @@ def build_report_editor(
                                 content=ft.Row(
                                     [
                                         ft.ProgressRing(
-                                            width=12,
-                                            height=12,
-                                            stroke_width=2,
-                                            color="white",
+                                            width=tokens.PROGRESS_RING_XS,
+                                            height=tokens.PROGRESS_RING_XS,
+                                            stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
+                                            color=ft.Colors.WHITE,
                                         ),
-                                        ft.Text("Saving...", size=12),
+                                        ft.Text(
+                                            "Saving...",
+                                            size=tokens.FONT_BODY_SM,
+                                        ),
                                     ],
-                                    spacing=6,
+                                    spacing=tokens.SPACE_SM_XS,
                                 )
                                 if is_saving
                                 else "Save",
@@ -269,8 +317,10 @@ def build_report_editor(
                                 style=ft.ButtonStyle(
                                     bgcolor=theme.PRIMARY,
                                     color=ft.Colors.WHITE,
-                                    shape=ft.RoundedRectangleBorder(radius=12),
-                                    padding=14,
+                                    shape=ft.RoundedRectangleBorder(
+                                        radius=tokens.RADIUS_MD
+                                    ),
+                                    padding=tokens.BUTTON_PADDING_MD,
                                 ),
                                 on_click=lambda e: on_save(),
                                 disabled=is_saving or is_ai_editing,
@@ -280,14 +330,14 @@ def build_report_editor(
                                     [
                                         ft.Icon(
                                             ft.Icons.PUBLIC_ROUNDED,
-                                            size=16,
+                                            size=tokens.ICON_SM,
                                             color=theme.PRIMARY
                                             if is_public
                                             else ft.Colors.ON_SURFACE_VARIANT,
                                         ),
                                         ft.Text(
                                             "Feature on spaninsight.com",
-                                            size=12,
+                                            size=tokens.FONT_BODY_SM,
                                             expand=True,
                                             color=theme.PRIMARY
                                             if is_public
@@ -302,12 +352,19 @@ def build_report_editor(
                                             ),
                                         ),
                                     ],
-                                    spacing=8,
+                                    spacing=tokens.SPACE_SM,
                                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                                 ),
-                                padding=ft.Padding(12, 8, 12, 8),
-                                border_radius=8,
-                                bgcolor=ft.Colors.with_opacity(0.05, theme.PRIMARY)
+                                padding=ft.Padding(
+                                    tokens.SPACE_MD,
+                                    tokens.SPACE_SM,
+                                    tokens.SPACE_MD,
+                                    tokens.SPACE_SM,
+                                ),
+                                border_radius=tokens.RADIUS_SM,
+                                bgcolor=ft.Colors.with_opacity(
+                                    tokens.OPACITY_FAINT, theme.PRIMARY
+                                )
                                 if is_public
                                 else None,
                             ),
@@ -316,18 +373,25 @@ def build_report_editor(
                                 content=ft.Row(
                                     [
                                         ft.ProgressRing(
-                                            width=12, height=12, stroke_width=2
+                                            width=tokens.PROGRESS_RING_XS,
+                                            height=tokens.PROGRESS_RING_XS,
+                                            stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
                                         ),
-                                        ft.Text("Sharing...", size=12),
+                                        ft.Text(
+                                            "Sharing...",
+                                            size=tokens.FONT_BODY_SM,
+                                        ),
                                     ],
-                                    spacing=6,
+                                    spacing=tokens.SPACE_SM_XS,
                                 )
                                 if is_sharing
                                 else "Share",
                                 icon=ft.Icons.SHARE_ROUNDED if not is_sharing else None,
                                 style=ft.ButtonStyle(
-                                    shape=ft.RoundedRectangleBorder(radius=12),
-                                    padding=14,
+                                    shape=ft.RoundedRectangleBorder(
+                                        radius=tokens.RADIUS_MD
+                                    ),
+                                    padding=tokens.BUTTON_PADDING_MD,
                                     color=theme.PRIMARY,
                                 ),
                                 on_click=lambda e: on_share(),
@@ -340,18 +404,18 @@ def build_report_editor(
                                     content=ft.Row(
                                         [
                                             ft.ProgressRing(
-                                                width=12,
-                                                height=12,
-                                                stroke_width=2,
+                                                width=tokens.PROGRESS_RING_XS,
+                                                height=tokens.PROGRESS_RING_XS,
+                                                stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
                                                 color=theme.ERROR,
                                             ),
                                             ft.Text(
                                                 "Deleting...",
-                                                size=12,
+                                                size=tokens.FONT_BODY_SM,
                                                 color=theme.ERROR,
                                             ),
                                         ],
-                                        spacing=6,
+                                        spacing=tokens.SPACE_SM_XS,
                                     )
                                     if is_deleting
                                     else "Delete Report",
@@ -361,8 +425,10 @@ def build_report_editor(
                                     icon_color=theme.ERROR,
                                     style=ft.ButtonStyle(
                                         color=theme.ERROR,
-                                        shape=ft.RoundedRectangleBorder(radius=12),
-                                        padding=14,
+                                        shape=ft.RoundedRectangleBorder(
+                                            radius=tokens.RADIUS_MD
+                                        ),
+                                        padding=tokens.BUTTON_PADDING_MD,
                                     ),
                                     on_click=lambda e: on_delete(),
                                     disabled=is_deleting or is_ai_editing,
@@ -371,19 +437,24 @@ def build_report_editor(
                             if on_delete is not None
                             else []
                         ),
-                        spacing=8,
+                        spacing=tokens.SPACE_SM,
                         wrap=True,
                     ),
                 ],
-                spacing=8,
+                spacing=tokens.SPACE_SM,
             ),
-            padding=20,
-            margin=ft.Margin(20, 8, 20, 8),
-            border_radius=16,
+            padding=tokens.SPACE_XL,
+            margin=ft.Margin(
+                tokens.SPACE_XL,
+                tokens.SPACE_SM,
+                tokens.SPACE_XL,
+                tokens.SPACE_SM,
+            ),
+            border_radius=tokens.RADIUS_LG,
             bgcolor=theme.GLASS_BG,
-            border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+            border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
         )
     )
 
-    controls.append(ft.Container(height=100))
+    controls.append(ft.Container(height=tokens.INPUT_WIDTH_SM))
     return controls

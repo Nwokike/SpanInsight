@@ -137,7 +137,7 @@ def build_notebook_cell(
                             controls=[
                                 ft.Icon(
                                     ft.Icons.MODE_EDIT_OUTLINE_ROUNDED,
-                                    size=12,
+                                    size=tokens.ICON_MICRO,
                                     color=ft.Colors.ON_SURFACE_VARIANT,
                                 ),
                                 ft.Text(
@@ -152,10 +152,10 @@ def build_notebook_cell(
                         ft.Container(expand=True),
                         ft.IconButton(
                             icon=ft.Icons.CHECK_ROUNDED,
-                            icon_size=14,
+                            icon_size=tokens.ICON_XS,
                             icon_color=theme.SUCCESS,
                             tooltip="Render",
-                            style=ft.ButtonStyle(padding=4),
+                            style=ft.ButtonStyle(padding=tokens.SPACE_XS),
                             on_click=_render,
                         ),
                         _make_actions(),
@@ -163,7 +163,7 @@ def build_notebook_cell(
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
             ],
-            spacing=0,
+            spacing=tokens.SPACE_NONE,
         )
 
         render_container.content = ft.Column(
@@ -188,9 +188,9 @@ def build_notebook_cell(
                             ft.Container(expand=True),
                             ft.IconButton(
                                 ft.Icons.EDIT_ROUNDED,
-                                icon_size=14,
+                                icon_size=tokens.ICON_XS,
                                 tooltip="Edit",
-                                style=ft.ButtonStyle(padding=4),
+                                style=ft.ButtonStyle(padding=tokens.SPACE_XS),
                                 on_click=_edit,
                             ),
                             _make_actions(),
@@ -199,23 +199,30 @@ def build_notebook_cell(
                     ),
                     padding=ft.Padding(
                         tokens.SPACE_SM,
-                        0,
+                        tokens.SPACE_NONE,
                         tokens.SPACE_SM,
                         tokens.SPACE_XS,
                     ),
                 ),
             ],
-            spacing=0,
+            spacing=tokens.SPACE_NONE,
         )
 
-        content = ft.Column([edit_container, render_container], spacing=0)
+        content = ft.Column(
+            [edit_container, render_container], spacing=tokens.SPACE_NONE
+        )
 
         return ft.Container(
             content=content,
             border_radius=tokens.RADIUS_SM,
-            bgcolor=ft.Colors.with_opacity(0.02, ft.Colors.ON_SURFACE),
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE)),
-            margin=ft.Margin(0, tokens.SPACE_XS, 0, tokens.SPACE_XS),
+            bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE),
+            border=ft.Border.all(
+                tokens.DIVIDER_THICKNESS,
+                ft.Colors.with_opacity(tokens.OPACITY_MUTED, ft.Colors.ON_SURFACE),
+            ),
+            margin=ft.Margin(
+                tokens.SPACE_NONE, tokens.SPACE_XS, tokens.SPACE_NONE, tokens.SPACE_XS
+            ),
         ), refs
 
     # ── Code Cell ────────────────────────────────────────────────
@@ -242,30 +249,32 @@ def build_notebook_cell(
                     controls=[
                         ft.Text(
                             "OUTPUT",
-                            size=8,
-                            color=ft.Colors.with_opacity(0.4, ft.Colors.ON_SURFACE),
+                            size=tokens.FONT_XXS,
+                            color=ft.Colors.with_opacity(
+                                tokens.OPACITY_DISABLED, ft.Colors.ON_SURFACE
+                            ),
                             weight=ft.FontWeight.W_600,
                         ),
                         ft.Row(
                             controls=[
                                 ft.IconButton(
                                     ft.Icons.COPY_ALL_ROUNDED,
-                                    icon_size=12,
+                                    icon_size=tokens.ICON_MICRO,
                                     tooltip="Copy Output",
-                                    style=ft.ButtonStyle(padding=2),
+                                    style=ft.ButtonStyle(padding=tokens.SPACE_XXS),
                                     on_click=lambda e: page.run_task(_copy_output, e),
                                 ),
                                 ft.IconButton(
                                     ft.Icons.CLEAR_ALL_ROUNDED,
-                                    icon_size=12,
+                                    icon_size=tokens.ICON_MICRO,
                                     tooltip="Clear Output",
-                                    style=ft.ButtonStyle(padding=2),
+                                    style=ft.ButtonStyle(padding=tokens.SPACE_XXS),
                                     on_click=lambda e: (
                                         on_clear_output() if on_clear_output else None
                                     ),
                                 ),
                             ],
-                            spacing=0,
+                            spacing=tokens.SPACE_NONE,
                         ),
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -289,7 +298,7 @@ def build_notebook_cell(
         icon_color=theme.SUCCESS,
         on_click=lambda e: on_run() if on_run else None,
         tooltip="Run Cell",
-        style=ft.ButtonStyle(padding=4),
+        style=ft.ButtonStyle(padding=tokens.SPACE_XS),
         visible=not is_running,
     )
 
@@ -297,17 +306,17 @@ def build_notebook_cell(
         ref=stop_row_ref,
         controls=[
             ft.ProgressRing(
-                width=14,
-                height=14,
-                stroke_width=2,
+                width=tokens.PROGRESS_RING_XS,
+                height=tokens.PROGRESS_RING_XS,
+                stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
             ),
             ft.IconButton(
                 ft.Icons.STOP_ROUNDED,
-                icon_size=14,
+                icon_size=tokens.ICON_XS,
                 icon_color=theme.ERROR,
                 on_click=lambda e: on_stop() if on_stop else None,
                 tooltip="Stop",
-                style=ft.ButtonStyle(padding=2),
+                style=ft.ButtonStyle(padding=tokens.SPACE_XXS),
             ),
         ],
         spacing=tokens.SPACE_XS,
@@ -346,16 +355,21 @@ def build_notebook_cell(
             ],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
-        padding=ft.Padding(tokens.SPACE_XS, 0, tokens.SPACE_SM, tokens.SPACE_XS),
+        padding=ft.Padding(
+            tokens.SPACE_XS,
+            tokens.SPACE_NONE,
+            tokens.SPACE_SM,
+            tokens.SPACE_XS,
+        ),
     )
 
     code_box = ft.Container(
         content=ft.Column(
             controls=[editor, toolbar],
-            spacing=0,
+            spacing=tokens.SPACE_NONE,
         ),
         border_radius=tokens.RADIUS_SM,
-        bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE),
     )
 
     content = ft.Column(
@@ -363,10 +377,15 @@ def build_notebook_cell(
             code_box,
             ft.Container(
                 content=output_panel,
-                padding=ft.Padding(0, tokens.SPACE_XXS, 0, 0),
+                padding=ft.Padding(
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_XXS,
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_NONE,
+                ),
             ),
         ],
-        spacing=0,
+        spacing=tokens.SPACE_NONE,
     )
 
     container = ft.Container(
@@ -375,9 +394,14 @@ def build_notebook_cell(
             tokens.SPACE_SM, tokens.SPACE_XS, tokens.SPACE_SM, tokens.SPACE_XS
         ),
         border=ft.Border(
-            left=ft.BorderSide(2, ft.Colors.with_opacity(0.15, ft.Colors.ON_SURFACE)),
+            left=ft.BorderSide(
+                tokens.SPACE_NANO,
+                ft.Colors.with_opacity(tokens.OPACITY_BORDER, ft.Colors.ON_SURFACE),
+            ),
         ),
-        margin=ft.Margin(0, tokens.SPACE_XXS, 0, tokens.SPACE_XXS),
+        margin=ft.Margin(
+            tokens.SPACE_NONE, tokens.SPACE_XXS, tokens.SPACE_NONE, tokens.SPACE_XXS
+        ),
     )
 
     return container, refs

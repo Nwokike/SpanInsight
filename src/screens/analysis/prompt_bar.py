@@ -30,7 +30,7 @@ def build_prompt_bar(
             icon_size=tokens.ICON_MD,
             tooltip="Import Data File",
             on_click=on_upload,
-            style=ft.ButtonStyle(padding=6),
+            style=ft.ButtonStyle(padding=tokens.SPACE_SM_XS),
         ),
     ]
 
@@ -46,7 +46,7 @@ def build_prompt_bar(
                 if not is_expert_mode
                 else "Switch to Natural Prompt",
                 on_click=on_toggle_expert_mode,
-                style=ft.ButtonStyle(padding=6),
+                style=ft.ButtonStyle(padding=tokens.SPACE_SM_XS),
             )
         )
 
@@ -88,7 +88,7 @@ def build_prompt_bar(
                     icon_color=theme.ERROR if is_recording else None,
                     tooltip="Voice" if not is_recording else "Stop",
                     on_click=on_toggle_voice,
-                    style=ft.ButtonStyle(padding=6),
+                    style=ft.ButtonStyle(padding=tokens.SPACE_SM_XS),
                 ),
                 ft.Container(
                     content=ft.IconButton(
@@ -100,11 +100,11 @@ def build_prompt_bar(
                         tooltip="Run Code" if is_expert_mode else "Send",
                         on_click=lambda _: on_submit(prompt_text),
                         disabled=is_generating or not has_text,
-                        style=ft.ButtonStyle(padding=6),
+                        style=ft.ButtonStyle(padding=tokens.SPACE_SM_XS),
                     ),
                     bgcolor=theme.PRIMARY
                     if has_text
-                    else ft.Colors.with_opacity(0.3, theme.PRIMARY),
+                    else ft.Colors.with_opacity(tokens.OPACITY_DIM, theme.PRIMARY),
                     border_radius=tokens.RADIUS_MD,
                 ),
             ],
@@ -115,8 +115,11 @@ def build_prompt_bar(
             tokens.SPACE_XS, tokens.SPACE_XS, tokens.SPACE_XS, tokens.SPACE_XS
         ),
         border_radius=tokens.RADIUS_LG,
-        bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ON_SURFACE),
-        border=ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE)),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE),
+        border=ft.Border.all(
+            tokens.DIVIDER_THICKNESS,
+            ft.Colors.with_opacity(tokens.OPACITY_MUTED, ft.Colors.ON_SURFACE),
+        ),
         margin=ft.Margin(
             tokens.SPACE_MD, tokens.SPACE_SM, tokens.SPACE_MD, tokens.SPACE_SM
         ),
@@ -143,5 +146,7 @@ def build_gen_indicator(
         return ft.Container(visible=False)
     return ft.Container(
         content=pill,
-        padding=ft.Padding(tokens.SPACE_MD, tokens.SPACE_XS, tokens.SPACE_MD, 0),
+        padding=ft.Padding(
+            tokens.SPACE_MD, tokens.SPACE_XS, tokens.SPACE_MD, tokens.SPACE_NONE
+        ),
     )

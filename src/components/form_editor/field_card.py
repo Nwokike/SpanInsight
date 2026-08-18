@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from core import theme
+from core import theme, tokens
 
 FIELD_TYPES = [
     "text",
@@ -100,36 +100,46 @@ def build_field_card(
             [
                 ft.Icon(
                     TYPE_ICONS.get(field["type"], ft.Icons.TEXT_FIELDS),
-                    size=16,
+                    size=tokens.ICON_SM,
                     color=theme.ACCENT,
                 ),
                 ft.TextField(
                     value=field["label"],
-                    border="none",
-                    text_size=14,
+                    border=ft.InputBorder.NONE,
+                    text_size=tokens.FONT_MD,
                     text_style=ft.TextStyle(weight=ft.FontWeight.W_500),
                     expand=True,
-                    content_padding=ft.Padding(4, 0, 4, 0),
+                    content_padding=ft.Padding(
+                        tokens.SPACE_XS,
+                        tokens.SPACE_NONE,
+                        tokens.SPACE_XS,
+                        tokens.SPACE_NONE,
+                    ),
                     on_change=lambda e: _update("label", e.control.value),
                 ),
                 ft.Dropdown(
                     value=field["type"],
-                    width=110,
-                    text_size=11,
+                    width=tokens.INPUT_WIDTH_MD,
+                    text_size=tokens.FONT_SM,
                     options=type_options,
-                    border_radius=8,
-                    content_padding=ft.Padding(8, 0, 8, 0),
+                    border_radius=tokens.RADIUS_SM,
+                    content_padding=ft.Padding(
+                        tokens.SPACE_SM,
+                        tokens.SPACE_NONE,
+                        tokens.SPACE_SM,
+                        tokens.SPACE_NONE,
+                    ),
                     on_select=lambda e: _update("type", e.data),
                 ),
                 ft.Switch(
                     value=field.get("required", False),
                     label="Req",
-                    label_text_style=ft.TextStyle(size=10),
+                    label_text_style=ft.TextStyle(size=tokens.FONT_XS),
                     on_change=lambda e: _update("required", e.control.value),
                 ),
             ],
-            spacing=4,
-            vertical_alignment="center",
+            spacing=tokens.SPACE_XS,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
     ]
 
@@ -138,8 +148,8 @@ def build_field_card(
             ft.TextField(
                 value=", ".join(field.get("options", [])),
                 hint_text="Option 1, Option 2, Option 3...",
-                text_size=12,
-                border_radius=8,
+                text_size=tokens.FONT_BODY_SM,
+                border_radius=tokens.RADIUS_SM,
                 max_lines=2,
                 on_change=lambda e: _update_options(e.control.value),
             )
@@ -150,32 +160,32 @@ def build_field_card(
             [
                 ft.IconButton(
                     ft.Icons.ARROW_UPWARD_ROUNDED,
-                    icon_size=16,
+                    icon_size=tokens.ICON_SM,
                     disabled=index == 0,
                     on_click=lambda e, idx=index: on_move(idx, -1),
                 ),
                 ft.IconButton(
                     ft.Icons.ARROW_DOWNWARD_ROUNDED,
-                    icon_size=16,
+                    icon_size=tokens.ICON_SM,
                     disabled=index == total - 1,
                     on_click=lambda e, idx=index: on_move(idx, 1),
                 ),
                 ft.Container(expand=True),
                 ft.IconButton(
                     ft.Icons.DELETE_OUTLINE_ROUNDED,
-                    icon_size=16,
+                    icon_size=tokens.ICON_SM,
                     icon_color=theme.ERROR,
                     on_click=lambda e, idx=index: on_delete(idx),
                 ),
             ],
-            spacing=0,
+            spacing=tokens.SPACE_NONE,
         )
     )
 
     return ft.Container(
-        content=ft.Column(controls, spacing=6),
-        padding=12,
-        border_radius=10,
-        bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ON_SURFACE),
-        border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+        content=ft.Column(controls, spacing=tokens.SPACE_SM_XS),
+        padding=tokens.SPACE_MD,
+        border_radius=tokens.RADIUS_MD_SM,
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE),
+        border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
     )

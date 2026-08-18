@@ -37,28 +37,33 @@ def build_column_chips_section(
                             controls=[
                                 ft.Text(
                                     str(dtype),
-                                    size=9,
+                                    size=tokens.FONT_XS,
                                     color=ft.Colors.ON_SURFACE_VARIANT,
                                 ),
                                 ft.Container(
                                     content=ft.Text(
                                         null_badge_txt,
-                                        size=8,
+                                        size=tokens.FONT_XXS,
                                         weight=ft.FontWeight.W_700,
                                         color=null_badge_color,
                                     ),
-                                    padding=ft.Padding(3, 0, 3, 0),
+                                    padding=ft.Padding(
+                                        tokens.SPACE_TINY,
+                                        tokens.SPACE_NONE,
+                                        tokens.SPACE_TINY,
+                                        tokens.SPACE_NONE,
+                                    ),
                                     bgcolor=ft.Colors.with_opacity(
-                                        0.12, null_badge_color
+                                        tokens.OPACITY_CONTAINER, null_badge_color
                                     ),
                                     border_radius=tokens.RADIUS_SM,
                                 ),
                             ],
-                            spacing=4,
+                            spacing=tokens.SPACE_XS,
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
                     ],
-                    spacing=2,
+                    spacing=tokens.SPACE_XXS,
                     horizontal_alignment=ft.CrossAxisAlignment.START,
                 ),
                 padding=ft.Padding(
@@ -68,9 +73,12 @@ def build_column_chips_section(
                     tokens.SPACE_XXS,
                 ),
                 border_radius=tokens.RADIUS_SM,
-                bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.ON_SURFACE),
+                bgcolor=ft.Colors.with_opacity(
+                    tokens.OPACITY_FAINT, ft.Colors.ON_SURFACE
+                ),
                 border=ft.Border.all(
-                    1, ft.Colors.with_opacity(0.1, ft.Colors.ON_SURFACE)
+                    tokens.DIVIDER_THICKNESS,
+                    ft.Colors.with_opacity(tokens.OPACITY_LIGHT, ft.Colors.ON_SURFACE),
                 ),
             )
         )
@@ -81,7 +89,7 @@ def build_column_chips_section(
                 controls=[
                     ft.Icon(
                         ft.Icons.VIEW_COLUMN_ROUNDED,
-                        size=14,
+                        size=tokens.ICON_XS,
                         color=theme.ACCENT,
                     ),
                     ft.Text(

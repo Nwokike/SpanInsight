@@ -189,9 +189,14 @@ def HomeScreen() -> ft.Control:
                     spacing=tokens.SPACE_MD,
                 ),
             ],
-            spacing=0,
+            spacing=tokens.SPACE_NONE,
         ),
-        padding=ft.Padding(tokens.SPACE_LG, 0, tokens.SPACE_LG, tokens.SPACE_LG),
+        padding=ft.Padding(
+            tokens.SPACE_LG,
+            tokens.SPACE_NONE,
+            tokens.SPACE_LG,
+            tokens.SPACE_LG,
+        ),
     )
 
     # ── Cloud power banner ──────────────────────────────────────
@@ -230,8 +235,11 @@ def HomeScreen() -> ft.Control:
             tokens.SPACE_LG, tokens.SPACE_SM, tokens.SPACE_LG, tokens.SPACE_SM
         ),
         border_radius=tokens.RADIUS_LG,
-        bgcolor=ft.Colors.with_opacity(0.06, theme.PRIMARY),
-        border=ft.Border.all(1, ft.Colors.with_opacity(0.15, theme.PRIMARY)),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_LIGHT, theme.PRIMARY),
+        border=ft.Border.all(
+            tokens.DIVIDER_THICKNESS,
+            ft.Colors.with_opacity(tokens.OPACITY_BORDER, theme.PRIMARY),
+        ),
     )
 
     # ── Features ────────────────────────────────────────────────
@@ -306,7 +314,11 @@ def HomeScreen() -> ft.Control:
     credits_info = ft.Container(
         content=ft.Row(
             controls=[
-                ft.Icon(ft.Icons.BOLT_ROUNDED, size=20, color=theme.ACCENT),
+                ft.Icon(
+                    ft.Icons.BOLT_ROUNDED,
+                    size=tokens.ICON_BASE,
+                    color=theme.ACCENT,
+                ),
                 ft.Column(
                     [
                         ft.Text(
@@ -320,20 +332,28 @@ def HomeScreen() -> ft.Control:
                             color=ft.Colors.ON_SURFACE_VARIANT,
                         ),
                     ],
-                    spacing=2,
+                    spacing=tokens.SPACE_XXS,
                     expand=True,
                 ),
             ],
             spacing=tokens.SPACE_MD,
-            vertical_alignment="center",
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
         padding=ft.Padding(
             tokens.SPACE_LG, tokens.SPACE_MD, tokens.SPACE_LG, tokens.SPACE_MD
         ),
-        margin=ft.Margin(tokens.SPACE_LG, 0, tokens.SPACE_LG, tokens.SPACE_LG),
+        margin=ft.Margin(
+            tokens.SPACE_LG,
+            tokens.SPACE_NONE,
+            tokens.SPACE_LG,
+            tokens.SPACE_LG,
+        ),
         border_radius=tokens.RADIUS_LG,
-        bgcolor=ft.Colors.with_opacity(0.06, theme.ACCENT),
-        border=ft.Border.all(1, ft.Colors.with_opacity(0.15, theme.ACCENT)),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_LIGHT, theme.ACCENT),
+        border=ft.Border.all(
+            tokens.DIVIDER_THICKNESS,
+            ft.Colors.with_opacity(tokens.OPACITY_BORDER, theme.ACCENT),
+        ),
     )
 
     # ── Ad helper ───────────────────────────────────────────────
@@ -345,23 +365,28 @@ def HomeScreen() -> ft.Control:
                         [
                             ft.Text(
                                 "SPONSORED",
-                                size=8,
+                                size=tokens.FONT_XXS,
                                 weight=ft.FontWeight.W_700,
                                 color=ft.Colors.ON_SURFACE_VARIANT,
-                                style=ft.TextStyle(letter_spacing=1),
+                                style=ft.TextStyle(letter_spacing=tokens.SPACE_MICRO),
                             ),
                             get_banner_ad(),
                         ],
-                        horizontal_alignment="center",
-                        spacing=4,
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=tokens.SPACE_XS,
                     ),
                     alignment=ft.Alignment.CENTER,
-                    padding=8,
+                    padding=tokens.SPACE_SM,
                     border_radius=tokens.RADIUS_LG,
                     bgcolor=theme.GLASS_BG,
-                    border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+                    border=ft.Border.all(
+                        tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR
+                    ),
                     margin=ft.Margin(
-                        tokens.SPACE_LG, 0, tokens.SPACE_LG, tokens.SPACE_LG
+                        tokens.SPACE_LG,
+                        tokens.SPACE_NONE,
+                        tokens.SPACE_LG,
+                        tokens.SPACE_LG,
                     ),
                 )
             except Exception:
@@ -389,9 +414,9 @@ def HomeScreen() -> ft.Control:
             _create_home_ad(),
             how_it_works,
             credits_info,
-            ft.Container(height=80),
+            ft.Container(height=tokens.SCROLL_BOTTOM_INSET),
         ],
         scroll=ft.ScrollMode.AUTO,
         expand=True,
-        spacing=0,
+        spacing=tokens.SPACE_NONE,
     )

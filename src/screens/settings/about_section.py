@@ -23,12 +23,17 @@ def build_about_section(
                     ft.Container(
                         content=ft.Image(
                             src="icon.png",
-                            width=96,
-                            height=96,
+                            width=tokens.AVATAR_CONTAINER_SIZE,
+                            height=tokens.AVATAR_CONTAINER_SIZE,
                             fit=ft.BoxFit.CONTAIN,
                         ),
                         alignment=ft.Alignment.CENTER,
-                        margin=ft.Margin(0, 0, 0, tokens.SPACE_SM),
+                        margin=ft.Margin(
+                            tokens.SPACE_NONE,
+                            tokens.SPACE_NONE,
+                            tokens.SPACE_NONE,
+                            tokens.SPACE_SM,
+                        ),
                     ),
                     ft.Text(
                         "Ready Autonomous Data Intelligence for Everyone",
@@ -60,8 +65,10 @@ def build_about_section(
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),
                     ft.Divider(
-                        height=1,
-                        color=ft.Colors.with_opacity(0.04, ft.Colors.ON_SURFACE),
+                        height=tokens.DIVIDER_THICKNESS,
+                        color=ft.Colors.with_opacity(
+                            tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE
+                        ),
                     ),
                     ft.Row(
                         [
@@ -92,7 +99,9 @@ def build_about_section(
                     ft.Icon(
                         ft.Icons.WORKSPACE_PREMIUM_ROUNDED,
                         size=tokens.ICON_LG,
-                        color=ft.Colors.with_opacity(0.4, theme.PRIMARY),
+                        color=ft.Colors.with_opacity(
+                            tokens.OPACITY_DISABLED, theme.PRIMARY
+                        ),
                     ),
                     ft.Column(
                         [
@@ -100,13 +109,15 @@ def build_about_section(
                                 "SpanInsight Pro",
                                 size=tokens.FONT_MD,
                                 weight=ft.FontWeight.W_500,
-                                color=ft.Colors.with_opacity(0.5, ft.Colors.ON_SURFACE),
+                                color=ft.Colors.with_opacity(
+                                    tokens.OPACITY_HALF, ft.Colors.ON_SURFACE
+                                ),
                             ),
                             ft.Text(
                                 "Zero ads • Unlimited credits • Priority support",
                                 size=tokens.FONT_XS,
                                 color=ft.Colors.with_opacity(
-                                    0.35, ft.Colors.ON_SURFACE
+                                    tokens.OPACITY_DIM, ft.Colors.ON_SURFACE
                                 ),
                             ),
                         ],
@@ -127,13 +138,20 @@ def build_about_section(
                             tokens.SPACE_XXS,
                         ),
                         border_radius=tokens.RADIUS_SM,
-                        bgcolor=ft.Colors.with_opacity(0.1, theme.ACCENT),
+                        bgcolor=ft.Colors.with_opacity(
+                            tokens.OPACITY_LIGHT, theme.ACCENT
+                        ),
                     ),
                 ],
                 spacing=tokens.SPACE_LG,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.Padding(tokens.SPACE_LG, 14, tokens.SPACE_LG, 14),
-            opacity=0.6,
+            padding=ft.Padding(
+                tokens.SPACE_LG,
+                tokens.BUTTON_PADDING_MD,
+                tokens.SPACE_LG,
+                tokens.BUTTON_PADDING_MD,
+            ),
+            opacity=tokens.OPACITY_MUTED_BORDER,
         ),
     ]

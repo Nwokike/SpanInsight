@@ -26,17 +26,22 @@ def hardware_badge(accelerator: str, variant: str = "") -> ft.Container:
             color=ft.Colors.WHITE,
         ),
         bgcolor=color,
-        border_radius=4,
-        padding=ft.Padding(6, 2, 6, 2),
+        border_radius=tokens.RADIUS_XS,
+        padding=ft.Padding(
+            tokens.SPACE_SM_XS,
+            tokens.SPACE_XXS,
+            tokens.SPACE_SM_XS,
+            tokens.SPACE_XXS,
+        ),
     )
 
 
 def status_dot(is_running: bool = False) -> ft.Container:
     """Green dot for running, gray for idle."""
     return ft.Container(
-        width=8,
-        height=8,
-        border_radius=4,
+        width=tokens.DOT_INDICATOR_WIDTH_INACTIVE,
+        height=tokens.DOT_INDICATOR_HEIGHT,
+        border_radius=tokens.RADIUS_XS,
         bgcolor=theme.SUCCESS if is_running else theme.HARDWARE_CPU,
     )
 
@@ -99,9 +104,14 @@ def build_session_card(session: dict, on_click=None) -> ft.Container:
             tokens.SPACE_LG, tokens.SPACE_MD, tokens.SPACE_LG, tokens.SPACE_MD
         ),
         border_radius=tokens.RADIUS_MD,
-        bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.ON_SURFACE),
-        border=ft.Border.all(1, ft.Colors.with_opacity(0.1, ft.Colors.ON_SURFACE)),
-        margin=ft.Margin(tokens.SPACE_LG, tokens.SPACE_SM, tokens.SPACE_LG, 0),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_FAINT, ft.Colors.ON_SURFACE),
+        border=ft.Border.all(
+            tokens.DIVIDER_THICKNESS,
+            ft.Colors.with_opacity(tokens.OPACITY_LIGHT, ft.Colors.ON_SURFACE),
+        ),
+        margin=ft.Margin(
+            tokens.SPACE_LG, tokens.SPACE_SM, tokens.SPACE_LG, tokens.SPACE_NONE
+        ),
         on_click=on_click,
         ink=True,
     )

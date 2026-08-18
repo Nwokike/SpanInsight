@@ -59,14 +59,18 @@ def try_parse_dataframe_text(text: str) -> ft.Control | None:
             table = ft.DataTable(
                 columns=data_cols,
                 rows=data_rows,
-                heading_row_height=34,
-                data_row_max_height=30,
-                column_spacing=16,
+                heading_row_height=tokens.TABLE_HEADING_ROW_HEIGHT,
+                data_row_max_height=tokens.TABLE_DATA_ROW_HEIGHT,
+                column_spacing=tokens.SPACE_LG,
                 horizontal_lines=ft.BorderSide(
-                    1, ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE)
+                    tokens.DIVIDER_THICKNESS,
+                    ft.Colors.with_opacity(tokens.OPACITY_MUTED, ft.Colors.ON_SURFACE),
                 ),
                 border=ft.Border.all(
-                    1, ft.Colors.with_opacity(0.12, ft.Colors.ON_SURFACE)
+                    tokens.DIVIDER_THICKNESS,
+                    ft.Colors.with_opacity(
+                        tokens.OPACITY_CONTAINER, ft.Colors.ON_SURFACE
+                    ),
                 ),
                 border_radius=tokens.RADIUS_SM,
             )
@@ -96,7 +100,9 @@ def render_chart_output(figure_png: bytes | str | None) -> ft.Control | None:
                 border_radius=tokens.RADIUS_MD,
             ),
             alignment=ft.Alignment.CENTER,
-            padding=ft.Padding(0, tokens.SPACE_XS, 0, tokens.SPACE_XS),
+            padding=ft.Padding(
+                tokens.SPACE_NONE, tokens.SPACE_XS, tokens.SPACE_NONE, tokens.SPACE_XS
+            ),
         )
     except Exception as ex:
         logger.error("Chart render error: %s", ex)
@@ -126,7 +132,11 @@ def render_raw_output_drawer(
             await page.set_clipboard_async(raw_output_full)
             from core.utils import show_snack
 
-            show_snack(page, "📋 Raw output copied to clipboard!", duration=2000)
+            show_snack(
+                page,
+                "📋 Raw output copied to clipboard!",
+                duration=tokens.SNACK_DURATION_SHORT_MS,
+            )
         except Exception as ex:
             logger.error("Copy raw output failed: %s", ex)
 
@@ -139,12 +149,16 @@ def render_raw_output_drawer(
         on_click=_toggle_raw_output,
     )
 
-    drawer_controls = [
-        ft.Row([raw_toggle_btn], alignment=ft.MainAxisAlignment.START)
-    ]
+    drawer_controls = [ft.Row([raw_toggle_btn], alignment=ft.MainAxisAlignment.START)]
     if show_raw:
         raw_lines = max(raw_output_full.count("\n") + 1, 1)
-        raw_height = min(max(raw_lines * 18 + 20, 50), 320)
+        raw_height = min(
+            max(
+                raw_lines * tokens.RAW_OUTPUT_LINE_HEIGHT + tokens.SPACE_XL,
+                tokens.RAW_OUTPUT_MIN_HEIGHT,
+            ),
+            tokens.RAW_OUTPUT_MAX_HEIGHT,
+        )
         raw_output_box = ft.Container(
             content=ft.Column(
                 [
@@ -152,22 +166,20 @@ def render_raw_output_drawer(
                         [
                             ft.Text(
                                 "RAW KERNEL OUTPUT",
-                                size=8,
+                                size=tokens.FONT_XXS,
                                 color=ft.Colors.with_opacity(
-                                    0.4, ft.Colors.ON_SURFACE
+                                    tokens.OPACITY_DISABLED, ft.Colors.ON_SURFACE
                                 ),
                                 weight=ft.FontWeight.W_600,
                             ),
                             ft.IconButton(
                                 ft.Icons.COPY_ALL_ROUNDED,
-                                icon_size=12,
+                                icon_size=tokens.ICON_MICRO,
                                 tooltip="Copy Raw Output",
-                                style=ft.ButtonStyle(padding=2),
-                                on_click=lambda e: page.run_task(
-                                    _copy_raw_output, e
-                                )
-                                if page
-                                else None,
+                                style=ft.ButtonStyle(padding=tokens.SPACE_XXS),
+                                on_click=lambda e: (
+                                    page.run_task(_copy_raw_output, e) if page else None
+                                ),
                             ),
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -184,7 +196,7 @@ def render_raw_output_drawer(
                         height=raw_height,
                     ),
                 ],
-                spacing=2,
+                spacing=tokens.SPACE_XXS,
             ),
             padding=tokens.SPACE_SM,
             bgcolor=theme.TERMINAL_BG,
@@ -233,26 +245,26 @@ def render_code_drawer(
                             ft.Row(
                                 [
                                     ft.Container(
-                                        width=10,
-                                        height=10,
-                                        border_radius=5,
-                                        bgcolor="#FF5F56",
+                                        width=tokens.TERMINAL_DOT_SIZE,
+                                        height=tokens.TERMINAL_DOT_SIZE,
+                                        border_radius=tokens.TERMINAL_DOT_RADIUS,
+                                        bgcolor=theme.TERMINAL_DOT_RED,
                                     ),
                                     ft.Container(
-                                        width=10,
-                                        height=10,
-                                        border_radius=5,
-                                        bgcolor="#FFBD2E",
+                                        width=tokens.TERMINAL_DOT_SIZE,
+                                        height=tokens.TERMINAL_DOT_SIZE,
+                                        border_radius=tokens.TERMINAL_DOT_RADIUS,
+                                        bgcolor=theme.TERMINAL_DOT_YELLOW,
                                     ),
                                     ft.Container(
-                                        width=10,
-                                        height=10,
-                                        border_radius=5,
-                                        bgcolor="#28C840",
+                                        width=tokens.TERMINAL_DOT_SIZE,
+                                        height=tokens.TERMINAL_DOT_SIZE,
+                                        border_radius=tokens.TERMINAL_DOT_RADIUS,
+                                        bgcolor=theme.TERMINAL_DOT_GREEN,
                                     ),
                                     ft.Text(
                                         "analysis.py",
-                                        size=11,
+                                        size=tokens.FONT_SM,
                                         color=ft.Colors.ON_SURFACE_VARIANT,
                                     ),
                                 ],
@@ -294,10 +306,11 @@ def render_code_drawer(
                 spacing=tokens.SPACE_XXS,
             ),
             padding=tokens.SPACE_SM,
-            bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+            bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, ft.Colors.BLACK),
             border_radius=tokens.RADIUS_SM,
             border=ft.Border.all(
-                1, ft.Colors.with_opacity(0.12, ft.Colors.ON_SURFACE)
+                tokens.DIVIDER_THICKNESS,
+                ft.Colors.with_opacity(tokens.OPACITY_CONTAINER, ft.Colors.ON_SURFACE),
             ),
         )
         code_drawer_controls.append(code_terminal)

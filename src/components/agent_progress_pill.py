@@ -119,7 +119,7 @@ def AgentProgressPill(
         step_rows.append(
             ft.Row(
                 [
-                    ft.Icon(icon, size=12, color=icon_color),
+                    ft.Icon(icon, size=tokens.ICON_MICRO, color=icon_color),
                     ft.Text(
                         s.get("text", ""),
                         size=tokens.FONT_XXS,
@@ -142,9 +142,12 @@ def AgentProgressPill(
     timeline_drawer = ft.Container(
         content=ft.Column(step_rows, spacing=tokens.SPACE_XXS),
         padding=tokens.SPACE_SM,
-        bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.BLACK),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, ft.Colors.BLACK),
         border_radius=tokens.RADIUS_SM,
-        border=ft.Border.all(1, ft.Colors.with_opacity(0.1, ft.Colors.ON_SURFACE)),
+        border=ft.Border.all(
+            tokens.DIVIDER_THICKNESS,
+            ft.Colors.with_opacity(tokens.OPACITY_LIGHT, ft.Colors.ON_SURFACE),
+        ),
         visible=is_expanded,
     )
 
@@ -156,9 +159,9 @@ def AgentProgressPill(
             ft.Row(
                 [
                     ft.ProgressRing(
-                        width=14,
-                        height=14,
-                        stroke_width=2,
+                        width=tokens.PROGRESS_RING_XS,
+                        height=tokens.PROGRESS_RING_XS,
+                        stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
                         color=theme.PRIMARY,
                     ),
                     ft.Text(
@@ -175,9 +178,9 @@ def AgentProgressPill(
                 icon=ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
                 if is_expanded
                 else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED,
-                icon_size=16,
+                icon_size=tokens.ICON_SM,
                 icon_color=ft.Colors.ON_SURFACE_VARIANT,
-                style=ft.ButtonStyle(padding=0),
+                style=ft.ButtonStyle(padding=tokens.SPACE_NONE),
                 tooltip="Toggle timeline",
                 on_click=_toggle,
             ),
@@ -188,12 +191,19 @@ def AgentProgressPill(
 
     pill_container = ft.Container(
         content=header_content,
-        height=32,
-        padding=ft.Padding(tokens.SPACE_SM, 0, tokens.SPACE_XS, 0),
-        bgcolor=ft.Colors.with_opacity(0.08, theme.PRIMARY),
+        height=tokens.SPACE_XXXL,
+        padding=ft.Padding(
+            tokens.SPACE_SM, tokens.SPACE_NONE, tokens.SPACE_XS, tokens.SPACE_NONE
+        ),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_MUTED, theme.PRIMARY),
         border_radius=tokens.RADIUS_SM,
-        border=ft.Border.all(1, ft.Colors.with_opacity(0.2, theme.PRIMARY)),
-        margin=ft.Margin(0, tokens.SPACE_XXS, 0, tokens.SPACE_XXS),
+        border=ft.Border.all(
+            tokens.DIVIDER_THICKNESS,
+            ft.Colors.with_opacity(tokens.OPACITY_BORDER, theme.PRIMARY),
+        ),
+        margin=ft.Margin(
+            tokens.SPACE_NONE, tokens.SPACE_XXS, tokens.SPACE_NONE, tokens.SPACE_XXS
+        ),
         on_click=_toggle,
     )
 

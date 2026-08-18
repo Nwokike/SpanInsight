@@ -138,9 +138,7 @@ async def suggest(
             # Reasoning models sometimes emit a broken string mid-array —
             # salvage the complete objects instead of losing every suggestion.
             salvaged = salvage_json_objects(cleaned)
-            salvaged = [
-                s for s in salvaged if isinstance(s, dict) and s.get("label")
-            ]
+            salvaged = [s for s in salvaged if isinstance(s, dict) and s.get("label")]
             if salvaged:
                 logger.info(
                     "Suggest JSON was malformed; salvaged %d complete item(s)",

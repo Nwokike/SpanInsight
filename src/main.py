@@ -12,6 +12,7 @@ import sys
 
 import flet as ft
 
+from core import tokens
 from core.state import state
 from core.theme import AppTheme
 from services.ad_service import AdService
@@ -54,10 +55,10 @@ class AppController:
         # to avoid a white flash on dark-mode devices.
         page.theme_mode = ft.ThemeMode.SYSTEM
 
-        page.window.min_width = 360
-        page.window.min_height = 600
-        page.padding = 0
-        page.spacing = 0
+        page.window.min_width = tokens.WINDOW_MIN_WIDTH
+        page.window.min_height = tokens.WINDOW_MIN_HEIGHT
+        page.padding = tokens.SPACE_NONE
+        page.spacing = tokens.SPACE_NONE
 
         page.on_error = self._on_error
 
@@ -389,7 +390,7 @@ class AppController:
                     show_snack(
                         self.page,
                         "A required update is available. Please update Spaninsight.",
-                        duration=8000,
+                        duration=tokens.SNACK_DURATION_EXTENDED_MS,
                     )
         except Exception:
             pass

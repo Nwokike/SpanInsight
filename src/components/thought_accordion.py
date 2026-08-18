@@ -41,9 +41,12 @@ def build_thought_accordion(block: dict, on_change=None) -> ft.Control | None:
         padding=ft.Padding(
             tokens.SPACE_SM, tokens.SPACE_XS, tokens.SPACE_SM, tokens.SPACE_XS
         ),
-        bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE),
         border_radius=tokens.RADIUS_SM,
-        border=ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE)),
+        border=ft.Border.all(
+            tokens.DIVIDER_THICKNESS,
+            ft.Colors.with_opacity(tokens.OPACITY_MUTED, ft.Colors.ON_SURFACE),
+        ),
         visible=show_thought,
     )
 
@@ -78,7 +81,7 @@ def build_thought_accordion(block: dict, on_change=None) -> ft.Control | None:
                     [
                         ft.Icon(
                             ft.Icons.PSYCHOLOGY_ROUNDED,
-                            size=14,
+                            size=tokens.ICON_XS,
                             color=theme.PRIMARY,
                         ),
                         ft.Text(
@@ -100,7 +103,7 @@ def build_thought_accordion(block: dict, on_change=None) -> ft.Control | None:
                     icon=ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
                     if show_thought
                     else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED,
-                    size=16,
+                    size=tokens.ICON_SM,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
             ],
@@ -109,7 +112,7 @@ def build_thought_accordion(block: dict, on_change=None) -> ft.Control | None:
         padding=ft.Padding(
             tokens.SPACE_SM, tokens.SPACE_XXS, tokens.SPACE_SM, tokens.SPACE_XXS
         ),
-        bgcolor=ft.Colors.with_opacity(0.06, theme.PRIMARY),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, theme.PRIMARY),
         border_radius=tokens.RADIUS_SM,
         on_click=_toggle,
         ink=True,

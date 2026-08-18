@@ -22,7 +22,9 @@ def _image_container(b64_img: str) -> ft.Container:
             src=b64_img,
             fit=ft.BoxFit.CONTAIN,
         ),
-        margin=ft.Margin(0, tokens.SPACE_XS, 0, tokens.SPACE_XS),
+        margin=ft.Margin(
+            tokens.SPACE_NONE, tokens.SPACE_XS, tokens.SPACE_NONE, tokens.SPACE_XS
+        ),
         border_radius=tokens.RADIUS_SM,
     )
 
@@ -104,7 +106,7 @@ def parse_outputs_to_controls(outputs: list) -> list[ft.Control]:
                         [
                             ft.Icon(
                                 ft.Icons.INFO_OUTLINE_ROUNDED,
-                                size=14,
+                                size=tokens.ICON_XS,
                                 color=theme.WARNING,
                             ),
                             ft.Text(
@@ -115,7 +117,12 @@ def parse_outputs_to_controls(outputs: list) -> list[ft.Control]:
                         ],
                         spacing=tokens.SPACE_XS,
                     ),
-                    padding=ft.Padding(0, tokens.SPACE_XXS, 0, 0),
+                    padding=ft.Padding(
+                        tokens.SPACE_NONE,
+                        tokens.SPACE_XXS,
+                        tokens.SPACE_NONE,
+                        tokens.SPACE_NONE,
+                    ),
                 )
                 output_controls.append(note)
                 if "text/plain" in data:
@@ -137,7 +144,9 @@ def parse_outputs_to_controls(outputs: list) -> list[ft.Control]:
                                 readable, default_size=tokens.FONT_SM
                             ),
                             padding=tokens.SPACE_SM,
-                            bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ON_SURFACE),
+                            bgcolor=ft.Colors.with_opacity(
+                                tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE
+                            ),
                             border_radius=tokens.RADIUS_SM,
                         )
                     )

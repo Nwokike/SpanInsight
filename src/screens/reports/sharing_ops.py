@@ -6,6 +6,7 @@ import logging
 
 import flet as ft
 
+from core import tokens
 from core.state import state
 from core.utils import show_snack
 
@@ -40,10 +41,15 @@ async def on_share(page: ft.Page, ui_state, report_service, ad_service):
                     page,
                     "Link copied to clipboard! (Expires in 7 days)",
                     success=True,
-                    duration=5000,
+                    duration=tokens.SNACK_DURATION_EXTENDED_MS,
                 )
             else:
-                show_snack(page, "Share failed. Try again.", error=True, duration=3000)
+                show_snack(
+                    page,
+                    "Share failed. Try again.",
+                    error=True,
+                    duration=tokens.SNACK_DURATION_MD_MS,
+                )
     except Exception as e:
         logger.error("Share failed: %s", e)
     finally:
@@ -82,12 +88,20 @@ async def on_view_live(page: ft.Page, ui_state, report_service, ad_service):
         else:
             if page:
                 show_snack(
-                    page, "View live failed. Try again.", error=True, duration=3000
+                    page,
+                    "View live failed. Try again.",
+                    error=True,
+                    duration=tokens.SNACK_DURATION_MD_MS,
                 )
     except Exception as e:
         logger.error("View live failed: %s", e)
         if page:
-            show_snack(page, f"View live failed: {e}", error=True, duration=3000)
+            show_snack(
+                page,
+                f"View live failed: {e}",
+                error=True,
+                duration=tokens.SNACK_DURATION_MD_MS,
+            )
     finally:
         ui_state.is_viewing_live["value"] = False
         ui_state.rebuild()
@@ -106,7 +120,11 @@ async def on_toggle_featured(
 
     if is_featured:
         if page:
-            show_snack(page, "Publishing to spaninsight.com...", duration=2000)
+            show_snack(
+                page,
+                "Publishing to spaninsight.com...",
+                duration=tokens.SNACK_DURATION_SHORT_MS,
+            )
         report["blocks"] = list(ui_state.editor_blocks)
         report["title"] = ui_state.draft_title["value"]
         report["description"] = ui_state.draft_desc["value"]
@@ -121,7 +139,7 @@ async def on_toggle_featured(
                     page,
                     "Featured on spaninsight.com! Live in community gallery.",
                     success=True,
-                    duration=4000,
+                    duration=tokens.SNACK_DURATION_LONG_MS,
                 )
         else:
             ui_state.is_public["value"] = False
@@ -136,7 +154,11 @@ async def on_toggle_featured(
         # User toggled OFF: delete from public gallery
         share_id = report.get("share_id", "")
         if page:
-            show_snack(page, "Removing from spaninsight.com...", duration=2000)
+            show_snack(
+                page,
+                "Removing from spaninsight.com...",
+                duration=tokens.SNACK_DURATION_SHORT_MS,
+            )
 
         if share_id and report_service:
             await report_service.delete_public_report(share_id)
@@ -158,6 +180,6 @@ async def on_toggle_featured(
                 page,
                 "Removed from spaninsight.com public gallery.",
                 success=True,
-                duration=3000,
+                duration=tokens.SNACK_DURATION_NORMAL_MS,
             )
     ui_state.rebuild()

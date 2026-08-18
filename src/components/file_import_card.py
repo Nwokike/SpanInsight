@@ -18,7 +18,11 @@ def build_file_import_card(
     if is_loading:
         content = ft.Column(
             controls=[
-                ft.ProgressRing(width=36, height=36, stroke_width=3),
+                ft.ProgressRing(
+                    width=tokens.PROGRESS_RING_MD,
+                    height=tokens.PROGRESS_RING_MD,
+                    stroke_width=tokens.PROGRESS_RING_STROKE_NORMAL,
+                ),
                 ft.Text(
                     loading_message,
                     size=tokens.FONT_MD,
@@ -52,10 +56,10 @@ def build_file_import_card(
                         size=tokens.ICON_XXL,
                         color=theme.PRIMARY_LIGHT,
                     ),
-                    width=72,
-                    height=72,
+                    width=tokens.ICON_CONTAINER_LG,
+                    height=tokens.ICON_CONTAINER_LG,
                     border_radius=tokens.RADIUS_XXL,
-                    bgcolor=ft.Colors.with_opacity(0.08, theme.PRIMARY),
+                    bgcolor=ft.Colors.with_opacity(tokens.OPACITY_MUTED, theme.PRIMARY),
                     alignment=ft.Alignment.CENTER,
                 ),
                 ft.Text(
@@ -85,7 +89,9 @@ def build_file_import_card(
                                 bottom=tokens.SPACE_XXS,
                             ),
                             border_radius=tokens.RADIUS_SM,
-                            bgcolor=ft.Colors.with_opacity(0.1, theme.ACCENT),
+                            bgcolor=ft.Colors.with_opacity(
+                                tokens.OPACITY_LIGHT, theme.ACCENT
+                            ),
                         )
                         for ext in format_pills
                     ],
@@ -103,10 +109,10 @@ def build_file_import_card(
         padding=tokens.SPACE_XXL,
         border_radius=tokens.RADIUS_XL,
         border=ft.Border.all(
-            2,
-            ft.Colors.with_opacity(0.25, theme.PRIMARY),
+            tokens.DIVIDER_THICKNESS_THICK,
+            ft.Colors.with_opacity(tokens.OPACITY_FOCUS, theme.PRIMARY),
         ),
-        bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.WHITE),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, ft.Colors.WHITE),
         alignment=ft.Alignment.CENTER,
         on_click=lambda _: on_pick() if not is_loading else None,
         ink=not is_loading,

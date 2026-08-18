@@ -42,15 +42,20 @@ def build_session_banner(on_connect, is_connecting: bool) -> ft.Control:
                     style=ft.ButtonStyle(
                         bgcolor=theme.PRIMARY,
                         color=ft.Colors.WHITE,
-                        padding=ft.Padding(24, 12, 24, 12),
+                        padding=ft.Padding(
+                            tokens.SPACE_XXL,
+                            tokens.SPACE_MD,
+                            tokens.SPACE_XXL,
+                            tokens.SPACE_MD,
+                        ),
                         shape=ft.RoundedRectangleBorder(radius=tokens.RADIUS_MD),
                     ),
                 ),
                 ft.ProgressRing(
                     visible=is_connecting,
-                    width=24,
-                    height=24,
-                    stroke_width=2,
+                    width=tokens.PROGRESS_RING_LG,
+                    height=tokens.PROGRESS_RING_LG,
+                    stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
                 ),
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -71,7 +76,7 @@ def build_session_chip(session_name: str, hw_label: str) -> ft.Container:
             controls=[
                 ft.Icon(
                     ft.Icons.CLOUD_DONE_ROUNDED,
-                    size=14,
+                    size=tokens.ICON_XS,
                     color=theme.SUCCESS,
                 ),
                 ft.Text(
@@ -94,6 +99,9 @@ def build_session_chip(session_name: str, hw_label: str) -> ft.Container:
             tokens.SPACE_MD, tokens.SPACE_XS, tokens.SPACE_MD, tokens.SPACE_XS
         ),
         border_radius=tokens.RADIUS_PILL,
-        bgcolor=ft.Colors.with_opacity(0.06, theme.SUCCESS),
-        border=ft.Border.all(1, ft.Colors.with_opacity(0.15, theme.SUCCESS)),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, theme.SUCCESS),
+        border=ft.Border.all(
+            tokens.DIVIDER_THICKNESS,
+            ft.Colors.with_opacity(tokens.OPACITY_BORDER, theme.SUCCESS),
+        ),
     )

@@ -372,7 +372,7 @@ def AnalysisScreen() -> Control:
                 show_snack(
                     page,
                     "⏳ Analysis already in progress — please wait",
-                    duration=2500,
+                    duration=tokens.SNACK_DURATION_NORMAL_MS,
                 )
             return
         try:
@@ -406,7 +406,7 @@ def AnalysisScreen() -> Control:
                 show_snack(
                     page,
                     "⏳ Analysis already in progress — please wait",
-                    duration=2500,
+                    duration=tokens.SNACK_DURATION_NORMAL_MS,
                 )
             return
         await pick_and_upload_file_async(
@@ -585,7 +585,12 @@ def AnalysisScreen() -> Control:
                 page=page,
                 credit_service=credits,
             ),
-            padding=ft.Padding(tokens.SPACE_MD, tokens.SPACE_XS, tokens.SPACE_MD, 0),
+            padding=ft.Padding(
+                tokens.SPACE_MD,
+                tokens.SPACE_XS,
+                tokens.SPACE_MD,
+                tokens.SPACE_NONE,
+            ),
         )
 
     prompt_bar = build_prompt_bar(
@@ -598,7 +603,11 @@ def AnalysisScreen() -> Control:
         on_submit=lambda p: page.run_task(_submit_prompt, p),
         on_upload=lambda _: page.run_task(_pick_and_upload_file),
         on_toggle_voice=lambda _: page.run_task(
-            toggle_voice_recording, page, is_recording, set_is_recording, set_prompt_text
+            toggle_voice_recording,
+            page,
+            is_recording,
+            set_is_recording,
+            set_prompt_text,
         ),
         on_toggle_expert_mode=lambda _: set_is_expert_mode(not is_expert_mode),
         is_expert_mode=is_expert_mode,
@@ -610,7 +619,7 @@ def AnalysisScreen() -> Control:
             chips_section,
             prompt_bar,
         ],
-        spacing=0,
+        spacing=tokens.SPACE_NONE,
     )
 
     return ft.Column(
@@ -620,5 +629,5 @@ def AnalysisScreen() -> Control:
             bottom_bar,
         ],
         expand=True,
-        spacing=0,
+        spacing=tokens.SPACE_NONE,
     )

@@ -129,7 +129,11 @@ def SettingsScreen() -> ft.Control:
                     if page:
                         from core.utils import show_snack
 
-                        show_snack(page, "Signed out successfully", duration=2000)
+                        show_snack(
+                            page,
+                            "Signed out successfully",
+                            duration=tokens.SNACK_DURATION_SHORT_MS,
+                        )
                         page.update()
 
             return _close
@@ -156,7 +160,11 @@ def SettingsScreen() -> ft.Control:
         if page:
             from core.utils import show_snack
 
-            show_snack(page, "Checking Google account…", duration=1500)
+            show_snack(
+                page,
+                "Checking Google account…",
+                duration=tokens.SNACK_DURATION_SHORT_MS,
+            )
         try:
             result = await services.colab.check_auth()
         except Exception as ex:
@@ -164,7 +172,12 @@ def SettingsScreen() -> ft.Control:
             if page:
                 from core.utils import show_snack
 
-                show_snack(page, f"Auth check failed: {ex}", error=True, duration=3000)
+                show_snack(
+                    page,
+                    f"Auth check failed: {ex}",
+                    error=True,
+                    duration=tokens.SNACK_DURATION_NORMAL_MS,
+                )
             return
         if result.get("authenticated"):
             state.is_authenticated = True
@@ -176,7 +189,7 @@ def SettingsScreen() -> ft.Control:
                     page,
                     f"✓ Authenticated as {state.auth_email}",
                     success=True,
-                    duration=3000,
+                    duration=tokens.SNACK_DURATION_NORMAL_MS,
                 )
         else:
             state.is_authenticated = False
@@ -187,7 +200,7 @@ def SettingsScreen() -> ft.Control:
                 show_snack(
                     page,
                     "Not authenticated — sign in from onboarding",
-                    duration=3000,
+                    duration=tokens.SNACK_DURATION_NORMAL_MS,
                 )
 
     # ── Clear data ──────────────────────────────────────────────
@@ -209,7 +222,11 @@ def SettingsScreen() -> ft.Control:
                     state.user_uuid = ""
                     from core.utils import show_snack
 
-                    show_snack(page, "Local settings cleared.", duration=2000)
+                    show_snack(
+                        page,
+                        "Local settings cleared.",
+                        duration=tokens.SNACK_DURATION_SHORT_MS,
+                    )
 
             return _close
 
@@ -242,7 +259,12 @@ def SettingsScreen() -> ft.Control:
                 _DATASETS_DIR.mkdir(parents=True, exist_ok=True)
             from core.utils import show_snack
 
-            show_snack(page, "🗁️ Dataset cache cleared", success=True, duration=2500)
+            show_snack(
+                page,
+                "🗁️ Dataset cache cleared",
+                success=True,
+                duration=tokens.SNACK_DURATION_NORMAL_MS,
+            )
         except Exception as ex:
             logger.warning("Dataset cache clear failed: %s", ex)
             from core.utils import show_snack
@@ -261,7 +283,9 @@ def SettingsScreen() -> ft.Control:
                     padding=tokens.SPACE_SM,
                     border_radius=tokens.RADIUS_LG,
                     bgcolor=theme.GLASS_BG,
-                    border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+                    border=ft.Border.all(
+                        tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR
+                    ),
                     margin=ft.Margin(
                         tokens.SPACE_LG,
                         tokens.SPACE_XS,
@@ -326,7 +350,7 @@ def SettingsScreen() -> ft.Control:
     controls.extend(
         build_about_section(cli_version, on_launch_privacy, on_launch_terms)
     )
-    controls.append(ft.Container(height=80))
+    controls.append(ft.Container(height=tokens.SCROLL_BOTTOM_INSET))
 
     return ft.Column(
         controls=controls,

@@ -124,7 +124,7 @@ def build_summary_table_section(summary_stats: dict) -> ft.Control | None:
                     controls=[
                         ft.Icon(
                             ft.Icons.QUERY_STATS_ROUNDED,
-                            size=14,
+                            size=tokens.ICON_XS,
                             color=theme.PRIMARY,
                         ),
                         ft.Text(
@@ -146,19 +146,19 @@ def build_summary_table_section(summary_stats: dict) -> ft.Control | None:
                             ft.DataTable(
                                 columns=stat_cols,
                                 rows=stat_rows,
-                                heading_row_height=36,
-                                data_row_max_height=32,
-                                column_spacing=18,
+                                heading_row_height=tokens.TABLE_HEADING_ROW_HEIGHT,
+                                data_row_max_height=tokens.TABLE_DATA_ROW_HEIGHT,
+                                column_spacing=tokens.TABLE_COLUMN_SPACING,
                                 horizontal_lines=ft.BorderSide(
-                                    1,
+                                    tokens.DIVIDER_THICKNESS,
                                     ft.Colors.with_opacity(
-                                        0.08, ft.Colors.ON_SURFACE
+                                        tokens.OPACITY_MUTED, ft.Colors.ON_SURFACE
                                     ),
                                 ),
                                 border=ft.Border.all(
-                                    1,
+                                    tokens.DIVIDER_THICKNESS,
                                     ft.Colors.with_opacity(
-                                        0.12, ft.Colors.ON_SURFACE
+                                        tokens.OPACITY_CONTAINER, ft.Colors.ON_SURFACE
                                     ),
                                 ),
                                 border_radius=tokens.RADIUS_SM,

@@ -19,7 +19,7 @@ def build_empty_state(
                 ft.Icon(
                     ft.Icons.AUTO_AWESOME_ROUNDED,
                     size=tokens.ICON_XXL,
-                    color=ft.Colors.with_opacity(0.3, theme.PRIMARY),
+                    color=ft.Colors.with_opacity(tokens.OPACITY_DIM, theme.PRIMARY),
                 ),
                 ft.Text(
                     "Ready to analyze",

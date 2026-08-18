@@ -19,7 +19,11 @@ def build_autopilot_bar(
     return ft.Container(
         content=ft.Row(
             controls=[
-                ft.ProgressRing(width=14, height=14, stroke_width=2),
+                ft.ProgressRing(
+                    width=tokens.PROGRESS_RING_XS,
+                    height=tokens.PROGRESS_RING_XS,
+                    stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
+                ),
                 ft.Text(
                     progress_text or "Running...",
                     size=tokens.FONT_XS,
@@ -31,7 +35,12 @@ def build_autopilot_bar(
                     on_click=on_stop,
                     style=ft.ButtonStyle(
                         color=theme.ERROR,
-                        padding=ft.Padding(8, 4, 8, 4),
+                        padding=ft.Padding(
+                            tokens.SPACE_SM,
+                            tokens.SPACE_XS,
+                            tokens.SPACE_SM,
+                            tokens.SPACE_XS,
+                        ),
                     ),
                 ),
             ],
@@ -44,8 +53,13 @@ def build_autopilot_bar(
             tokens.SPACE_MD,
             tokens.SPACE_XS,
         ),
-        bgcolor=ft.Colors.with_opacity(0.06, theme.ACCENT),
-        border=ft.Border.all(1, ft.Colors.with_opacity(0.15, theme.ACCENT)),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, theme.ACCENT),
+        border=ft.Border.all(
+            tokens.DIVIDER_THICKNESS,
+            ft.Colors.with_opacity(tokens.OPACITY_BORDER, theme.ACCENT),
+        ),
         border_radius=tokens.RADIUS_SM,
-        margin=ft.Margin(tokens.SPACE_MD, 0, tokens.SPACE_MD, tokens.SPACE_XS),
+        margin=ft.Margin(
+            tokens.SPACE_MD, tokens.SPACE_NONE, tokens.SPACE_MD, tokens.SPACE_XS
+        ),
     )

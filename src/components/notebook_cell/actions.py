@@ -5,7 +5,7 @@ import re
 
 import flet as ft
 
-from core import theme
+from core import theme, tokens
 
 logger = logging.getLogger("notebook")
 
@@ -19,10 +19,10 @@ def make_actions_row(
         controls.append(
             ft.IconButton(
                 ft.Icons.AUTO_FIX_HIGH_ROUNDED,
-                icon_size=14,
+                icon_size=tokens.ICON_XS,
                 icon_color=theme.WARNING,
                 tooltip="Fix with AI",
-                style=ft.ButtonStyle(padding=4),
+                style=ft.ButtonStyle(padding=tokens.SPACE_XS),
                 on_click=lambda e: on_fix() if on_fix else None,
             )
         )
@@ -30,9 +30,9 @@ def make_actions_row(
         controls.append(
             ft.IconButton(
                 ft.Icons.COPY_ROUNDED,
-                icon_size=14,
+                icon_size=tokens.ICON_XS,
                 tooltip="Copy Code",
-                style=ft.ButtonStyle(padding=4),
+                style=ft.ButtonStyle(padding=tokens.SPACE_XS),
                 on_click=lambda e: on_copy() if on_copy else None,
             )
         )
@@ -40,29 +40,29 @@ def make_actions_row(
         [
             ft.IconButton(
                 ft.Icons.ARROW_UPWARD_ROUNDED,
-                icon_size=14,
+                icon_size=tokens.ICON_XS,
                 tooltip="Move Up",
-                style=ft.ButtonStyle(padding=4),
+                style=ft.ButtonStyle(padding=tokens.SPACE_XS),
                 on_click=lambda e: on_move_up() if on_move_up else None,
             ),
             ft.IconButton(
                 ft.Icons.ARROW_DOWNWARD_ROUNDED,
-                icon_size=14,
+                icon_size=tokens.ICON_XS,
                 tooltip="Move Down",
-                style=ft.ButtonStyle(padding=4),
+                style=ft.ButtonStyle(padding=tokens.SPACE_XS),
                 on_click=lambda e: on_move_down() if on_move_down else None,
             ),
             ft.IconButton(
                 ft.Icons.DELETE_OUTLINE_ROUNDED,
-                icon_size=14,
+                icon_size=tokens.ICON_XS,
                 icon_color=theme.ERROR,
                 tooltip="Delete Cell",
-                style=ft.ButtonStyle(padding=4),
+                style=ft.ButtonStyle(padding=tokens.SPACE_XS),
                 on_click=lambda e: on_delete() if on_delete else None,
             ),
         ]
     )
-    return ft.Row(controls=controls, spacing=0)
+    return ft.Row(controls=controls, spacing=tokens.SPACE_NONE)
 
 
 async def fix_with_ai(page: ft.Page, cell: dict, on_change=None):
@@ -81,7 +81,11 @@ async def fix_with_ai(page: ft.Page, cell: dict, on_change=None):
     if page:
         from core.utils import show_snack
 
-        show_snack(page, "🩹 Asking AI for a fix…", duration=2000)
+        show_snack(
+            page,
+            "🩹 Asking AI for a fix…",
+            duration=tokens.SNACK_DURATION_SHORT_MS,
+        )
 
     try:
         corrected = await ai_service.generate_corrected_code(
@@ -101,7 +105,7 @@ async def fix_with_ai(page: ft.Page, cell: dict, on_change=None):
             show_snack(
                 page,
                 "AI couldn't improve this code — try rephrasing it.",
-                duration=2500,
+                duration=tokens.SNACK_DURATION_NORMAL_MS,
             )
         return
 
@@ -113,7 +117,10 @@ async def fix_with_ai(page: ft.Page, cell: dict, on_change=None):
         from core.utils import show_snack
 
         show_snack(
-            page, "🩹 Code corrected — review & run", duration=2500, success=True
+            page,
+            "🩹 Code corrected — review & run",
+            duration=tokens.SNACK_DURATION_NORMAL_MS,
+            success=True,
         )
 
 
@@ -126,7 +133,11 @@ async def copy_code(page: ft.Page, code: str):
         if page:
             from core.utils import show_snack
 
-            show_snack(page, "📋 Code copied to clipboard!", duration=2000)
+            show_snack(
+                page,
+                "📋 Code copied to clipboard!",
+                duration=tokens.SNACK_DURATION_SHORT_MS,
+            )
     except Exception as ex:
         logger.error("Copy code failed: %s", ex)
 
@@ -183,6 +194,10 @@ async def copy_output(page: ft.Page, outputs: list):
             if page:
                 from core.utils import show_snack
 
-                show_snack(page, "📋 Output copied to clipboard!", duration=2000)
+                show_snack(
+                    page,
+                    "📋 Output copied to clipboard!",
+                    duration=tokens.SNACK_DURATION_SHORT_MS,
+                )
         except Exception as ex:
             logger.error("Copy output failed: %s", ex)

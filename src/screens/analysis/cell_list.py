@@ -72,18 +72,34 @@ def build_add_cell_row(on_add_cell, visible: bool) -> ft.Container:
                     "Code",
                     icon=ft.Icons.CODE_ROUNDED,
                     on_click=lambda _: on_add_cell("code"),
-                    style=ft.ButtonStyle(padding=ft.Padding(12, 6, 12, 6)),
+                    style=ft.ButtonStyle(
+                        padding=ft.Padding(
+                            tokens.SPACE_MD,
+                            tokens.SPACE_SM_XS,
+                            tokens.SPACE_MD,
+                            tokens.SPACE_SM_XS,
+                        )
+                    ),
                 ),
                 ft.TextButton(
                     "Markdown",
                     icon=ft.Icons.TEXT_FIELDS_ROUNDED,
                     on_click=lambda _: on_add_cell("markdown"),
-                    style=ft.ButtonStyle(padding=ft.Padding(12, 6, 12, 6)),
+                    style=ft.ButtonStyle(
+                        padding=ft.Padding(
+                            tokens.SPACE_MD,
+                            tokens.SPACE_SM_XS,
+                            tokens.SPACE_MD,
+                            tokens.SPACE_SM_XS,
+                        )
+                    ),
                 ),
             ],
             alignment=ft.MainAxisAlignment.CENTER,
             spacing=tokens.SPACE_MD,
         ),
-        padding=ft.Padding(0, tokens.SPACE_SM, 0, tokens.SPACE_SM),
+        padding=ft.Padding(
+            tokens.SPACE_NONE, tokens.SPACE_SM, tokens.SPACE_NONE, tokens.SPACE_SM
+        ),
         visible=visible,
     )

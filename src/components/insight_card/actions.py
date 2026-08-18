@@ -19,19 +19,19 @@ def build_card_header(
     pin_btn = ft.IconButton(
         icon=ft.Icons.PUSH_PIN_ROUNDED if is_pinned else ft.Icons.PUSH_PIN_OUTLINED,
         icon_color=theme.ACCENT if is_pinned else ft.Colors.ON_SURFACE_VARIANT,
-        icon_size=16,
+        icon_size=tokens.ICON_SM,
         tooltip="Unpin from Report" if is_pinned else "Pin to Report",
         on_click=lambda _: pin_fn(block) if pin_fn else None,
-        style=ft.ButtonStyle(padding=2),
+        style=ft.ButtonStyle(padding=tokens.SPACE_XXS),
     )
 
     delete_btn = ft.IconButton(
         icon=ft.Icons.CLOSE_ROUNDED,
         icon_color=ft.Colors.ON_SURFACE_VARIANT,
-        icon_size=16,
+        icon_size=tokens.ICON_SM,
         tooltip="Remove Step",
         on_click=lambda _: on_delete() if on_delete else None,
-        style=ft.ButtonStyle(padding=2),
+        style=ft.ButtonStyle(padding=tokens.SPACE_XXS),
     )
 
     return ft.Row(
@@ -42,7 +42,7 @@ def build_card_header(
                         ft.Icons.AUTO_AWESOME_ROUNDED
                         if not is_failed
                         else ft.Icons.ERROR_OUTLINE_ROUNDED,
-                        size=16,
+                        size=tokens.ICON_SM,
                         color=theme.PRIMARY if not is_failed else theme.ERROR,
                     ),
                     ft.Text(
@@ -55,7 +55,7 @@ def build_card_header(
                 spacing=tokens.SPACE_XS,
                 expand=True,
             ),
-            ft.Row([pin_btn, delete_btn], spacing=0),
+            ft.Row([pin_btn, delete_btn], spacing=tokens.SPACE_NONE),
         ],
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
     )
@@ -70,7 +70,7 @@ def build_executive_narration(narration: str, is_failed: bool) -> ft.Control | N
             [
                 ft.Icon(
                     ft.Icons.LIGHTBULB_ROUNDED,
-                    size=18,
+                    size=tokens.ICON_MD,
                     color=theme.ACCENT,
                 ),
                 ft.Text(
@@ -85,9 +85,12 @@ def build_executive_narration(narration: str, is_failed: bool) -> ft.Control | N
             spacing=tokens.SPACE_SM,
         ),
         padding=tokens.SPACE_MD,
-        bgcolor=ft.Colors.with_opacity(0.08, theme.ACCENT),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_MUTED, theme.ACCENT),
         border_radius=tokens.RADIUS_MD,
-        border=ft.Border.all(1, ft.Colors.with_opacity(0.2, theme.ACCENT)),
+        border=ft.Border.all(
+            tokens.DIVIDER_THICKNESS,
+            ft.Colors.with_opacity(tokens.OPACITY_BORDER, theme.ACCENT),
+        ),
     )
 
 

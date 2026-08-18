@@ -49,22 +49,30 @@ def build_suggestion_chips(
         pill = ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Text(icon_text, size=12),
+                    ft.Text(icon_text, size=tokens.FONT_BODY_SM),
                     ft.Text(
                         label,
-                        size=11,
+                        size=tokens.FONT_SM,
                         weight=ft.FontWeight.W_500,
                         max_lines=1,
                         overflow=ft.TextOverflow.ELLIPSIS,
                     ),
                 ],
-                spacing=4,
+                spacing=tokens.SPACE_XS,
                 tight=True,
             ),
-            padding=ft.Padding(left=10, right=10, top=6, bottom=6),
-            border_radius=20,
-            bgcolor=ft.Colors.with_opacity(0.06, theme.PRIMARY),
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.15, theme.PRIMARY)),
+            padding=ft.Padding(
+                left=tokens.SPACE_MD_SM,
+                right=tokens.SPACE_MD_SM,
+                top=tokens.SPACE_SM_XS,
+                bottom=tokens.SPACE_SM_XS,
+            ),
+            border_radius=tokens.RADIUS_PILL,
+            bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, theme.PRIMARY),
+            border=ft.Border.all(
+                tokens.DIVIDER_THICKNESS,
+                ft.Colors.with_opacity(tokens.OPACITY_BORDER, theme.PRIMARY),
+            ),
             on_click=_make_handler(prompt),
             ink=True,
             disabled=is_loading and not no_credits,
@@ -82,9 +90,9 @@ def build_suggestion_chips(
             ft.Row(
                 controls=pills,
                 wrap=True,
-                spacing=6,
-                run_spacing=6,
+                spacing=tokens.SPACE_SM_XS,
+                run_spacing=tokens.SPACE_SM_XS,
             ),
         ],
-        spacing=6,
+        spacing=tokens.SPACE_SM_XS,
     )

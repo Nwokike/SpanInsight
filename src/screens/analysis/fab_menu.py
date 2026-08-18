@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from core import theme
+from core import theme, tokens
 
 
 def build_analysis_fab(
@@ -70,7 +70,7 @@ def build_analysis_fab(
             items=menu_items,
             icon=ft.Icons.MORE_VERT_ROUNDED,
             icon_color=ft.Colors.WHITE,
-            icon_size=20,
+            icon_size=tokens.ICON_MD,
         ),
         bgcolor=theme.PRIMARY,
         mini=True,

@@ -6,7 +6,7 @@ import logging
 
 import flet as ft
 
-from core import theme
+from core import theme, tokens
 from core.state import state
 from core.utils import show_snack
 from services import ai as ai_service
@@ -97,11 +97,21 @@ async def on_save(page: ft.Page, ui_state, report_service):
                 },
             )
             if page:
-                show_snack(page, "Report saved!", success=True, duration=2000)
+                show_snack(
+                    page,
+                    "Report saved!",
+                    success=True,
+                    duration=tokens.SNACK_DURATION_SHORT_MS,
+                )
     except Exception as e:
         logger.error("Save failed: %s", e)
         if page:
-            show_snack(page, f"Save failed: {e}", error=True, duration=3000)
+            show_snack(
+                page,
+                f"Save failed: {e}",
+                error=True,
+                duration=tokens.SNACK_DURATION_MD_MS,
+            )
     finally:
         ui_state.is_saving["value"] = False
         ui_state.rebuild()
@@ -125,7 +135,7 @@ async def on_import(page: ft.Page, ui_state):
                 page,
                 "No notebook cells available. Run an analysis first.",
                 error=True,
-                duration=3000,
+                duration=tokens.SNACK_DURATION_MD_MS,
             )
         return
 
@@ -151,7 +161,12 @@ async def on_import(page: ft.Page, ui_state):
             page.pop_dialog()
         ui_state.rebuild()
         if page:
-            show_snack(page, "Block imported!", success=True, duration=2000)
+            show_snack(
+                page,
+                "Block imported!",
+                success=True,
+                duration=tokens.SNACK_DURATION_SHORT_MS,
+            )
 
     items = []
     for i, cell in enumerate(cells):
@@ -168,13 +183,13 @@ async def on_import(page: ft.Page, ui_state):
                 title=ft.Text(
                     cell.get("prompt", "Cell")[:60],
                     max_lines=2,
-                    size=13,
+                    size=tokens.FONT_BODY,
                 ),
                 subtitle=ft.Text(
                     (cell.get("description", "")[:80] + "...")
                     if cell.get("description")
                     else "",
-                    size=11,
+                    size=tokens.FONT_SM,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
                 on_click=lambda e, idx=i: (
@@ -190,7 +205,7 @@ async def on_import(page: ft.Page, ui_state):
                 ft.Text(
                     "No importable cells found.", color=ft.Colors.ON_SURFACE_VARIANT
                 ),
-                padding=20,
+                padding=tokens.SPACE_XL,
             )
         )
 
@@ -201,9 +216,13 @@ async def on_import(page: ft.Page, ui_state):
     dlg = ft.AlertDialog(
         title=ft.Text("Import from Notebook"),
         content=ft.Container(
-            content=ft.Column(items, scroll="auto", spacing=0),
-            width=400,
-            height=400,
+            content=ft.Column(
+                items,
+                scroll=ft.ScrollMode.AUTO,
+                spacing=tokens.SPACE_NONE,
+            ),
+            width=tokens.DIALOG_WIDTH_MD,
+            height=tokens.DIALOG_HEIGHT_MD,
         ),
         actions=[
             ft.TextButton("Cancel", on_click=_close_dlg),
@@ -237,9 +256,9 @@ async def on_delete_report(page: ft.Page, ui_state, report_id: str, report_servi
             content=ft.Text(
                 "Are you sure you want to permanently delete this report from your device? "
                 "This cannot be undone.",
-                size=13,
+                size=tokens.FONT_BODY,
             ),
-            width=340,
+            width=tokens.DIALOG_WIDTH_SM,
         ),
         actions=[
             ft.TextButton("Cancel", on_click=_close_dlg),

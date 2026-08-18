@@ -15,8 +15,8 @@ def build_brand_header(
         ft.Container(height=tokens.SPACE_LG),
         ft.Image(
             src="logo.png",
-            width=200,
-            height=65,
+            width=tokens.BRAND_LOGO_WIDTH,
+            height=tokens.BRAND_LOGO_HEIGHT,
             fit=ft.BoxFit.CONTAIN,
         ),
     ]
@@ -41,6 +41,6 @@ def build_brand_header(
         content=ft.Column(
             controls=controls,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=0,
+            spacing=tokens.SPACE_NONE,
         ),
     )

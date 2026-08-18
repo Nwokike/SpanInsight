@@ -172,7 +172,9 @@ def ProjectsScreen() -> ft.Control:
             text_size=tokens.FONT_SM,
             dense=True,
             border_radius=tokens.RADIUS_MD,
-            border_color=ft.Colors.with_opacity(0.15, ft.Colors.ON_SURFACE),
+            border_color=ft.Colors.with_opacity(
+                tokens.OPACITY_BORDER, ft.Colors.ON_SURFACE
+            ),
             on_change=lambda e: set_search_query(e.control.value or ""),
         ),
         padding=ft.Padding(
@@ -187,7 +189,11 @@ def ProjectsScreen() -> ft.Control:
             ft.Container(
                 content=ft.Row(
                     [
-                        ft.ProgressRing(width=20, height=20, stroke_width=2),
+                        ft.ProgressRing(
+                            width=tokens.PROGRESS_RING_MD,
+                            height=tokens.PROGRESS_RING_MD,
+                            stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
+                        ),
                         ft.Text("Loading projects...", size=tokens.FONT_SM),
                     ],
                     spacing=tokens.SPACE_MD,
@@ -209,7 +215,7 @@ def ProjectsScreen() -> ft.Control:
                     [
                         ft.Icon(
                             ft.Icons.FOLDER_OPEN_ROUNDED,
-                            size=48,
+                            size=tokens.ICON_HERO,
                             color=ft.Colors.ON_SURFACE_VARIANT,
                         ),
                         ft.Text(
@@ -241,13 +247,15 @@ def ProjectsScreen() -> ft.Control:
                         ft.Container(
                             content=ft.Icon(
                                 ft.Icons.ANALYTICS_ROUNDED,
-                                size=24,
+                                size=tokens.ICON_LG,
                                 color=theme.PRIMARY,
                             ),
-                            width=44,
-                            height=44,
+                            width=tokens.BUTTON_HEIGHT_LG,
+                            height=tokens.BUTTON_HEIGHT_LG,
                             border_radius=tokens.RADIUS_MD,
-                            bgcolor=ft.Colors.with_opacity(0.1, theme.PRIMARY),
+                            bgcolor=ft.Colors.with_opacity(
+                                tokens.OPACITY_LIGHT, theme.PRIMARY
+                            ),
                             alignment=ft.Alignment.CENTER,
                         ),
                         ft.Column(
@@ -257,17 +265,17 @@ def ProjectsScreen() -> ft.Control:
                                     size=tokens.FONT_SM,
                                     weight=ft.FontWeight.W_600,
                                     max_lines=1,
-                                    overflow="ellipsis",
+                                    overflow=ft.TextOverflow.ELLIPSIS,
                                 ),
                                 ft.Text(
                                     f"{p.get('primary_dataset') or 'Empty notebook'} · {p.get('cell_count', 0)} cells · {time_str}",
                                     size=tokens.FONT_XS,
                                     color=ft.Colors.ON_SURFACE_VARIANT,
                                     max_lines=1,
-                                    overflow="ellipsis",
+                                    overflow=ft.TextOverflow.ELLIPSIS,
                                 ),
                             ],
-                            spacing=2,
+                            spacing=tokens.SPACE_XXS,
                             expand=True,
                         ),
                         ft.Container(
@@ -277,17 +285,24 @@ def ProjectsScreen() -> ft.Control:
                                 weight=ft.FontWeight.W_600,
                                 color=theme.PRIMARY,
                             ),
-                            padding=ft.Padding(6, 2, 6, 2),
+                            padding=ft.Padding(
+                                tokens.SPACE_SM_XS,
+                                tokens.SPACE_XXS,
+                                tokens.SPACE_SM_XS,
+                                tokens.SPACE_XXS,
+                            ),
                             border_radius=tokens.RADIUS_SM,
-                            bgcolor=ft.Colors.with_opacity(0.1, theme.PRIMARY),
+                            bgcolor=ft.Colors.with_opacity(
+                                tokens.OPACITY_LIGHT, theme.PRIMARY
+                            ),
                         ),
                         ft.IconButton(
                             icon=ft.Icons.DELETE_OUTLINE_ROUNDED,
-                            icon_size=18,
+                            icon_size=tokens.ICON_SM_MD,
                             icon_color=theme.ERROR,
                             tooltip="Delete Project",
                             on_click=lambda _, proj=p: _show_delete_dialog(proj),
-                            style=ft.ButtonStyle(padding=2),
+                            style=ft.ButtonStyle(padding=tokens.SPACE_XXS),
                         ),
                     ],
                     spacing=tokens.SPACE_MD,
@@ -296,7 +311,9 @@ def ProjectsScreen() -> ft.Control:
                 padding=tokens.SPACE_MD,
                 border_radius=tokens.RADIUS_LG,
                 bgcolor=theme.GLASS_BG,
-                border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+                border=ft.Border.all(
+                    tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR
+                ),
                 on_click=lambda _, proj=p: page.run_task(_on_open_project, proj),
                 ink=True,
             )
@@ -306,10 +323,15 @@ def ProjectsScreen() -> ft.Control:
     list_container = ft.Container(
         content=ft.ListView(
             controls=cards,
-            spacing=0,
+            spacing=tokens.SPACE_NONE,
             expand=True,
         ),
-        padding=ft.Padding(tokens.SPACE_LG, 0, tokens.SPACE_LG, tokens.SPACE_MD),
+        padding=ft.Padding(
+            tokens.SPACE_LG,
+            tokens.SPACE_NONE,
+            tokens.SPACE_LG,
+            tokens.SPACE_MD,
+        ),
         expand=True,
     )
 
@@ -320,5 +342,5 @@ def ProjectsScreen() -> ft.Control:
             list_container,
         ],
         expand=True,
-        spacing=0,
+        spacing=tokens.SPACE_NONE,
     )

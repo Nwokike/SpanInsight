@@ -85,7 +85,9 @@ def AppShell() -> Control:
             selected_index=state.current_tab,
             on_change=_on_tab_change,
             bgcolor=ft.Colors.SURFACE,
-            indicator_color=ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY),
+            indicator_color=ft.Colors.with_opacity(
+                tokens.OPACITY_CONTAINER, ft.Colors.PRIMARY
+            ),
             label_behavior=ft.NavigationBarLabelBehavior.ALWAYS_SHOW,
         )
 
@@ -94,7 +96,12 @@ def AppShell() -> Control:
         badge = build_credit_badge(state.credits_remaining)
         badge_container = ft.Container(
             content=badge,
-            margin=ft.Margin(0, 0, 16, 0),
+            margin=ft.Margin(
+                tokens.SPACE_NONE,
+                tokens.SPACE_NONE,
+                tokens.SPACE_LG,
+                tokens.SPACE_NONE,
+            ),
             on_click=lambda e: show_credits_dialog(page, services.credits),
         )
 
@@ -152,7 +159,11 @@ def AppShell() -> Control:
             colab_indicator = ft.Container(
                 content=ft.Row(
                     [
-                        ft.ProgressRing(width=12, height=12, stroke_width=2),
+                        ft.ProgressRing(
+                            width=tokens.PROGRESS_RING_XS,
+                            height=tokens.PROGRESS_RING_XS,
+                            stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
+                        ),
                         ft.Text(
                             "Connecting…",
                             size=tokens.FONT_XS,
@@ -163,11 +174,21 @@ def AppShell() -> Control:
                     alignment=ft.MainAxisAlignment.CENTER,
                 ),
                 padding=ft.Padding(
-                    tokens.SPACE_SM, tokens.SPACE_XXS, tokens.SPACE_SM, tokens.SPACE_XXS
+                    tokens.SPACE_SM,
+                    tokens.SPACE_XXS,
+                    tokens.SPACE_SM,
+                    tokens.SPACE_XXS,
                 ),
                 border_radius=tokens.RADIUS_SM,
-                bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY),
-                margin=ft.Margin(0, 0, 4, 0),
+                bgcolor=ft.Colors.with_opacity(
+                    tokens.OPACITY_CONTAINER, ft.Colors.PRIMARY
+                ),
+                margin=ft.Margin(
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_XS,
+                    tokens.SPACE_NONE,
+                ),
             )
         elif state.colab_connected and state.active_session_name:
             colab_indicator = ft.Container(
@@ -175,7 +196,7 @@ def AppShell() -> Control:
                     [
                         ft.Icon(
                             ft.Icons.CLOUD_DONE_ROUNDED,
-                            size=16,
+                            size=tokens.ICON_SM,
                             color=ft.Colors.PRIMARY,
                         ),
                         ft.Text(
@@ -189,12 +210,22 @@ def AppShell() -> Control:
                     alignment=ft.MainAxisAlignment.CENTER,
                 ),
                 padding=ft.Padding(
-                    tokens.SPACE_SM, tokens.SPACE_XXS, tokens.SPACE_SM, tokens.SPACE_XXS
+                    tokens.SPACE_SM,
+                    tokens.SPACE_XXS,
+                    tokens.SPACE_SM,
+                    tokens.SPACE_XXS,
                 ),
                 border_radius=tokens.RADIUS_SM,
-                bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY),
+                bgcolor=ft.Colors.with_opacity(
+                    tokens.OPACITY_CONTAINER, ft.Colors.PRIMARY
+                ),
                 tooltip=f"Colab Connected: {state.active_session_name} ({state.session_hardware}) — Tap for status",
-                margin=ft.Margin(0, 0, 4, 0),
+                margin=ft.Margin(
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_XS,
+                    tokens.SPACE_NONE,
+                ),
                 on_click=lambda _: __import__(
                     "components.colab_status_dialog"
                 ).colab_status_dialog.show_colab_status_dialog(
@@ -207,7 +238,7 @@ def AppShell() -> Control:
                     [
                         ft.Icon(
                             ft.Icons.CLOUD_OFF_ROUNDED,
-                            size=16,
+                            size=tokens.ICON_SM,
                             color=ft.Colors.ON_SURFACE_VARIANT,
                         ),
                         ft.Text(
@@ -220,14 +251,23 @@ def AppShell() -> Control:
                     alignment=ft.MainAxisAlignment.CENTER,
                 ),
                 padding=ft.Padding(
-                    tokens.SPACE_SM, tokens.SPACE_XXS, tokens.SPACE_SM, tokens.SPACE_XXS
+                    tokens.SPACE_SM,
+                    tokens.SPACE_XXS,
+                    tokens.SPACE_SM,
+                    tokens.SPACE_XXS,
                 ),
                 border_radius=tokens.RADIUS_SM,
                 border=ft.Border.all(
-                    1, ft.Colors.with_opacity(0.2, ft.Colors.ON_SURFACE)
+                    tokens.DIVIDER_THICKNESS,
+                    ft.Colors.with_opacity(tokens.OPACITY_BORDER, ft.Colors.ON_SURFACE),
                 ),
                 tooltip="Colab Disconnected — Click to connect",
-                margin=ft.Margin(0, 0, 4, 0),
+                margin=ft.Margin(
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_XS,
+                    tokens.SPACE_NONE,
+                ),
                 on_click=lambda _: page.run_task(_connect_colab_header),
             )
 
@@ -239,11 +279,16 @@ def AppShell() -> Control:
         page_tag = ft.Container(
             content=ft.Text(
                 tag_text,
-                size=16,
+                size=tokens.FONT_HEADING,
                 weight=ft.FontWeight.BOLD,
                 color=ft.Colors.ON_SURFACE,
             ),
-            padding=ft.Padding(16, 0, 0, 0),
+            padding=ft.Padding(
+                tokens.SPACE_LG,
+                tokens.SPACE_NONE,
+                tokens.SPACE_NONE,
+                tokens.SPACE_NONE,
+            ),
             alignment=ft.Alignment.CENTER_LEFT,
         )
 
@@ -253,7 +298,11 @@ def AppShell() -> Control:
         ai_busy_chip = ft.Container(
             content=ft.Row(
                 [
-                    ft.ProgressRing(width=12, height=12, stroke_width=2),
+                    ft.ProgressRing(
+                        width=tokens.PROGRESS_RING_XS,
+                        height=tokens.PROGRESS_RING_XS,
+                        stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
+                    ),
                     ft.Text(
                         "AI working…",
                         size=tokens.FONT_XS,
@@ -265,18 +314,26 @@ def AppShell() -> Control:
                 tight=True,
             ),
             padding=ft.Padding(
-                tokens.SPACE_SM, tokens.SPACE_XXS, tokens.SPACE_SM, tokens.SPACE_XXS
+                tokens.SPACE_SM,
+                tokens.SPACE_XXS,
+                tokens.SPACE_SM,
+                tokens.SPACE_XXS,
             ),
             border_radius=tokens.RADIUS_SM,
-            bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY),
+            bgcolor=ft.Colors.with_opacity(tokens.OPACITY_CONTAINER, ft.Colors.PRIMARY),
             tooltip="An AI task is running — results appear on the Analysis tab",
-            margin=ft.Margin(0, 0, 4, 0),
+            margin=ft.Margin(
+                tokens.SPACE_NONE,
+                tokens.SPACE_NONE,
+                tokens.SPACE_XS,
+                tokens.SPACE_NONE,
+            ),
             visible=ai_busy,
         )
 
         page.views[0].appbar = ft.AppBar(
             leading=page_tag,
-            leading_width=120,
+            leading_width=tokens.INPUT_WIDTH_SM,
             actions=[ai_busy_chip, colab_indicator, theme_btn, badge_container],
             center_title=True,
             bgcolor=ft.Colors.TRANSPARENT,
@@ -322,10 +379,17 @@ def AppShell() -> Control:
             content=ft.Column(
                 [
                     ft.Image(
-                        src="icon.png", width=72, height=72, fit=ft.BoxFit.CONTAIN
+                        src="icon.png",
+                        width=tokens.ICON_CONTAINER_LG,
+                        height=tokens.ICON_CONTAINER_LG,
+                        fit=ft.BoxFit.CONTAIN,
                     ),
-                    ft.Container(height=24),
-                    ft.ProgressRing(width=28, height=28, stroke_width=3),
+                    ft.Container(height=tokens.SPACE_XXL),
+                    ft.ProgressRing(
+                        width=tokens.PROGRESS_RING_LG,
+                        height=tokens.PROGRESS_RING_LG,
+                        stroke_width=tokens.PROGRESS_RING_STROKE_NORMAL,
+                    ),
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -376,5 +440,5 @@ def AppShell() -> Control:
             ft.SafeArea(content=screen, expand=True),
         ],
         expand=True,
-        spacing=0,
+        spacing=tokens.SPACE_NONE,
     )

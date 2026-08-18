@@ -112,13 +112,19 @@ def OnboardingScreen() -> ft.Control:
     def build_indicators():
         return [
             ft.Container(
-                width=8 if i != slide_index else 20,
-                height=8,
-                border_radius=4,
+                width=tokens.DOT_INDICATOR_WIDTH_INACTIVE
+                if i != slide_index
+                else tokens.DOT_INDICATOR_WIDTH_ACTIVE,
+                height=tokens.DOT_INDICATOR_HEIGHT,
+                border_radius=tokens.RADIUS_XS,
                 bgcolor=theme.PRIMARY
                 if i == slide_index
-                else ft.Colors.with_opacity(0.3, ft.Colors.ON_SURFACE),
-                animate=ft.Animation(200, ft.AnimationCurve.EASE_IN_OUT),
+                else ft.Colors.with_opacity(
+                    tokens.OPACITY_MUTED_BORDER, ft.Colors.ON_SURFACE
+                ),
+                animate=ft.Animation(
+                    tokens.ANIMATION_MS_NORMAL, ft.AnimationCurve.EASE_IN_OUT
+                ),
             )
             for i in range(TOTAL_SLIDES)
         ]
@@ -178,7 +184,12 @@ def OnboardingScreen() -> ft.Control:
         content=ft.Container(
             content=build_slide(slide_index),
             expand=True,
-            padding=ft.Padding(tokens.SPACE_XL, 0, tokens.SPACE_XL, 0),
+            padding=ft.Padding(
+                tokens.SPACE_XL,
+                tokens.SPACE_NONE,
+                tokens.SPACE_XL,
+                tokens.SPACE_NONE,
+            ),
         ),
         on_horizontal_drag_end=on_swipe,
     )
@@ -187,7 +198,7 @@ def OnboardingScreen() -> ft.Control:
         content=ft.Column(
             controls=[slide_area, nav_row],
             expand=True,
-            spacing=0,
+            spacing=tokens.SPACE_NONE,
         ),
         expand=True,
     )

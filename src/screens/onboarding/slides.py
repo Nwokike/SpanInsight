@@ -14,18 +14,16 @@ def feature_row(icon, title, subtitle) -> ft.Container:
         content=ft.Row(
             controls=[
                 ft.Container(
-                    content=ft.Icon(icon, size=22, color=theme.PRIMARY),
-                    width=40,
-                    height=40,
-                    border_radius=10,
-                    bgcolor=ft.Colors.with_opacity(0.1, theme.PRIMARY),
+                    content=ft.Icon(icon, size=tokens.ICON_MD_LG, color=theme.PRIMARY),
+                    width=tokens.ICON_CONTAINER_SIZE,
+                    height=tokens.ICON_CONTAINER_SIZE,
+                    border_radius=tokens.RADIUS_MD_SM,
+                    bgcolor=ft.Colors.with_opacity(tokens.OPACITY_LIGHT, theme.PRIMARY),
                     alignment=ft.Alignment.CENTER,
                 ),
                 ft.Column(
                     controls=[
-                        ft.Text(
-                            title, size=tokens.FONT_LG, weight=ft.FontWeight.W_600
-                        ),
+                        ft.Text(title, size=tokens.FONT_LG, weight=ft.FontWeight.W_600),
                         ft.Text(
                             subtitle,
                             size=tokens.FONT_SM,
@@ -39,7 +37,9 @@ def feature_row(icon, title, subtitle) -> ft.Container:
             spacing=tokens.SPACE_MD,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
-        padding=ft.Padding(0, tokens.SPACE_SM, 0, tokens.SPACE_SM),
+        padding=ft.Padding(
+            tokens.SPACE_NONE, tokens.SPACE_SM, tokens.SPACE_NONE, tokens.SPACE_SM
+        ),
     )
 
 
@@ -74,10 +74,14 @@ def build_slide_2() -> ft.Column:
     return ft.Column(
         controls=[
             ft.Container(height=tokens.SPACE_XL),
-            ft.Icon(ft.Icons.ROCKET_LAUNCH_ROUNDED, size=56, color=theme.PRIMARY),
+            ft.Icon(
+                ft.Icons.ROCKET_LAUNCH_ROUNDED,
+                size=tokens.ICON_HERO_LG,
+                color=theme.PRIMARY,
+            ),
             ft.Text(
                 "How It Works",
-                size=24,
+                size=tokens.FONT_XL,
                 weight=ft.FontWeight.W_700,
                 text_align=ft.TextAlign.CENTER,
             ),
@@ -116,7 +120,9 @@ def build_slide_2() -> ft.Column:
                     tokens.SPACE_LG,
                     tokens.SPACE_MD,
                 ),
-                bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.ON_SURFACE),
+                bgcolor=ft.Colors.with_opacity(
+                    tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE
+                ),
                 border_radius=tokens.RADIUS_MD,
             ),
         ],

@@ -16,15 +16,17 @@ def action_card(
             controls=[
                 ft.Container(
                     content=ft.Icon(icon, size=tokens.ICON_XL, color=color),
-                    width=48,
-                    height=48,
+                    width=tokens.ICON_HERO,
+                    height=tokens.ICON_HERO,
                     border_radius=tokens.RADIUS_MD,
-                    bgcolor=ft.Colors.with_opacity(0.1, color),
+                    bgcolor=ft.Colors.with_opacity(tokens.OPACITY_LIGHT, color),
                     alignment=ft.Alignment.CENTER,
                 ),
                 ft.Text(title, size=tokens.FONT_SM, weight=ft.FontWeight.W_600),
                 ft.Text(
-                    subtitle, size=tokens.FONT_XXS, color=ft.Colors.ON_SURFACE_VARIANT
+                    subtitle,
+                    size=tokens.FONT_XXS,
+                    color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
             ],
             spacing=tokens.SPACE_XS,
@@ -34,7 +36,7 @@ def action_card(
         padding=tokens.SPACE_MD,
         border_radius=tokens.RADIUS_LG,
         bgcolor=theme.GLASS_BG,
-        border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+        border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
         on_click=on_click,
         ink=True,
     )
@@ -46,35 +48,39 @@ def feature_card(icon: str, title: str, desc: str, color: str) -> ft.Container:
         content=ft.Row(
             controls=[
                 ft.Container(
-                    content=ft.Icon(icon, size=22, color=color),
-                    width=40,
-                    height=40,
-                    border_radius=10,
-                    bgcolor=ft.Colors.with_opacity(0.1, color),
+                    content=ft.Icon(icon, size=tokens.ICON_MD_LG, color=color),
+                    width=tokens.ICON_CONTAINER_SIZE,
+                    height=tokens.ICON_CONTAINER_SIZE,
+                    border_radius=tokens.RADIUS_MD_SM,
+                    bgcolor=ft.Colors.with_opacity(tokens.OPACITY_LIGHT, color),
                     alignment=ft.Alignment.CENTER,
                 ),
                 ft.Column(
                     controls=[
-                        ft.Text(title, size=tokens.FONT_SM, weight=ft.FontWeight.W_600),
+                        ft.Text(
+                            title,
+                            size=tokens.FONT_SM,
+                            weight=ft.FontWeight.W_600,
+                        ),
                         ft.Text(
                             desc,
                             size=tokens.FONT_XS,
                             color=ft.Colors.ON_SURFACE_VARIANT,
                             max_lines=3,
-                            overflow="ellipsis",
+                            overflow=ft.TextOverflow.ELLIPSIS,
                         ),
                     ],
-                    spacing=2,
+                    spacing=tokens.SPACE_XXS,
                     expand=True,
                 ),
             ],
             spacing=tokens.SPACE_MD,
-            vertical_alignment="start",
+            vertical_alignment=ft.CrossAxisAlignment.START,
         ),
-        padding=12,
-        border_radius=10,
+        padding=tokens.SPACE_MD,
+        border_radius=tokens.RADIUS_MD_SM,
         bgcolor=theme.GLASS_BG,
-        border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+        border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
     )
 
 
@@ -90,9 +96,9 @@ def step_row(number: str, title: str, desc: str) -> ft.Row:
                     color=ft.Colors.WHITE,
                     text_align=ft.TextAlign.CENTER,
                 ),
-                width=26,
-                height=26,
-                border_radius=13,
+                width=tokens.ICON_CONTAINER_SM,
+                height=tokens.ICON_CONTAINER_SM,
+                border_radius=tokens.RADIUS_PILL,
                 bgcolor=theme.PRIMARY,
                 alignment=ft.Alignment.CENTER,
             ),
@@ -127,11 +133,15 @@ def project_card(project: dict, on_open, on_delete=None) -> ft.Container:
 
     card_controls = [
         ft.Container(
-            content=ft.Icon(ft.Icons.ANALYTICS_ROUNDED, size=24, color=theme.PRIMARY),
-            width=44,
-            height=44,
+            content=ft.Icon(
+                ft.Icons.ANALYTICS_ROUNDED,
+                size=tokens.ICON_LG,
+                color=theme.PRIMARY,
+            ),
+            width=tokens.BUTTON_HEIGHT_LG,
+            height=tokens.BUTTON_HEIGHT_LG,
             border_radius=tokens.RADIUS_MD,
-            bgcolor=ft.Colors.with_opacity(0.1, theme.PRIMARY),
+            bgcolor=ft.Colors.with_opacity(tokens.OPACITY_LIGHT, theme.PRIMARY),
             alignment=ft.Alignment.CENTER,
         ),
         ft.Column(
@@ -141,17 +151,17 @@ def project_card(project: dict, on_open, on_delete=None) -> ft.Container:
                     size=tokens.FONT_SM,
                     weight=ft.FontWeight.W_600,
                     max_lines=1,
-                    overflow="ellipsis",
+                    overflow=ft.TextOverflow.ELLIPSIS,
                 ),
                 ft.Text(
                     f"{project.get('primary_dataset') or 'Empty notebook'} · {project.get('cell_count', 0)} cells · {time_str}",
                     size=tokens.FONT_XS,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                     max_lines=1,
-                    overflow="ellipsis",
+                    overflow=ft.TextOverflow.ELLIPSIS,
                 ),
             ],
-            spacing=2,
+            spacing=tokens.SPACE_XXS,
             expand=True,
         ),
         ft.Container(
@@ -161,9 +171,14 @@ def project_card(project: dict, on_open, on_delete=None) -> ft.Container:
                 weight=ft.FontWeight.W_600,
                 color=theme.PRIMARY,
             ),
-            padding=ft.Padding(6, 2, 6, 2),
+            padding=ft.Padding(
+                tokens.SPACE_SM_XS,
+                tokens.SPACE_XXS,
+                tokens.SPACE_SM_XS,
+                tokens.SPACE_XXS,
+            ),
             border_radius=tokens.RADIUS_SM,
-            bgcolor=ft.Colors.with_opacity(0.1, theme.PRIMARY),
+            bgcolor=ft.Colors.with_opacity(tokens.OPACITY_LIGHT, theme.PRIMARY),
         ),
     ]
 
@@ -171,18 +186,18 @@ def project_card(project: dict, on_open, on_delete=None) -> ft.Container:
         card_controls.append(
             ft.IconButton(
                 icon=ft.Icons.DELETE_OUTLINE_ROUNDED,
-                icon_size=18,
+                icon_size=tokens.ICON_SM_MD,
                 icon_color=theme.ERROR,
                 tooltip="Delete Project",
                 on_click=lambda e: on_delete(project),
-                style=ft.ButtonStyle(padding=2),
+                style=ft.ButtonStyle(padding=tokens.SPACE_XXS),
             )
         )
     else:
         card_controls.append(
             ft.Icon(
                 ft.Icons.CHEVRON_RIGHT_ROUNDED,
-                size=20,
+                size=tokens.ICON_MD,
                 color=ft.Colors.ON_SURFACE_VARIANT,
             )
         )
@@ -196,7 +211,7 @@ def project_card(project: dict, on_open, on_delete=None) -> ft.Container:
         padding=tokens.SPACE_MD,
         border_radius=tokens.RADIUS_LG,
         bgcolor=theme.GLASS_BG,
-        border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+        border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
         on_click=lambda e: on_open(project),
         ink=True,
     )
@@ -210,7 +225,9 @@ def build_recent_projects_section(
         ft.Row(
             controls=[
                 ft.Text(
-                    "Recent Projects", size=tokens.FONT_MD, weight=ft.FontWeight.W_600
+                    "Recent Projects",
+                    size=tokens.FONT_MD,
+                    weight=ft.FontWeight.W_600,
                 ),
                 ft.Container(expand=True),
                 ft.Row(
@@ -244,7 +261,12 @@ def build_recent_projects_section(
                     size=tokens.FONT_XS,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
-                padding=ft.Padding(0, tokens.SPACE_XS, 0, tokens.SPACE_SM),
+                padding=ft.Padding(
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_XS,
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_SM,
+                ),
             )
         )
     else:
@@ -253,6 +275,11 @@ def build_recent_projects_section(
             controls.append(ft.Container(height=tokens.SPACE_XS))
 
     return ft.Container(
-        content=ft.Column(controls=controls, spacing=0),
-        padding=ft.Padding(tokens.SPACE_LG, 0, tokens.SPACE_LG, tokens.SPACE_MD),
+        content=ft.Column(controls=controls, spacing=tokens.SPACE_NONE),
+        padding=ft.Padding(
+            tokens.SPACE_LG,
+            tokens.SPACE_NONE,
+            tokens.SPACE_LG,
+            tokens.SPACE_MD,
+        ),
     )

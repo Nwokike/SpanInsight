@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from core import theme
+from core import theme, tokens
 
 
 def build_ai_edit_box(
@@ -29,7 +29,7 @@ def build_ai_edit_box(
                 ft.Text(
                     "Edit with AI",
                     weight="bold",
-                    size=13,
+                    size=tokens.FONT_BODY,
                     color=theme.ACCENT,
                 ),
                 ft.Row(
@@ -38,10 +38,10 @@ def build_ai_edit_box(
                             ref=ai_field_ref,
                             value=ai_prompt_text,
                             hint_text="e.g. 'Add a rating field', 'Make it shorter', 'Add demographics'...",
-                            border_radius=10,
+                            border_radius=tokens.RADIUS_MD_SM,
                             max_lines=2,
                             expand=True,
-                            text_size=13,
+                            text_size=tokens.FONT_BODY,
                             disabled=is_ai_editing or is_recording,
                             on_change=lambda e: on_ai_edit(
                                 "__set_text__", e.control.value
@@ -52,7 +52,7 @@ def build_ai_edit_box(
                                 ft.Text(
                                     ref=recording_timer_ref,
                                     value=f"00:{recording_time:02d} / 01:00",
-                                    size=11,
+                                    size=tokens.FONT_SM,
                                     color=theme.ERROR,
                                     weight="bold",
                                     visible=is_recording,
@@ -69,8 +69,8 @@ def build_ai_edit_box(
                                     disabled=is_ai_editing,
                                 ),
                             ],
-                            spacing=2,
-                            vertical_alignment="center",
+                            spacing=tokens.SPACE_XXS,
+                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
                         ft.IconButton(
                             ft.Icons.AUTO_FIX_HIGH_ROUNDED,
@@ -85,28 +85,35 @@ def build_ai_edit_box(
                             disabled=is_ai_editing or is_recording,
                         ),
                     ],
-                    spacing=4,
-                    vertical_alignment="center",
+                    spacing=tokens.SPACE_XS,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
                 ft.ProgressBar(
                     visible=is_ai_editing or is_transcribing,
                 ),
                 ft.Row(
                     [
-                        ft.ProgressRing(width=16, height=16, stroke_width=2),
+                        ft.ProgressRing(
+                            width=tokens.PROGRESS_RING_SM,
+                            height=tokens.PROGRESS_RING_SM,
+                            stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
+                        ),
                         ft.Text(
                             "Transcribing your voice..."
                             if is_transcribing
                             else "AI is editing your form...",
-                            size=12,
+                            size=tokens.FONT_BODY_SM,
                             color=theme.ACCENT,
                         ),
                     ],
-                    spacing=8,
-                    alignment="center",
+                    spacing=tokens.SPACE_SM,
+                    alignment=ft.MainAxisAlignment.CENTER,
                     visible=is_transcribing or is_ai_editing,
                 ),
-                ft.Divider(height=1, color=theme.GLASS_BORDER_COLOR),
+                ft.Divider(
+                    height=tokens.DIVIDER_THICKNESS,
+                    color=theme.GLASS_BORDER_COLOR,
+                ),
                 ft.Row(
                     [
                         ft.FilledButton(
@@ -115,8 +122,10 @@ def build_ai_edit_box(
                             style=ft.ButtonStyle(
                                 bgcolor=theme.PRIMARY,
                                 color=ft.Colors.WHITE,
-                                shape=ft.RoundedRectangleBorder(radius=12),
-                                padding=14,
+                                shape=ft.RoundedRectangleBorder(
+                                    radius=tokens.RADIUS_MD
+                                ),
+                                padding=tokens.BUTTON_PADDING_MD,
                             ),
                             on_click=lambda e: on_publish(),
                             disabled=is_publishing or is_ai_editing,
@@ -125,22 +134,26 @@ def build_ai_edit_box(
                             "Cancel",
                             icon=ft.Icons.CLOSE_ROUNDED,
                             style=ft.ButtonStyle(
-                                shape=ft.RoundedRectangleBorder(radius=12),
-                                padding=14,
+                                shape=ft.RoundedRectangleBorder(
+                                    radius=tokens.RADIUS_MD
+                                ),
+                                padding=tokens.BUTTON_PADDING_MD,
                                 color=theme.PRIMARY,
                             ),
                             on_click=lambda e: on_cancel(),
                         ),
                     ],
-                    spacing=8,
+                    spacing=tokens.SPACE_SM,
                 ),
                 ft.ProgressBar(visible=is_publishing),
             ],
-            spacing=8,
+            spacing=tokens.SPACE_SM,
         ),
-        padding=20,
-        margin=ft.Margin(20, 8, 20, 8),
-        border_radius=16,
+        padding=tokens.SPACE_XL,
+        margin=ft.Margin(
+            tokens.SPACE_XL, tokens.SPACE_SM, tokens.SPACE_XL, tokens.SPACE_SM
+        ),
+        border_radius=tokens.RADIUS_LG,
         bgcolor=theme.GLASS_BG,
-        border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+        border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
     )

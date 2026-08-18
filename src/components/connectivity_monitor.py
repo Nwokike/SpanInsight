@@ -41,7 +41,11 @@ def build_offline_banner() -> ft.Container:
     return ft.Container(
         content=ft.Row(
             controls=[
-                ft.Icon(ft.Icons.WIFI_OFF_ROUNDED, size=16, color=ft.Colors.WHITE),
+                ft.Icon(
+                    ft.Icons.WIFI_OFF_ROUNDED,
+                    size=tokens.ICON_SM,
+                    color=ft.Colors.WHITE,
+                ),
                 ft.Text(
                     "No internet connection",
                     size=tokens.FONT_SM,
@@ -52,7 +56,7 @@ def build_offline_banner() -> ft.Container:
                 ft.Text(
                     "Colab features unavailable",
                     size=tokens.FONT_XS,
-                    color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE),
+                    color=ft.Colors.with_opacity(tokens.OPACITY_HEAVY, ft.Colors.WHITE),
                 ),
             ],
             spacing=tokens.SPACE_SM,

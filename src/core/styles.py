@@ -27,12 +27,12 @@ def glass_card(
         padding=padding,
         border_radius=border_radius,
         bgcolor=theme.GLASS_BG,
-        border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+        border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
         shadow=ft.BoxShadow(
-            spread_radius=0,
+            spread_radius=tokens.SPACE_NONE,
             blur_radius=tokens.SHADOW_BLUR,
             color=theme.SHADOW_DARK,
-            offset=ft.Offset(0, tokens.SHADOW_OFFSET_Y),
+            offset=ft.Offset(tokens.SPACE_NONE, tokens.SHADOW_OFFSET_Y),
         ),
     )
 
@@ -58,12 +58,12 @@ def solid_card(
         padding=padding,
         border_radius=border_radius,
         bgcolor=theme.LIGHT_SURFACE,
-        border=ft.Border.all(1, theme.LIGHT_BORDER),
+        border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.LIGHT_BORDER),
         shadow=ft.BoxShadow(
-            spread_radius=0,
+            spread_radius=tokens.SPACE_NONE,
             blur_radius=tokens.SHADOW_BLUR,
-            color=ft.Colors.with_opacity(0.06, "#000000"),
-            offset=ft.Offset(0, tokens.SHADOW_OFFSET_Y),
+            color=ft.Colors.with_opacity(tokens.OPACITY_LIGHT, theme.SHADOW_DARK),
+            offset=ft.Offset(tokens.SPACE_NONE, tokens.SHADOW_OFFSET_Y),
         ),
     )
 
@@ -88,13 +88,13 @@ def section_header(title: str) -> ft.Container:
             size=tokens.FONT_XS,
             weight=ft.FontWeight.W_600,
             color=ft.Colors.PRIMARY,
-            style=ft.TextStyle(letter_spacing=0.8),
+            style=ft.TextStyle(letter_spacing=tokens.LETTER_SPACING_CAPS),
         ),
         padding=ft.Padding(
             left=tokens.SPACE_XS,
             top=tokens.SPACE_XL,
             bottom=tokens.SPACE_SM,
-            right=0,
+            right=tokens.SPACE_NONE,
         ),
     )
 
@@ -143,12 +143,12 @@ def setting_tile(
         padding=ft.Padding(
             left=tokens.SPACE_LG,
             right=tokens.SPACE_LG,
-            top=14,
-            bottom=14,
+            top=tokens.BUTTON_PADDING_MD,
+            bottom=tokens.BUTTON_PADDING_MD,
         ),
         border_radius=tokens.RADIUS_MD,
         ink=True,
-        ink_color=ft.Colors.with_opacity(0.08, theme.PRIMARY),
+        ink_color=ft.Colors.with_opacity(tokens.OPACITY_MUTED, theme.PRIMARY),
         on_click=on_click,
     )
 
@@ -190,8 +190,11 @@ def dashed_border_container(
         width=width,
         height=height,
         border_radius=border_radius,
-        border=ft.Border.all(2, ft.Colors.with_opacity(0.3, border_color)),
-        bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.WHITE),
+        border=ft.Border.all(
+            tokens.DIVIDER_THICKNESS_THICK,
+            ft.Colors.with_opacity(tokens.OPACITY_MUTED_BORDER, border_color),
+        ),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, ft.Colors.WHITE),
         alignment=ft.Alignment.CENTER,
         on_click=on_click,
         ink=True,
@@ -239,17 +242,22 @@ def build_banner_ad(page: ft.Page) -> ft.Container:
             [
                 ft.Text(
                     "SPONSORED",
-                    size=8,
+                    size=tokens.FONT_XXS,
                     weight=ft.FontWeight.W_700,
                     color=ft.Colors.ON_SURFACE_VARIANT,
-                    style=ft.TextStyle(letter_spacing=1),
+                    style=ft.TextStyle(letter_spacing=tokens.SPACE_MICRO),
                 ),
                 utils.get_banner_ad(),
             ],
-            horizontal_alignment="center",
-            spacing=4,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=tokens.SPACE_XS,
         ),
         alignment=ft.Alignment.CENTER,
         padding=tokens.SPACE_SM,
-        margin=ft.Margin(0, tokens.SPACE_SM, 0, tokens.SPACE_SM),
+        margin=ft.Margin(
+            tokens.SPACE_NONE,
+            tokens.SPACE_SM,
+            tokens.SPACE_NONE,
+            tokens.SPACE_SM,
+        ),
     )

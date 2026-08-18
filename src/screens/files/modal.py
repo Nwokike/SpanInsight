@@ -67,16 +67,21 @@ def show_manage_files_modal(page: ft.Page, colab, session_name: str):
                             ],
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
-                        padding=ft.Padding(tokens.SPACE_SM, 0, tokens.SPACE_SM, 0),
+                        padding=ft.Padding(
+                            tokens.SPACE_SM,
+                            tokens.SPACE_NONE,
+                            tokens.SPACE_SM,
+                            tokens.SPACE_NONE,
+                        ),
                     ),
-                    ft.Divider(height=1),
+                    ft.Divider(height=tokens.DIVIDER_THICKNESS),
                     list_container,
                 ],
                 spacing=tokens.SPACE_XS,
                 expand=True,
             ),
-            width=650,
-            height=500,
+            width=tokens.DIALOG_WIDTH_LG,
+            height=tokens.DIALOG_HEIGHT_LG,
         ),
         actions=[
             ft.TextButton(
@@ -107,7 +112,12 @@ def show_manage_files_modal(page: ft.Page, colab, session_name: str):
                         weight=ft.FontWeight.W_600,
                         color=ft.Colors.PRIMARY,
                     ),
-                    padding=ft.Padding(tokens.SPACE_XS, 0, tokens.SPACE_XS, 0),
+                    padding=ft.Padding(
+                        tokens.SPACE_XS,
+                        tokens.SPACE_NONE,
+                        tokens.SPACE_XS,
+                        tokens.SPACE_NONE,
+                    ),
                 )
             )
             sel_item = next((i for i in listing if i["name"] in selected_files), None)
@@ -216,7 +226,10 @@ def show_manage_files_modal(page: ft.Page, colab, session_name: str):
                 expand=True,
                 spacing=tokens.SPACE_XXS,
                 padding=ft.Padding(
-                    tokens.SPACE_SM, 0, tokens.SPACE_SM, tokens.SPACE_SM
+                    tokens.SPACE_SM,
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_SM,
+                    tokens.SPACE_SM,
                 ),
             )
 

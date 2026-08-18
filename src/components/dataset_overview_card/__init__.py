@@ -49,7 +49,7 @@ def build_dataset_overview_card(
             padding=ft.Padding(
                 tokens.SPACE_SM, tokens.SPACE_XXS, tokens.SPACE_SM, tokens.SPACE_XXS
             ),
-            bgcolor=ft.Colors.with_opacity(0.12, theme.PRIMARY),
+            bgcolor=ft.Colors.with_opacity(tokens.OPACITY_CONTAINER, theme.PRIMARY),
             border_radius=tokens.RADIUS_SM,
         )
     ]
@@ -59,7 +59,7 @@ def build_dataset_overview_card(
             ft.IconButton(
                 icon=ft.Icons.TABLE_VIEW_ROUNDED,
                 tooltip="Preview Raw Data",
-                icon_size=18,
+                icon_size=tokens.ICON_MD,
                 icon_color=theme.ACCENT,
                 on_click=lambda _: on_view_raw_data(),
             )
@@ -70,7 +70,7 @@ def build_dataset_overview_card(
             ft.IconButton(
                 icon=ft.Icons.INFO_OUTLINE_ROUNDED,
                 tooltip="Schema Details",
-                icon_size=18,
+                icon_size=tokens.ICON_MD,
                 icon_color=ft.Colors.ON_SURFACE_VARIANT,
                 on_click=lambda _: on_inspect_schema(),
             )
@@ -82,7 +82,7 @@ def build_dataset_overview_card(
                 controls=[
                     ft.Icon(
                         ft.Icons.DATASET_ROUNDED,
-                        size=20,
+                        size=tokens.ICON_BASE,
                         color=theme.ACCENT,
                     ),
                     ft.Text(
@@ -120,7 +120,7 @@ def build_dataset_overview_card(
                     controls=[
                         ft.Icon(
                             callout_icon,
-                            size=18,
+                            size=tokens.ICON_MD,
                             color=callout_color,
                         ),
                         ft.Text(
@@ -135,9 +135,12 @@ def build_dataset_overview_card(
                     spacing=tokens.SPACE_SM,
                 ),
                 padding=tokens.SPACE_MD,
-                bgcolor=ft.Colors.with_opacity(0.08, callout_color),
+                bgcolor=ft.Colors.with_opacity(tokens.OPACITY_MUTED, callout_color),
                 border_radius=tokens.RADIUS_MD,
-                border=ft.Border.all(1, ft.Colors.with_opacity(0.2, callout_color)),
+                border=ft.Border.all(
+                    tokens.DIVIDER_THICKNESS,
+                    ft.Colors.with_opacity(tokens.OPACITY_BORDER, callout_color),
+                ),
             )
         )
 
@@ -156,8 +159,10 @@ def build_dataset_overview_card(
         padding=tokens.SPACE_MD,
         border_radius=tokens.RADIUS_LG,
         bgcolor=theme.GLASS_BG,
-        border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
-        margin=ft.Margin(0, 0, 0, tokens.SPACE_SM),
+        border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
+        margin=ft.Margin(
+            tokens.SPACE_NONE, tokens.SPACE_NONE, tokens.SPACE_NONE, tokens.SPACE_SM
+        ),
     )
 
 

@@ -151,10 +151,15 @@ def build_insight_card(
                     ft.Container(
                         content=parsed_ctrl,
                         padding=tokens.SPACE_SM,
-                        bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ON_SURFACE),
+                        bgcolor=ft.Colors.with_opacity(
+                            tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE
+                        ),
                         border_radius=tokens.RADIUS_SM,
                         border=ft.Border.all(
-                            1, ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE)
+                            tokens.DIVIDER_THICKNESS,
+                            ft.Colors.with_opacity(
+                                tokens.OPACITY_MUTED, ft.Colors.ON_SURFACE
+                            ),
                         ),
                     )
                 )
@@ -200,8 +205,10 @@ def build_insight_card(
         padding=tokens.SPACE_MD,
         border_radius=tokens.RADIUS_LG,
         bgcolor=theme.GLASS_BG,
-        border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
-        margin=ft.Margin(0, 0, 0, tokens.SPACE_SM),
+        border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
+        margin=ft.Margin(
+            tokens.SPACE_NONE, tokens.SPACE_NONE, tokens.SPACE_NONE, tokens.SPACE_SM
+        ),
     )
 
 

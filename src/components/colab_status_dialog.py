@@ -19,10 +19,10 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
         return
 
     progress_bar = ft.ProgressBar(
-        width=340,
-        height=2,
+        width=tokens.DIALOG_WIDTH_SM,
+        height=tokens.SPACE_NANO,
         color=theme.PRIMARY,
-        bgcolor=ft.Colors.with_opacity(0.1, theme.PRIMARY),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_LIGHT, theme.PRIMARY),
     )
 
     details_column = ft.Column(
@@ -30,7 +30,11 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
             ft.Container(
                 content=ft.Row(
                     controls=[
-                        ft.ProgressRing(width=16, height=16, stroke_width=2),
+                        ft.ProgressRing(
+                            width=tokens.PROGRESS_RING_SM,
+                            height=tokens.PROGRESS_RING_SM,
+                            stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
+                        ),
                         ft.Text(
                             "Running diagnostics in VM…",
                             size=tokens.FONT_XS,
@@ -60,9 +64,16 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
                         weight=ft.FontWeight.W_600,
                         color=badge_color or theme.PRIMARY,
                     ),
-                    padding=ft.Padding(6, 2, 6, 2),
+                    padding=ft.Padding(
+                        tokens.SPACE_SM_XS,
+                        tokens.SPACE_XXS,
+                        tokens.SPACE_SM_XS,
+                        tokens.SPACE_XXS,
+                    ),
                     border_radius=tokens.RADIUS_XS,
-                    bgcolor=ft.Colors.with_opacity(0.12, badge_color or theme.PRIMARY),
+                    bgcolor=ft.Colors.with_opacity(
+                        tokens.OPACITY_CONTAINER, badge_color or theme.PRIMARY
+                    ),
                 )
             )
 
@@ -78,7 +89,7 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(icon, size=16, color=theme.PRIMARY),
+                    ft.Icon(icon, size=tokens.ICON_SM, color=theme.PRIMARY),
                     ft.Text(
                         label,
                         size=tokens.FONT_SM,
@@ -91,7 +102,9 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=tokens.SPACE_SM,
             ),
-            padding=ft.Padding(0, 2, 0, 2),
+            padding=ft.Padding(
+                tokens.SPACE_NONE, tokens.SPACE_XXS, tokens.SPACE_NONE, tokens.SPACE_XXS
+            ),
         )
 
     def _render_gui_status(data: dict):
@@ -110,9 +123,16 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
                 content=ft.Text(
                     f, size=tokens.FONT_XXS, color=ft.Colors.ON_SURFACE_VARIANT
                 ),
-                padding=ft.Padding(6, 2, 6, 2),
+                padding=ft.Padding(
+                    tokens.SPACE_SM_XS,
+                    tokens.SPACE_XXS,
+                    tokens.SPACE_SM_XS,
+                    tokens.SPACE_XXS,
+                ),
                 border_radius=tokens.RADIUS_XS,
-                bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE),
+                bgcolor=ft.Colors.with_opacity(
+                    tokens.OPACITY_MUTED, ft.Colors.ON_SURFACE
+                ),
             )
             for f in files[:8]
         ]
@@ -128,7 +148,7 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
                     ),
                     ft.Row(controls=file_chips, wrap=True, spacing=tokens.SPACE_XXS),
                 ],
-                spacing=4,
+                spacing=tokens.SPACE_XS,
             )
             if files
             else ft.Container()
@@ -147,7 +167,9 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
             _build_info_row(ft.Icons.PSYCHOLOGY_ALT_ROUNDED, "TensorFlow", tf_ver),
             ft.Divider(
                 height=tokens.SPACE_SM,
-                color=ft.Colors.with_opacity(0.06, ft.Colors.ON_SURFACE),
+                color=ft.Colors.with_opacity(
+                    tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE
+                ),
             ),
             files_section,
         ]
@@ -223,7 +245,9 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
                 ft.Row(
                     controls=[
                         ft.Icon(
-                            ft.Icons.ERROR_OUTLINE_ROUNDED, color=theme.ERROR, size=18
+                            ft.Icons.ERROR_OUTLINE_ROUNDED,
+                            color=theme.ERROR,
+                            size=tokens.ICON_MD,
                         ),
                         ft.Text(
                             f"Diagnostic failed: {ex}",
@@ -231,7 +255,7 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
                             color=theme.ERROR,
                         ),
                     ],
-                    spacing=6,
+                    spacing=tokens.SPACE_SM_XS,
                 )
             ]
             try:
@@ -242,7 +266,11 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
     dlg = ft.AlertDialog(
         title=ft.Row(
             controls=[
-                ft.Icon(ft.Icons.CLOUD_DONE_ROUNDED, size=20, color=theme.SUCCESS),
+                ft.Icon(
+                    ft.Icons.CLOUD_DONE_ROUNDED,
+                    size=tokens.ICON_BASE,
+                    color=theme.SUCCESS,
+                ),
                 ft.Text(
                     "Colab VM Status",
                     weight=ft.FontWeight.W_600,
@@ -257,13 +285,20 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
                         weight=ft.FontWeight.BOLD,
                         color=theme.PRIMARY,
                     ),
-                    padding=ft.Padding(6, 2, 6, 2),
+                    padding=ft.Padding(
+                        tokens.SPACE_SM_XS,
+                        tokens.SPACE_XXS,
+                        tokens.SPACE_SM_XS,
+                        tokens.SPACE_XXS,
+                    ),
                     border_radius=tokens.RADIUS_XS,
-                    bgcolor=ft.Colors.with_opacity(0.12, theme.PRIMARY),
+                    bgcolor=ft.Colors.with_opacity(
+                        tokens.OPACITY_CONTAINER, theme.PRIMARY
+                    ),
                 ),
             ],
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=8,
+            spacing=tokens.SPACE_SM,
         ),
         content=ft.Container(
             content=ft.Column(
@@ -274,7 +309,7 @@ def show_colab_status_dialog(page: ft.Page, colab, session_name: str):
                 spacing=tokens.SPACE_SM,
                 tight=True,
             ),
-            width=340,
+            width=tokens.DIALOG_WIDTH_SM,
         ),
         actions=[
             ft.TextButton(

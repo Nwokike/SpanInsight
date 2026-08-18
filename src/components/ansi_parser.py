@@ -22,25 +22,7 @@ def _rich_color_to_hex(color):
 
         # Standard 16 terminal colors
         if n <= 15:
-            cmap = {
-                0: "#000000",
-                1: "#cc0000",
-                2: "#4e9a06",
-                3: "#c4a000",
-                4: "#3465a4",
-                5: "#75507b",
-                6: "#06989a",
-                7: "#d3d7cf",
-                8: "#555753",
-                9: "#ef2929",
-                10: "#8ae234",
-                11: "#fce94f",
-                12: "#729fcf",
-                13: "#ad7fa8",
-                14: "#34e2e2",
-                15: "#eeeeec",
-            }
-            return cmap.get(n, None)
+            return theme.ANSI_COLORS.get(n, None)
 
         # 256-color palette: colors 16-231 are a 6x6x6 color cube
         if 16 <= n <= 231:

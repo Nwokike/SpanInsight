@@ -18,15 +18,11 @@ from core import theme, tokens
 logger = logging.getLogger("NativeChart")
 
 # Distinct series palette tuned for light & dark surfaces
+# Distinct series palette tuned for light & dark surfaces
 _PALETTE = [
     theme.PRIMARY,
     theme.ACCENT,
-    "#7C4DFF",
-    "#00BFA5",
-    "#FF7043",
-    "#5C9DED",
-    "#EC407A",
-    "#9CCC65",
+    *theme.CHART_PALETTE,
 ]
 
 _LABEL_CAP = 14  # max x-axis labels rendered before thinning
@@ -49,7 +45,7 @@ def _thinned_labels(x_labels: list) -> list[tuple[int, str]]:
     return [items[min(int(i * step), len(items) - 1)] for i in range(_LABEL_CAP)]
 
 
-def _axis_text(value: str, size: int = 10) -> ft.Text:
+def _axis_text(value: str, size: int = tokens.FONT_SM_XS) -> ft.Text:
     return ft.Text(
         value,
         size=size,
@@ -126,8 +122,11 @@ def build_native_chart(spec: dict) -> ft.Control | None:
         ),
         padding=tokens.SPACE_MD,
         border_radius=tokens.RADIUS_MD,
-        bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ON_SURFACE),
-        border=ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE)),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE),
+        border=ft.Border.all(
+            tokens.DIVIDER_THICKNESS,
+            ft.Colors.with_opacity(tokens.OPACITY_MUTED, ft.Colors.ON_SURFACE),
+        ),
     )
 
 
@@ -145,19 +144,23 @@ def _build_pie(
                 value=v,
                 title=f"{pct:.0f}%",
                 title_style=ft.TextStyle(
-                    size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE
+                    size=tokens.FONT_SM,
+                    weight=ft.FontWeight.BOLD,
+                    color=ft.Colors.WHITE,
                 ),
                 color=_PALETTE[i % len(_PALETTE)],
-                radius=80.0,
+                radius=tokens.PIE_CHART_RADIUS,
             )
         )
 
     return fch.PieChart(
         sections=sections,
-        center_space_radius=32,
-        sections_space=2,
+        center_space_radius=tokens.PIE_CHART_CENTER_RADIUS,
+        sections_space=tokens.SPACE_XXS,
         expand=True,
-        animation=ft.Animation(400, ft.AnimationCurve.EASE_OUT_CUBIC),
+        animation=ft.Animation(
+            tokens.OUTPUT_THROTTLE_MS, ft.AnimationCurve.EASE_OUT_CUBIC
+        ),
     )
 
 
@@ -199,12 +202,12 @@ def _build_line(
         min_y=0,
         horizontal_grid_lines=fch.ChartGridLines(
             interval=None,
-            color=ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE),
+            color=ft.Colors.with_opacity(tokens.OPACITY_MUTED, ft.Colors.ON_SURFACE),
         ),
         left_axis=fch.ChartAxis(
             title=ft.Text(
                 str(spec.get("y_label", "")),
-                size=9,
+                size=tokens.FONT_XS,
                 color=ft.Colors.ON_SURFACE_VARIANT,
                 weight=ft.FontWeight.W_600,
             )
@@ -212,7 +215,9 @@ def _build_line(
             else None,
         ),
         bottom_axis=fch.ChartAxis(labels=bottom_labels),
-        animation=ft.Animation(400, ft.AnimationCurve.EASE_OUT_CUBIC),
+        animation=ft.Animation(
+            tokens.OUTPUT_THROTTLE_MS, ft.AnimationCurve.EASE_OUT_CUBIC
+        ),
     )
 
 
@@ -236,7 +241,7 @@ def _build_bar(
                     color=_PALETTE[i % len(_PALETTE)],
                     tooltip=f"{v:,.2f}",
                     show_tooltip=True,
-                    border_radius=4,
+                    border_radius=tokens.RADIUS_XS,
                 )
             )
         if rods:
@@ -256,12 +261,12 @@ def _build_bar(
         interactive=True,
         expand=True,
         horizontal_grid_lines=fch.ChartGridLines(
-            color=ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE),
+            color=ft.Colors.with_opacity(tokens.OPACITY_MUTED, ft.Colors.ON_SURFACE),
         ),
         left_axis=fch.ChartAxis(
             title=ft.Text(
                 str(spec.get("y_label", "")),
-                size=9,
+                size=tokens.FONT_XS,
                 color=ft.Colors.ON_SURFACE_VARIANT,
                 weight=ft.FontWeight.W_600,
             )
@@ -269,7 +274,9 @@ def _build_bar(
             else None
         ),
         bottom_axis=fch.ChartAxis(labels=bottom_labels) if bottom_labels else None,
-        animation=ft.Animation(400, ft.AnimationCurve.EASE_OUT_CUBIC),
+        animation=ft.Animation(
+            tokens.OUTPUT_THROTTLE_MS, ft.AnimationCurve.EASE_OUT_CUBIC
+        ),
     )
 
 
@@ -280,9 +287,9 @@ def _build_legend(names: list[str]) -> list[ft.Control]:
             ft.Row(
                 [
                     ft.Container(
-                        width=8,
-                        height=8,
-                        border_radius=4,
+                        width=tokens.DOT_INDICATOR_WIDTH_INACTIVE,
+                        height=tokens.DOT_INDICATOR_HEIGHT,
+                        border_radius=tokens.RADIUS_XS,
                         bgcolor=_PALETTE[i % len(_PALETTE)],
                     ),
                     ft.Text(
@@ -293,7 +300,7 @@ def _build_legend(names: list[str]) -> list[ft.Control]:
                         overflow=ft.TextOverflow.ELLIPSIS,
                     ),
                 ],
-                spacing=4,
+                spacing=tokens.SPACE_XS,
                 tight=True,
             )
         )

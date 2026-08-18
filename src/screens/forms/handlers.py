@@ -8,7 +8,7 @@ import logging
 
 import flet as ft
 
-from core import theme
+from core import theme, tokens
 from services import ai as ai_service
 from services import forms_service
 
@@ -138,7 +138,7 @@ async def publish_form_async(
                     page,
                     f"Published! Link: {result['url']}",
                     success=True,
-                    duration=5000,
+                    duration=tokens.SNACK_DURATION_EXTENDED_MS,
                 )
             try:
                 await page.set_clipboard_async(result["url"])
@@ -180,7 +180,9 @@ async def delete_form_async(
                 from core.utils import show_snack
 
                 show_snack(
-                    page, "Form permanently deleted from project.", duration=2000
+                    page,
+                    "Form permanently deleted from project.",
+                    duration=tokens.SNACK_DURATION_SHORT_MS,
                 )
             await load_forms_fn()
         else:
@@ -194,9 +196,9 @@ async def delete_form_async(
                 "Anyone with access to this project PIN can edit or delete items. "
                 "Deleting this form will permanently remove it and all collected responses "
                 "from the cloud node for all collaborators. This cannot be undone.",
-                size=13,
+                size=tokens.FONT_BODY,
             ),
-            width=340,
+            width=tokens.DIALOG_WIDTH_SM,
         ),
         actions=[
             ft.TextButton("Cancel", on_click=_close_dlg),
@@ -243,7 +245,7 @@ async def download_csv_async(form: dict, page: ft.Page, show_error):
                 page,
                 f"📄 Responses saved: {export_path.name}",
                 success=True,
-                duration=3000,
+                duration=tokens.SNACK_DURATION_MD_MS,
             )
     except Exception as err:
         show_error(f"Save failed: {err}")

@@ -23,10 +23,14 @@ def build_auth_slide(
     return ft.Column(
         controls=[
             ft.Container(height=tokens.SPACE_XL),
-            ft.Icon(ft.Icons.LOCK_OPEN_ROUNDED, size=56, color=theme.PRIMARY),
+            ft.Icon(
+                ft.Icons.LOCK_OPEN_ROUNDED,
+                size=tokens.ICON_HERO_LG,
+                color=theme.PRIMARY,
+            ),
             ft.Text(
                 "Sign in to Google",
-                size=24,
+                size=tokens.FONT_XL,
                 weight=ft.FontWeight.W_700,
                 text_align=ft.TextAlign.CENTER,
             ),
@@ -42,7 +46,7 @@ def build_auth_slide(
                     controls=[
                         ft.Icon(
                             ft.Icons.CHECK_CIRCLE_ROUNDED,
-                            size=16,
+                            size=tokens.ICON_SM,
                             color=theme.SUCCESS,
                         ),
                         ft.Text("Colab CLI ready", size=tokens.FONT_SM),
@@ -55,7 +59,9 @@ def build_auth_slide(
                     tokens.SPACE_LG,
                     tokens.SPACE_MD,
                 ),
-                bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.ON_SURFACE),
+                bgcolor=ft.Colors.with_opacity(
+                    tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE
+                ),
                 border_radius=tokens.RADIUS_MD,
             ),
             ft.Container(height=tokens.SPACE_LG),
@@ -79,9 +85,7 @@ def build_auth_slide(
                     ),
                 ),
                 disabled=is_loading_auth,
-                on_click=lambda e: page.run_task(start_auth_fn, e)
-                if page
-                else None,
+                on_click=lambda e: page.run_task(start_auth_fn, e) if page else None,
             ),
             ft.TextField(
                 ref=auth_code_ref,
@@ -92,18 +96,14 @@ def build_auth_slide(
                 text_size=tokens.FONT_MD,
                 visible=show_verify,
                 on_change=lambda e: set_auth_code_fn(e.control.value),
-                on_submit=lambda e: page.run_task(submit_code_fn, e)
-                if page
-                else None,
+                on_submit=lambda e: page.run_task(submit_code_fn, e) if page else None,
             ),
             ft.FilledTonalButton(
                 content=ft.Text("Verify Code"),
                 icon=ft.Icons.VERIFIED_ROUNDED,
                 visible=show_verify,
                 disabled=is_loading_auth,
-                on_click=lambda e: page.run_task(submit_code_fn, e)
-                if page
-                else None,
+                on_click=lambda e: page.run_task(submit_code_fn, e) if page else None,
             ),
             ft.Text(
                 value=auth_status,

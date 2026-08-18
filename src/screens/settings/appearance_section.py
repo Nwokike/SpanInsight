@@ -34,18 +34,26 @@ def build_appearance_section(
                     ),
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
-                spacing=6,
+                spacing=tokens.SPACE_SM_XS,
             ),
-            padding=ft.Padding(10, 10, 10, 10),
+            padding=ft.Padding(
+                tokens.SPACE_MD_SM,
+                tokens.SPACE_MD_SM,
+                tokens.SPACE_MD_SM,
+                tokens.SPACE_MD_SM,
+            ),
             border_radius=tokens.RADIUS_MD,
-            border=ft.Border.all(2, theme.PRIMARY)
+            border=ft.Border.all(tokens.DIVIDER_THICKNESS_THICK, theme.PRIMARY)
             if is_sel
-            else ft.Border.all(1, ft.Colors.with_opacity(0.12, ft.Colors.ON_SURFACE)),
-            bgcolor=ft.Colors.with_opacity(0.10, theme.PRIMARY)
+            else ft.Border.all(
+                tokens.DIVIDER_THICKNESS,
+                ft.Colors.with_opacity(tokens.OPACITY_CONTAINER, ft.Colors.ON_SURFACE),
+            ),
+            bgcolor=ft.Colors.with_opacity(tokens.OPACITY_LIGHT, theme.PRIMARY)
             if is_sel
             else ft.Colors.SURFACE_CONTAINER_HIGHEST,
             expand=True,
-            animate=ft.Animation(150, ft.AnimationCurve.EASE_OUT),
+            animate=ft.Animation(tokens.ANIMATION_MS_FAST, ft.AnimationCurve.EASE_OUT),
             on_click=lambda e: on_theme_changed(mode),
         )
 
@@ -60,6 +68,11 @@ def build_appearance_section(
                 controls=[light_btn, dark_btn, system_btn],
                 spacing=tokens.SPACE_SM,
             ),
-            padding=ft.Padding(tokens.SPACE_LG, 6, tokens.SPACE_LG, 14),
+            padding=ft.Padding(
+                tokens.SPACE_LG,
+                tokens.SPACE_SM_XS,
+                tokens.SPACE_LG,
+                tokens.BUTTON_PADDING_MD,
+            ),
         ),
     ]

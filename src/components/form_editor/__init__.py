@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import flet as ft
 
-from core import theme
+from core import theme, tokens
 
 from .ai_box import build_ai_edit_box
 from .field_card import FIELD_TYPES, build_field_card, new_field
@@ -37,28 +37,37 @@ def build_form_editor(
         ft.Container(
             content=ft.Column(
                 [
-                    ft.Text("Preview & Edit", weight="bold", size=16),
+                    ft.Text(
+                        "Preview & Edit",
+                        weight="bold",
+                        size=tokens.FONT_HEADING,
+                    ),
                     ft.TextField(
                         value=title,
                         label="Form Title",
-                        border_radius=10,
+                        border_radius=tokens.RADIUS_MD_SM,
                         on_change=lambda e: on_title_changed(e.control.value),
                     ),
                     ft.TextField(
                         value=description,
                         label="Description",
-                        border_radius=10,
+                        border_radius=tokens.RADIUS_MD_SM,
                         max_lines=2,
                         on_change=lambda e: on_desc_changed(e.control.value),
                     ),
                 ],
-                spacing=8,
+                spacing=tokens.SPACE_SM,
             ),
-            padding=20,
-            margin=ft.Margin(20, 10, 20, 4),
-            border_radius=16,
+            padding=tokens.SPACE_XL,
+            margin=ft.Margin(
+                tokens.SPACE_XL,
+                tokens.SPACE_MD_SM,
+                tokens.SPACE_XL,
+                tokens.SPACE_XS,
+            ),
+            border_radius=tokens.RADIUS_LG,
             bgcolor=theme.GLASS_BG,
-            border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+            border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
         )
     )
 
@@ -81,7 +90,12 @@ def build_form_editor(
                 content=build_field_card(
                     field, i, total, on_schema_changed, _move, _delete, schema
                 ),
-                margin=ft.Margin(20, 4, 20, 4),
+                margin=ft.Margin(
+                    tokens.SPACE_XL,
+                    tokens.SPACE_XS,
+                    tokens.SPACE_XL,
+                    tokens.SPACE_XS,
+                ),
             )
         )
 
@@ -96,11 +110,16 @@ def build_form_editor(
                     on_schema_changed(),
                 ),
                 style=ft.ButtonStyle(
-                    shape=ft.RoundedRectangleBorder(radius=12),
-                    padding=14,
+                    shape=ft.RoundedRectangleBorder(radius=tokens.RADIUS_MD),
+                    padding=tokens.BUTTON_PADDING_MD,
                 ),
             ),
-            padding=ft.Padding(20, 4, 20, 4),
+            padding=ft.Padding(
+                tokens.SPACE_XL,
+                tokens.SPACE_XS,
+                tokens.SPACE_XL,
+                tokens.SPACE_XS,
+            ),
         )
     )
 
@@ -121,7 +140,7 @@ def build_form_editor(
         )
     )
 
-    controls.append(ft.Container(height=100))
+    controls.append(ft.Container(height=tokens.INPUT_WIDTH_SM))
     return controls
 
 

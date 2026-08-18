@@ -6,7 +6,7 @@ import flet as ft
 
 from components.brand_header import build_brand_header
 from components.refresh_button import build_refresh_button
-from core import theme, utils
+from core import theme, tokens, utils
 from screens.reports.report_card import build_report_card
 
 
@@ -25,12 +25,21 @@ def build_reports_dashboard(
         ft.Container(
             content=ft.Row(
                 [
-                    ft.Text("Your Reports", size=18, weight=ft.FontWeight.W_700),
+                    ft.Text(
+                        "Your Reports",
+                        size=tokens.FONT_LG,
+                        weight=ft.FontWeight.W_700,
+                    ),
                     ft.Container(expand=True),
                     build_refresh_button(on_click=on_refresh),
                 ],
             ),
-            padding=ft.Padding(20, 10, 20, 0),
+            padding=ft.Padding(
+                tokens.SPACE_XL,
+                tokens.SPACE_MD_SM,
+                tokens.SPACE_XL,
+                tokens.SPACE_NONE,
+            ),
         )
     )
 
@@ -48,22 +57,27 @@ def build_reports_dashboard(
                 [
                     ft.Text(
                         "SPONSORED",
-                        size=8,
+                        size=tokens.FONT_XXS,
                         weight=ft.FontWeight.W_700,
                         color=ft.Colors.ON_SURFACE_VARIANT,
                         style=ft.TextStyle(letter_spacing=1),
                     ),
                     utils.get_banner_ad(),
                 ],
-                horizontal_alignment="center",
-                spacing=4,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=tokens.SPACE_XS,
             ),
             alignment=ft.Alignment.CENTER,
-            padding=8,
-            border_radius=12,
+            padding=tokens.SPACE_SM,
+            border_radius=tokens.RADIUS_MD,
             bgcolor=theme.GLASS_BG,
-            border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
-            margin=ft.Margin(20, 10, 20, 10),
+            border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
+            margin=ft.Margin(
+                tokens.SPACE_XL,
+                tokens.SPACE_MD_SM,
+                tokens.SPACE_XL,
+                tokens.SPACE_MD_SM,
+            ),
         )
 
     controls.append(_ad())
@@ -74,10 +88,16 @@ def build_reports_dashboard(
         reports_list_controls.append(
             ft.Container(
                 content=ft.Column(
-                    [ft.ProgressRing(width=30, height=30, stroke_width=3)],
-                    horizontal_alignment="center",
+                    [
+                        ft.ProgressRing(
+                            width=tokens.BUTTON_HEIGHT_SM,
+                            height=tokens.BUTTON_HEIGHT_SM,
+                            stroke_width=tokens.PROGRESS_RING_STROKE_NORMAL,
+                        )
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=40,
+                padding=tokens.ICON_CONTAINER_SIZE,
                 alignment=ft.Alignment.CENTER,
             )
         )
@@ -86,41 +106,47 @@ def build_reports_dashboard(
             ft.Container(
                 content=ft.Column(
                     [
-                        ft.Container(height=40),
+                        ft.Container(height=tokens.ICON_CONTAINER_SIZE),
                         ft.Icon(
                             ft.Icons.ASSESSMENT_OUTLINED,
-                            size=64,
-                            color=ft.Colors.with_opacity(0.15, ft.Colors.ON_SURFACE),
+                            size=tokens.ICON_HERO_LG,
+                            color=ft.Colors.with_opacity(
+                                tokens.OPACITY_BORDER, ft.Colors.ON_SURFACE
+                            ),
                         ),
                         ft.Text(
                             "No reports yet",
-                            size=16,
-                            weight="w500",
+                            size=tokens.FONT_HEADING,
+                            weight=ft.FontWeight.W_500,
                             color=ft.Colors.ON_SURFACE_VARIANT,
                         ),
                         ft.Text(
                             "Pin analysis results or use Autopilot to create your first report.",
-                            size=13,
-                            color=ft.Colors.with_opacity(0.5, ft.Colors.ON_SURFACE),
-                            text_align="center",
+                            size=tokens.FONT_BODY,
+                            color=ft.Colors.with_opacity(
+                                tokens.OPACITY_HALF, ft.Colors.ON_SURFACE
+                            ),
+                            text_align=ft.TextAlign.CENTER,
                         ),
-                        ft.Container(height=16),
+                        ft.Container(height=tokens.SPACE_LG),
                         ft.FilledButton(
                             "Start Analysis",
                             icon=ft.Icons.ANALYTICS_ROUNDED,
                             style=ft.ButtonStyle(
                                 bgcolor=theme.PRIMARY,
                                 color=ft.Colors.WHITE,
-                                shape=ft.RoundedRectangleBorder(radius=12),
-                                padding=16,
+                                shape=ft.RoundedRectangleBorder(
+                                    radius=tokens.RADIUS_MD
+                                ),
+                                padding=tokens.SPACE_LG,
                             ),
                             on_click=on_start_analysis,
                         ),
                     ],
-                    horizontal_alignment="center",
-                    spacing=8,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=tokens.SPACE_SM,
                 ),
-                padding=20,
+                padding=tokens.SPACE_XL,
                 alignment=ft.Alignment.CENTER,
             )
         )
@@ -129,12 +155,17 @@ def build_reports_dashboard(
             reports_list_controls.append(
                 ft.Container(
                     content=build_report_card(report, on_open_report),
-                    margin=ft.Margin(20, 4, 20, 4),
+                    margin=ft.Margin(
+                        tokens.SPACE_XL,
+                        tokens.SPACE_XS,
+                        tokens.SPACE_XL,
+                        tokens.SPACE_XS,
+                    ),
                 )
             )
 
     controls.append(ft.Column(controls=reports_list_controls))
     controls.append(_ad())
-    controls.append(ft.Container(height=100))
+    controls.append(ft.Container(height=tokens.INPUT_WIDTH_SM))
 
-    return ft.Column(controls=controls, scroll="auto", expand=True)
+    return ft.Column(controls=controls, scroll=ft.ScrollMode.AUTO, expand=True)
