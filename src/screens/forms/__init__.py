@@ -240,7 +240,7 @@ def FormsScreen() -> ft.Control:
             f"df = pd.DataFrame(responses_data)\n"
             f"print(f'Survey: {form_title}')\n"
             f"print(f'Total Responses: {{len(df)}}')\n"
-            f"print(df.describe(include=\"all\"))\n"
+            f'print(df.describe(include="all"))\n'
         )
 
         has_active_project = (
@@ -248,6 +248,7 @@ def FormsScreen() -> ft.Control:
         )
         if not has_active_project:
             import uuid
+
             async def _create_survey_project():
                 proj = await services.projects.create_project(
                     name=f"{form_title} Analysis",
