@@ -90,30 +90,27 @@ def figure_to_png_bytes(fig) -> bytes:
 
 
 def get_temp_dir() -> Path:
-    """Resolve a writeable temporary directory safely across desktop and mobile platforms."""
+    """Resolve a writeable temporary directory using Flet's app storage paths."""
     import os
     from pathlib import Path
 
-    # 1. Try Flet's dedicated temporary storage directory environment variable (Android/iOS sandbox)
+    # FLET_APP_STORAGE_TEMP is always set by Flet at runtime (→ .flet/storage/temp/ locally,
+    # app private temp dir on Android)
     temp_env = os.getenv("FLET_APP_STORAGE_TEMP")
     if temp_env:
         path = Path(temp_env)
-        try:
-            path.mkdir(parents=True, exist_ok=True)
-            return path
-        except Exception:
-            pass
+    else:
+        # Dev fallback — matches the .flet folder structure Flet creates locally
+        path = Path(".flet") / "storage" / "temp"
 
-    # 2. Fall back to standard OS-specific temporary path or application base path
     try:
-        path = Path.home() / ".spaninsight" / "temp"
         path.mkdir(parents=True, exist_ok=True)
         return path
     except Exception:
-        # 3. Absolute last resort fallback (local directory in app space)
-        fallback_path = Path("./.temp_cache")
-        fallback_path.mkdir(parents=True, exist_ok=True)
-        return fallback_path
+        # Absolute last resort
+        fallback = Path(".temp_cache")
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
 
 
 def get_banner_ad(

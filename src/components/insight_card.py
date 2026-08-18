@@ -339,7 +339,7 @@ def build_insight_card(
             if not page:
                 return
             try:
-                await ft.Clipboard().set(raw_output_full)
+                page.set_clipboard(raw_output_full)
                 from core.utils import show_snack
 
                 show_snack(page, "📋 Raw output copied to clipboard!", duration=2000)

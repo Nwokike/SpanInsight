@@ -121,7 +121,7 @@ def build_native_chart(spec: dict) -> ft.Control | None:
 
     return ft.Container(
         content=ft.Column(
-            header_controls + [chart] + legend,
+            header_controls + [ft.Container(content=chart, height=220)] + legend,
             spacing=tokens.SPACE_XS,
         ),
         padding=tokens.SPACE_MD,
@@ -148,7 +148,7 @@ def _build_pie(
                     size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE
                 ),
                 color=_PALETTE[i % len(_PALETTE)],
-                radius=tokens.RADIUS_XL,
+                radius=80.0,
             )
         )
 
@@ -156,6 +156,7 @@ def _build_pie(
         sections=sections,
         center_space_radius=32,
         sections_space=2,
+        expand=True,
         animation=ft.Animation(400, ft.AnimationCurve.EASE_OUT_CUBIC),
     )
 
@@ -194,6 +195,8 @@ def _build_line(
     return fch.LineChart(
         data_series=data_series,
         interactive=True,
+        expand=True,
+        min_y=0,
         horizontal_grid_lines=fch.ChartGridLines(
             interval=None,
             color=ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE),
@@ -216,6 +219,7 @@ def _build_line(
 def _build_bar(
     spec: dict, series: list[tuple[str, list[float | None]]]
 ) -> fch.BarChart:
+    x_labels = [str(x) for x in (spec.get("x") or [])]
     groups = []
     n_points = max(len(ys) for _, ys in series)
     for j in range(n_points):
@@ -238,9 +242,19 @@ def _build_bar(
         if rods:
             groups.append(fch.BarChartGroup(x=j, rods=rods))
 
+    bottom_labels = (
+        [
+            fch.ChartAxisLabel(value=i, label=_axis_text(lbl))
+            for i, lbl in _thinned_labels(x_labels[:n_points])
+        ]
+        if x_labels
+        else []
+    )
+
     return fch.BarChart(
         groups=groups,
         interactive=True,
+        expand=True,
         horizontal_grid_lines=fch.ChartGridLines(
             color=ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE),
         ),
@@ -254,6 +268,7 @@ def _build_bar(
             if spec.get("y_label")
             else None
         ),
+        bottom_axis=fch.ChartAxis(labels=bottom_labels) if bottom_labels else None,
         animation=ft.Animation(400, ft.AnimationCurve.EASE_OUT_CUBIC),
     )
 

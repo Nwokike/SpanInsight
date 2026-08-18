@@ -145,7 +145,6 @@ async def run_dataset_import_dialog(
     Returns True when the dataset is loaded, schema extracted and enriched.
     """
     from core.utils import show_snack
-    from services.ai import analysis as ai_service
     from services.file_service import suggest_load_code
 
     remote = remote_path or f"/content/{file_name}"
@@ -172,9 +171,13 @@ async def run_dataset_import_dialog(
                 show_snack(page, f"Dataset load failed: {err_msg}", error=True)
             return False
 
-        if not schema.get("suggestions"):
-            schema["suggestions"] = ai_service.fallback_suggestions()
-        state.suggestions = schema["suggestions"]
+        # Enrich schema with AI description + suggestions (was missing — this is
+        # what caused the empty description after upload).
+        if page:
+            show_snack(page, "🤖 Compiling AI intelligence…", duration=4000)
+        schema = await enrich_schema_with_ai(schema)
+
+        state.suggestions = schema.get("suggestions", [])
         set_schema_json(schema)
 
         if page:

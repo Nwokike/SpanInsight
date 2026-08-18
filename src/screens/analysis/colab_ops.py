@@ -460,29 +460,43 @@ def _flush_output_to_ui(refs_dict: dict, c: dict, page: ft.Page):
 
 
 async def export_ipynb_async(page: ft.Page):
-    """Convert state notebook cells to standard Jupyter Notebook format and save."""
+    """Convert state notebook cells to standard .ipynb format and save to app storage.
+
+    Written to FLET_APP_STORAGE_DATA (→ .flet/storage/data/ in dev,
+    the app's private data directory on Android).
+    """
     if not state.notebook_cells:
         return
     from services.ipynb_converter import cells_to_ipynb
 
     ipynb = cells_to_ipynb(state.notebook_cells)
+    ipynb_text = json.dumps(ipynb, indent=2)
 
-    picker = page.file_picker
-    path = await picker.save_file(
-        file_name="spaninsight_notebook.ipynb",
-        dialog_title="Export Notebook",
-    )
-    if path:
-        try:
-            import pathlib
+    try:
+        import os
+        import pathlib
 
-            pathlib.Path(path).write_text(json.dumps(ipynb, indent=2))
-            if page:
-                from core.utils import show_snack
+        storage_data = os.getenv("FLET_APP_STORAGE_DATA")
+        export_dir = (
+            pathlib.Path(storage_data)
+            if storage_data
+            else pathlib.Path(".flet") / "storage" / "data"
+        )
+        export_dir.mkdir(parents=True, exist_ok=True)
+        export_path = export_dir / "spaninsight_notebook.ipynb"
+        export_path.write_text(ipynb_text, encoding="utf-8")
 
-                show_snack(page, f"Exported to {path}", success=True)
-        except Exception as e:
-            if page:
-                from core.utils import show_snack
+        if page:
+            from core.utils import show_snack
 
-                show_snack(page, f"Export failed: {e}", error=True)
+            show_snack(
+                page,
+                "📓 Notebook exported to app storage",
+                success=True,
+                duration=4000,
+            )
+    except Exception as e:
+        if page:
+            from core.utils import show_snack
+
+            show_snack(page, f"Export failed: {e}", error=True)

@@ -22,7 +22,8 @@ _storage_env = os.getenv("FLET_APP_STORAGE_DATA")
 if _storage_env:
     _DATASETS_DIR = Path(_storage_env) / "datasets"
 else:
-    _DATASETS_DIR = Path.home() / ".spaninsight" / "datasets"
+    # Dev fallback — mirrors what Flet sets as FLET_APP_STORAGE_DATA at runtime
+    _DATASETS_DIR = Path(".flet") / "storage" / "data" / "datasets"
 
 
 def _ensure_dir() -> None:

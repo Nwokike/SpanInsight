@@ -210,6 +210,25 @@ def SettingsScreen() -> ft.Control:
         )
         page.show_dialog(dialog)
 
+    async def on_clear_dataset_cache(e=None):
+        """Delete all locally-cached dataset files for all projects."""
+        try:
+            import shutil
+
+            from services.dataset_cache import _DATASETS_DIR
+
+            if _DATASETS_DIR.exists():
+                shutil.rmtree(_DATASETS_DIR, ignore_errors=True)
+                _DATASETS_DIR.mkdir(parents=True, exist_ok=True)
+            from core.utils import show_snack
+
+            show_snack(page, "🗁️ Dataset cache cleared", success=True, duration=2500)
+        except Exception as ex:
+            logger.warning("Dataset cache clear failed: %s", ex)
+            from core.utils import show_snack
+
+            show_snack(page, f"Cache clear failed: {ex}", error=True)
+
     # ── Debug terminal ──────────────────────────────────────────
     async def _run_debug(e=None):
         if not services.colab or not state.active_session_name:
@@ -318,7 +337,12 @@ def SettingsScreen() -> ft.Control:
             terminal_output, terminal_visible, lambda e: page.run_task(_run_debug, e)
         )
     )
-    controls.extend(build_data_section(lambda e: page.run_task(on_clear_data, e)))
+    controls.extend(
+        build_data_section(
+            lambda e: page.run_task(on_clear_data, e),
+            on_clear_dataset_cache=lambda e: page.run_task(on_clear_dataset_cache, e),
+        )
+    )
     controls.append(_ad())
     controls.extend(
         build_about_section(cli_version, on_launch_privacy, on_launch_terms)

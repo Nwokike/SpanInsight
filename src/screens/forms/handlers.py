@@ -213,35 +213,38 @@ async def delete_form_async(
 
 
 async def download_csv_async(form: dict, page: ft.Page, show_error):
-    """Exports all form submission responses to a local CSV file."""
+    """Exports all form submission responses to a CSV file in app storage."""
     responses = form.get("_responses", [])
     if not responses:
         show_error("No responses to download.")
         return
     csv_bytes = forms_service.responses_to_csv_bytes(responses)
 
-    picker = getattr(page, "file_picker", None)
-    if not picker:
-        picker = ft.FilePicker()
+    import os
+    from pathlib import Path
+
+    try:
+        storage_data = os.getenv("FLET_APP_STORAGE_DATA")
+        export_dir = (
+            Path(storage_data) if storage_data else Path(".flet") / "storage" / "data"
+        )
+        export_dir.mkdir(parents=True, exist_ok=True)
+        safe_name = form["title"].replace(" ", "_").replace("/", "-")
+        export_path = export_dir / f"{safe_name}_responses.csv"
+
+        def _write():
+            export_path.write_bytes(csv_bytes)
+
+        await asyncio.to_thread(_write)
         if page:
-            page.services.append(picker)
+            from core.utils import show_snack
 
-    result = await picker.save_file(
-        dialog_title="Save Responses CSV",
-        file_name=f"{form['title'].replace(' ', '_')}_responses.csv",
-        allowed_extensions=["csv"],
-    )
-    if result:
-        try:
+            show_snack(
+                page,
+                f"📄 Responses saved: {export_path.name}",
+                success=True,
+                duration=3000,
+            )
+    except Exception as err:
+        show_error(f"Save failed: {err}")
 
-            def _write():
-                with open(result, "wb") as f:
-                    f.write(csv_bytes)
-
-            await asyncio.to_thread(_write)
-            if page:
-                from core.utils import show_snack
-
-                show_snack(page, "Saved!", success=True, duration=3000)
-        except Exception as err:
-            show_error(f"Save failed: {err}")

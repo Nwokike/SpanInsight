@@ -16,28 +16,28 @@ from .vision import analyze_image
 logger = logging.getLogger(__name__)
 
 _COLAB_ENV_CONTEXT = (
-    "EXECUTION ENVIRONMENT: Google Colab (Python 3.10+, Ubuntu).\\n"
-    "PRE-INSTALLED: pandas, numpy, matplotlib, seaborn, scikit-learn, scipy,\\n"
-    "  statsmodels, plotly, tensorflow, torch, transformers, PIL/Pillow,\\n"
-    "  and all Python stdlib modules.\\n"
-    "You can install additional packages with !pip install <package>.\\n"
-    "The user's data files are in /content/. Use pandas to load them.\\n"
+    "EXECUTION ENVIRONMENT: Google Colab (Python 3.10+, Ubuntu).\n"
+    "PRE-INSTALLED: pandas, numpy, matplotlib, seaborn, scikit-learn, scipy,\n"
+    "  statsmodels, plotly, tensorflow, torch, transformers, PIL/Pillow,\n"
+    "  and all Python stdlib modules.\n"
+    "You can install additional packages with !pip install <package>.\n"
+    "The user's data files are in /content/. Use pandas to load them.\n"
 )
 
 _EXEC_RULES = (
-    "EXECUTION RULES:\\n"
-    "- If a DataFrame `df` exists in the session, use it. Otherwise load data from /content/.\\n"
-    "- Always .dropna() or .fillna() before algebraic/statistical operations.\\n"
-    "- Plotting: always create figures with plt.figure() or plt.subplots(). Do NOT call plt.savefig().\\n"
-    "- Assign key results to a variable named `result`.\\n"
+    "EXECUTION RULES:\n"
+    "- If a DataFrame `df` exists in the session, use it. Otherwise load data from /content/.\n"
+    "- Always .dropna() or .fillna() before algebraic/statistical operations.\n"
+    "- Plotting: always create figures with plt.figure() or plt.subplots(). Do NOT call plt.savefig().\n"
+    "- Assign key results to a variable named `result`.\n"
     "- For simple visual summaries (bar/line/pie), PREFER assigning a chart spec to `result` "
     'as a dict: {"chart": {"type": "bar" or "line" or "pie", "title": str, '
     '"x": [labels], "series": [{"name": str, "y": [numbers]}]}} — '
-    "the app renders it as a NATIVE interactive chart.\\n"
-    "- For complex visuals, use matplotlib figures; the app displays the rendered image.\\n"
-    "- Do NOT print human-readable text summaries. Only output raw tables, statistics, or plots.\\n"
-    "- Keep code efficient and focused on the user's request.\\n"
-    "- Return only executable Python code, no remarks.\\n"
+    "the app renders it as a NATIVE interactive chart.\n"
+    "- For complex visuals, use matplotlib figures; the app displays the rendered image.\n"
+    "- Do NOT print human-readable text summaries. Only output raw tables, statistics, or plots.\n"
+    "- Keep code efficient and focused on the user's request.\n"
+    "- Return only executable Python code, no remarks.\n"
 )
 
 
@@ -368,7 +368,7 @@ async def plan_next_step(
     ]
 
     try:
-        data = await call_gateway(TASK_CODE, messages)
+        data = await call_gateway(TASK_SUGGEST, messages)
         content = extract_content(data)
         cleaned = extract_block_by_pattern(content, is_json=True)
         result = json.loads(cleaned)

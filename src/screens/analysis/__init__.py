@@ -580,14 +580,16 @@ def AnalysisScreen() -> Control:
         if is_recording:
             set_is_recording(False)
             try:
-                from services.audio_service import stop_recording
+                from services.audio_service import AudioService as _AS
 
-                audio_bytes = await stop_recording()
-                if audio_bytes:
-                    from services.ai.client import transcribe_audio
+                _audio_svc = _AS(page)
+                result = await _audio_svc.stop_recording()
+                if result:
+                    audio_bytes, mime_type = result
+                    from services.ai import transcribe_audio
 
-                    text = await transcribe_audio(audio_bytes)
-                    if text:
+                    text = await transcribe_audio(audio_bytes, mime_type)
+                    if text and not text.startswith("["):
                         set_prompt_text(text)
             except Exception as ex:
                 logger.warning("Voice processing error: %s", ex)
@@ -870,7 +872,7 @@ def AnalysisScreen() -> Control:
         is_loading=is_generating,
     )
 
-    active_desc = schema_json.get("description", "Analyzing dataset schema…")
+    active_desc = schema_json.get("description", "")
 
     def _open_raw_data_dialog():
         if not schema_json or not page:
@@ -939,7 +941,20 @@ def AnalysisScreen() -> Control:
                 schema=schema_json,
                 page=page,
                 initial_description=active_desc,
+                suggestions=suggestions,
+                on_suggestion_selected=lambda p: (
+                    set_prompt_text(p),
+                    page.run_task(_submit_prompt, p),
+                ),
                 on_view_raw_data=_open_raw_data_dialog,
+                on_inspect_schema=lambda: __import__(
+                    "components.dataset_inspector",
+                    fromlist=["show_dataset_inspector"],
+                ).show_dataset_inspector(
+                    page,
+                    state.active_project_dataset or "Active Dataset",
+                    schema_json,
+                ),
             )
         )
 

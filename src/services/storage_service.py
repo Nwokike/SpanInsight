@@ -20,12 +20,13 @@ import flet as ft
 
 logger = logging.getLogger(__name__)
 
-# Use Flet sandbox data storage path on Android/iOS mobile to avoid Path.home() permission issues
+# Use FLET_APP_STORAGE_DATA when set by Flet at runtime (Android: app private data dir)
+# Dev fallback mirrors the .flet/storage/data/ folder Flet creates locally
 storage_env = os.getenv("FLET_APP_STORAGE_DATA")
 if storage_env:
     _STORAGE_DIR = Path(storage_env)
 else:
-    _STORAGE_DIR = Path.home() / ".spaninsight"
+    _STORAGE_DIR = Path(".flet") / "storage" / "data"
 
 _SETTINGS_FILE = _STORAGE_DIR / "settings.json"
 _HISTORY_FILE = _STORAGE_DIR / "history.json"

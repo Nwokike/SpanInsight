@@ -50,8 +50,9 @@ class AppController:
         page.dark_theme = AppTheme.get_dark_theme()
         page.theme.font_family = "Outfit"
         page.dark_theme.font_family = "Outfit"
-        page.theme_mode = ft.ThemeMode.LIGHT
-        state.theme_mode = page.theme_mode
+        # Theme mode is applied after loading saved preference in _initial_route
+        # to avoid a white flash on dark-mode devices.
+        page.theme_mode = ft.ThemeMode.SYSTEM
 
         page.window.min_width = 360
         page.window.min_height = 600
@@ -321,6 +322,14 @@ class AppController:
 
         # Signal AppShell that boot is complete
         state.app_ready = True
+
+        # Prune stale locally-cached dataset files (no-op if cache is empty)
+        try:
+            from services.dataset_cache import cleanup_stale
+
+            cleanup_stale()
+        except Exception as _ce:
+            logger.debug("Stale cache cleanup failed: %s", _ce)
 
     async def _startup_checks(self):
         """Check API health and version requirements."""

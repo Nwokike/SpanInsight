@@ -26,6 +26,7 @@ def build_dataset_overview_card(
     suggestions: list[str] | None = None,
     on_suggestion_selected: Callable[[str], None] | None = None,
     on_view_raw_data: Callable[[], None] | None = None,
+    on_inspect_schema: Callable[[], None] | None = None,
 ) -> ft.Container:
     """Build a rich glassmorphic Dataset Overview Card."""
     columns = schema.get("columns", [])
@@ -67,6 +68,17 @@ def build_dataset_overview_card(
             )
         )
 
+    if on_inspect_schema:
+        header_right_controls.append(
+            ft.IconButton(
+                icon=ft.Icons.INFO_OUTLINE_ROUNDED,
+                tooltip="Schema Details",
+                icon_size=18,
+                icon_color=ft.Colors.ON_SURFACE_VARIANT,
+                on_click=lambda _: on_inspect_schema(),
+            )
+        )
+
     header_row = ft.Row(
         controls=[
             ft.Row(
@@ -97,7 +109,10 @@ def build_dataset_overview_card(
 
     # ── 2. AI Dataset Description Callout ───────────────────────
     if initial_description and initial_description.strip():
-        is_fallback = "unavailable" in initial_description.lower()
+        is_fallback = (
+            "unavailable" in initial_description.lower()
+            or "analyzing dataset" in initial_description.lower()
+        )
         callout_color = ft.Colors.ON_SURFACE_VARIANT if is_fallback else theme.ACCENT
         callout_icon = (
             ft.Icons.INFO_OUTLINE_ROUNDED if is_fallback else ft.Icons.LIGHTBULB_ROUNDED
