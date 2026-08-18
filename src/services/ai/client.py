@@ -19,13 +19,15 @@ _PYTHON_BLOCK_RE = re.compile(r"```python\s*(.*?)\s*```", re.DOTALL | re.IGNOREC
 _JSON_BLOCK_RE = re.compile(r"```json\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE)
 _GENERIC_BLOCK_RE = re.compile(r"```\s*(.*?)\s*```", re.DOTALL)
 
-# Timeouts per task type matching the gateway's processing scale
+# Timeouts per task type, calibrated against real gateway latencies:
+# reasoning models routinely take 30-90s on `suggest` and up to ~140s on
+# `code` (observed live) — 60s timeouts caused double-spends via retries.
 TIMEOUTS = {
-    "suggest": 60.0,
-    "code": 60.0,
-    "interpret": 60.0,
+    "suggest": 90.0,
+    "code": 150.0,
+    "interpret": 90.0,
     "vision": 60.0,
-    "audio": 60.0,
+    "audio": 90.0,
 }
 
 

@@ -30,6 +30,9 @@ def build_cells_container(
     for idx, cell in enumerate(notebook_cells):
         cid = cell["id"]
         if not is_expert_mode:
+            # Skip initial dataset loading cell in Insight Mode (represented cleanly by DatasetOverviewCard)
+            if cell.get("is_initial_load"):
+                continue
             # SpanInsight Default: Rich Insight Card
             card = build_insight_card(
                 block=cell,

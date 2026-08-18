@@ -99,12 +99,9 @@ class FilePickerService:
 
         except Exception as e:
             logger.error("Data file picking failed: %s", e)
-            self._page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"File picker error: {e}"),
-                bgcolor=ft.Colors.ERROR,
-            )
-            self._page.snack_bar.open = True
-            self._page.update()
+            from core.utils import show_snack
+
+            show_snack(self._page, f"File picker error: {e}", error=True)
 
     async def _run_image_picker(self):
         """Async picker logic for images (vision AI)."""

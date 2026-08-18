@@ -58,11 +58,13 @@ class AudioService:
     async def start_recording(self, on_auto_stop=None) -> bool:
         """Start PCM16BITS streaming recording. Returns True if started."""
         if not self._recorder:
-            self._page.snack_bar = ft.SnackBar(
-                content=ft.Text("Audio recording not available on this platform")
+            from core.utils import show_snack
+
+            show_snack(
+                self._page,
+                "Audio recording not available on this platform",
+                error=True,
             )
-            self._page.snack_bar.open = True
-            self._page.update()
             return False
 
         self._pcm_buffer.clear()
@@ -86,9 +88,9 @@ class AudioService:
             return self._recording
         except Exception as e:
             logger.error("Failed to start recording: %s", e)
-            self._page.snack_bar = ft.SnackBar(content=ft.Text(f"Recording error: {e}"))
-            self._page.snack_bar.open = True
-            self._page.update()
+            from core.utils import show_snack
+
+            show_snack(self._page, f"Recording error: {e}", error=True)
             return False
 
     async def _auto_stop_timer(self, on_auto_stop=None):
@@ -103,14 +105,13 @@ class AudioService:
                 result = await self.stop_recording()
 
                 # Notify the UI that recording was auto-stopped
-                self._page.snack_bar = ft.SnackBar(
-                    content=ft.Text(
-                        f"Voice note auto-stopped ({MAX_VOICE_DURATION_SEC}s limit)"
-                    ),
+                from core.utils import show_snack
+
+                show_snack(
+                    self._page,
+                    f"Voice note auto-stopped ({MAX_VOICE_DURATION_SEC}s limit)",
                     duration=3000,
                 )
-                self._page.snack_bar.open = True
-                self._page.update()
 
                 if on_auto_stop and result:
                     if asyncio.iscoroutinefunction(on_auto_stop):
@@ -137,12 +138,13 @@ class AudioService:
 
             if not self._pcm_buffer:
                 logger.warning("No PCM data collected during recording")
-                self._page.snack_bar = ft.SnackBar(
-                    content=ft.Text("No audio captured. Please try again."),
-                    bgcolor=ft.Colors.ERROR,
+                from core.utils import show_snack
+
+                show_snack(
+                    self._page,
+                    "No audio captured. Please try again.",
+                    error=True,
                 )
-                self._page.snack_bar.open = True
-                self._page.update()
                 return None
 
             wav_bytes = _pcm_to_wav(
@@ -164,12 +166,13 @@ class AudioService:
                     len(wav_bytes),
                     MAX_AUDIO_SIZE_BYTES,
                 )
-                self._page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Voice note too large. Please keep it under 25MB."),
-                    bgcolor=ft.Colors.ERROR,
+                from core.utils import show_snack
+
+                show_snack(
+                    self._page,
+                    "Voice note too large. Please keep it under 25MB.",
+                    error=True,
                 )
-                self._page.snack_bar.open = True
-                self._page.update()
                 return None
 
             return (wav_bytes, "audio/wav")

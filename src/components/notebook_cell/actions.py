@@ -10,9 +10,22 @@ from core import theme
 logger = logging.getLogger("notebook")
 
 
-def make_actions_row(on_move_up=None, on_move_down=None, on_delete=None, on_copy=None):
+def make_actions_row(
+    on_move_up=None, on_move_down=None, on_delete=None, on_copy=None, on_fix=None
+):
     """Compact action button row for cell management."""
     controls = []
+    if on_fix:
+        controls.append(
+            ft.IconButton(
+                ft.Icons.AUTO_FIX_HIGH_ROUNDED,
+                icon_size=14,
+                icon_color=theme.WARNING,
+                tooltip="Fix with AI",
+                style=ft.ButtonStyle(padding=4),
+                on_click=lambda e: on_fix() if on_fix else None,
+            )
+        )
     if on_copy:
         controls.append(
             ft.IconButton(
@@ -52,21 +65,68 @@ def make_actions_row(on_move_up=None, on_move_down=None, on_delete=None, on_copy
     return ft.Row(controls=controls, spacing=0)
 
 
+async def fix_with_ai(page: ft.Page, cell: dict, on_change=None):
+    """Generate an AI correction for a failed hand-written cell (Expert mode).
+
+    Writes the corrected code into the editor WITHOUT running it — experts
+    stay in control and can review before executing.
+    """
+    from core.state import state
+    from services.ai import analysis as ai_service
+    from services.colab.output_utils import extract_error_text
+
+    src = cell.get("source", "")
+    error_text = extract_error_text(cell.get("outputs", [])) or "Unknown error"
+
+    if page:
+        from core.utils import show_snack
+
+        show_snack(page, "🩹 Asking AI for a fix…", duration=2000)
+
+    try:
+        corrected = await ai_service.generate_corrected_code(
+            "Fix the error in this Python data-analysis code",
+            src,
+            error_text,
+            state.active_schema_json or {},
+        )
+    except Exception as ex:
+        logger.warning("Fix-with-AI generation failed: %s", ex)
+        corrected = ""
+
+    if not corrected or corrected == src:
+        if page:
+            from core.utils import show_snack
+
+            show_snack(
+                page,
+                "AI couldn't improve this code — try rephrasing it.",
+                duration=2500,
+            )
+        return
+
+    cell["source"] = corrected
+    cell["failed"] = False
+    if on_change:
+        on_change()
+    if page:
+        from core.utils import show_snack
+
+        show_snack(
+            page, "🩹 Code corrected — review & run", duration=2500, success=True
+        )
+
+
 async def copy_code(page: ft.Page, code: str):
     """Copy cell source code to clipboard."""
     if not code or not code.strip():
         return
     try:
-        if page and hasattr(page, "set_clipboard_async"):
-            await page.set_clipboard_async(code.strip())
-        else:
-            await ft.Clipboard().set(code.strip())
+        await page.clipboard.set(code.strip())
         if page:
-            page.snack_bar = ft.SnackBar(
-                ft.Text("📋 Code copied to clipboard!"), duration=2000
-            )
-            page.snack_bar.open = True
-            page.update()
+            from core.utils import show_snack
+
+            show_snack(page, "📋 Code copied to clipboard!", duration=2000)
     except Exception as ex:
         logger.error("Copy code failed: %s", ex)
 
@@ -119,15 +179,10 @@ async def copy_output(page: ft.Page, outputs: list):
 
     if final_text:
         try:
-            if page and hasattr(page, "set_clipboard_async"):
-                await page.set_clipboard_async(final_text)
-            else:
-                await ft.Clipboard().set(final_text)
+            await page.clipboard.set(final_text)
             if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text("📋 Output copied to clipboard!"), duration=2000
-                )
-                page.snack_bar.open = True
-                page.update()
+                from core.utils import show_snack
+
+                show_snack(page, "📋 Output copied to clipboard!", duration=2000)
         except Exception as ex:
             logger.error("Copy output failed: %s", ex)

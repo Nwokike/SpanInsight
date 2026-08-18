@@ -2,13 +2,22 @@
 
 from __future__ import annotations
 
+import logging
+
 import flet as ft
 
 from core import theme, tokens
 
+logger = logging.getLogger("ThoughtAccordion")
+
 
 def build_thought_accordion(block: dict, on_change=None) -> ft.Control | None:
-    """Builds a collapsible accordion showing the model's internal reasoning process."""
+    """Builds a collapsible accordion showing the model's internal reasoning process.
+
+    Expansion is handled IN PLACE (no parent re-render needed) so the toggle
+    always responds instantly, even while background tasks are updating the
+    screen version counter.
+    """
     thought = block.get("thought", "")
     if not thought or not str(thought).strip():
         return None
@@ -22,10 +31,45 @@ def build_thought_accordion(block: dict, on_change=None) -> ft.Control | None:
         f"Thought for {duration_str}" if duration_str else "Reasoning Process"
     )
 
+    icon_ref = ft.Ref[ft.Icon]()
+    body = ft.Container(
+        content=ft.Markdown(
+            thought.strip(),
+            selectable=True,
+            extension_set=ft.MarkdownExtensionSet.GITHUB_FLAVORED,
+        ),
+        padding=ft.Padding(
+            tokens.SPACE_SM, tokens.SPACE_XS, tokens.SPACE_SM, tokens.SPACE_XS
+        ),
+        bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE),
+        border_radius=tokens.RADIUS_SM,
+        border=ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE)),
+        visible=show_thought,
+    )
+
+    def _apply_state(expanded: bool):
+        body.visible = expanded
+        if icon_ref.current:
+            icon_ref.current.icon = (
+                ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
+                if expanded
+                else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED
+            )
+
     def _toggle(_):
-        block["_show_thought"] = not show_thought
-        if on_change:
-            on_change()
+        expanded = not block.get("_show_thought", False)
+        block["_show_thought"] = expanded
+        _apply_state(expanded)
+        try:
+            body.update()
+            if icon_ref.current:
+                icon_ref.current.update()
+        except Exception:
+            # Control not mounted yet (or session shutting down) — fall back
+            # to a full parent rebuild.
+            logger.debug("In-place accordion update failed; falling back")
+            if on_change:
+                on_change()
 
     toggle_btn = ft.Container(
         content=ft.Row(
@@ -52,7 +96,8 @@ def build_thought_accordion(block: dict, on_change=None) -> ft.Control | None:
                     spacing=tokens.SPACE_XXS,
                 ),
                 ft.Icon(
-                    ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
+                    ref=icon_ref,
+                    icon=ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
                     if show_thought
                     else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED,
                     size=16,
@@ -70,33 +115,7 @@ def build_thought_accordion(block: dict, on_change=None) -> ft.Control | None:
         ink=True,
     )
 
-    if not show_thought:
-        return toggle_btn
-
-    body = ft.Container(
-        content=ft.Column(
-            [
-                toggle_btn,
-                ft.Container(
-                    content=ft.Markdown(
-                        thought.strip(),
-                        selectable=True,
-                        extension_set=ft.MarkdownExtensionSet.GITHUB_FLAVORED,
-                    ),
-                    padding=ft.Padding(
-                        tokens.SPACE_SM,
-                        tokens.SPACE_XS,
-                        tokens.SPACE_SM,
-                        tokens.SPACE_XS,
-                    ),
-                    bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE),
-                    border_radius=tokens.RADIUS_SM,
-                    border=ft.Border.all(
-                        1, ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE)
-                    ),
-                ),
-            ],
-            spacing=tokens.SPACE_XXS,
-        )
+    return ft.Column(
+        [toggle_btn, body],
+        spacing=tokens.SPACE_XXS,
     )
-    return body

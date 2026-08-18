@@ -44,7 +44,6 @@ class AppController:
         page = self.page
 
         page.title = "Spaninsight"
-        page.favicon = "icon.png"
         page.fonts = {"Outfit": "assets/outfit.css"}
 
         page.theme = AppTheme.get_light_theme()
@@ -170,14 +169,14 @@ class AppController:
         state.active_subview = ""
         state.current_tab = idx
 
-    def show_snack(self, message: str):
+    def show_snack(self, message: str, is_error: bool = False):
         """Show a snackbar message."""
         try:
-            self.page.snack_bar = ft.SnackBar(content=ft.Text(message))
-            self.page.snack_bar.open = True
-            self.page.update()
-        except Exception:
-            pass
+            from core.utils import show_snack as _show_snack
+
+            _show_snack(self.page, message, error=is_error)
+        except Exception as ex:
+            logger.warning("Snack display failed (%s): %s", message, ex)
 
     def _start_analysis(self, autopilot: bool = False):
         """Switch to analysis tab, optionally in autopilot mode."""
@@ -211,30 +210,26 @@ class AppController:
         """Global error handler."""
         logger.error("Page error: %s", e.data)
         try:
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text(
-                    "Something went wrong. Please try again.",
-                    color=ft.Colors.WHITE,
-                ),
-                bgcolor=ft.Colors.BLACK,
+            from core.utils import show_snack as _show_snack
+
+            _show_snack(
+                self.page, "Something went wrong. Please try again.", error=True
             )
-            self.page.snack_bar.open = True
-            self.page.update()
-        except Exception:
-            pass
+        except Exception as ex:
+            logger.warning("Error snackbar display failed: %s", ex)
 
     async def _on_disconnect(self, e=None):
         """Flush storage and close HTTP client on app close."""
         try:
             await self.storage.flush()
-        except Exception:
-            pass
+        except Exception as ex:
+            logger.warning("Storage flush on close failed: %s", ex)
         try:
             from services.api_client import close_client
 
             await close_client()
-        except Exception:
-            pass
+        except Exception as ex:
+            logger.warning("HTTP client close failed: %s", ex)
 
     async def _initial_route(self):
         """Determine startup route using Colab Shell's proven pattern."""
@@ -355,14 +350,13 @@ class AppController:
                 data = resp.json()
                 min_ver = data.get("min_version", "0.0.0")
                 if parse_version(APP_VERSION) < parse_version(min_ver):
-                    self.page.snack_bar = ft.SnackBar(
-                        ft.Text(
-                            "A required update is available. Please update Spaninsight."
-                        ),
+                    from core.utils import show_snack
+
+                    show_snack(
+                        self.page,
+                        "A required update is available. Please update Spaninsight.",
                         duration=8000,
                     )
-                    self.page.snack_bar.open = True
-                    self.page.update()
         except Exception:
             pass
 

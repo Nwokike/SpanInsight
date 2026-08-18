@@ -25,11 +25,17 @@ def test_home_to_analysis_workflow():
 def test_files_load_in_analysis_workflow():
     state.clear_notebook()
     state.current_tab = 0
+    state.pending_dataset_load = None
     handle_load_in_analysis(page=None, current_path="/content", item_name="sales.csv")
 
+    # New contract: Files hands off to the full Analysis import pipeline
+    # (load + schema + AI description) instead of dropping a raw code cell.
     assert state.current_tab == 1
-    assert len(state.notebook_cells) == 1
-    assert "read_csv('/content/sales.csv')" in state.notebook_cells[0]["source"]
+    assert state.pending_dataset_load == {
+        "remote_path": "/content/sales.csv",
+        "name": "sales.csv",
+    }
+    state.pending_dataset_load = None  # simulate AnalysisScreen consuming it
 
 
 def test_project_load_and_switch_workflow():

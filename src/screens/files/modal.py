@@ -236,10 +236,9 @@ def show_manage_files_modal(page: ft.Page, colab, session_name: str):
         except Exception as e:
             logger.error("ls failed: %s", e)
             if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text(f"Failed: {e}"), bgcolor=ft.Colors.ERROR
-                )
-                page.snack_bar.open = True
+                from core.utils import show_snack
+
+                show_snack(page, f"Failed: {e}", error=True)
         finally:
             is_loading = False
             _render()

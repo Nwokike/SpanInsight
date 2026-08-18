@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import json
+import asyncio
 import logging
-import os
 
 import flet as ft
 
-from core import tokens
 from core.constants import COST_AUTOPILOT, COST_CUSTOM_PROMPT
 from core.state import state
+from core.utils import show_snack
 
 logger = logging.getLogger("AutopilotHandlers")
 
@@ -33,12 +32,7 @@ async def submit_prompt_async(
         return
     if not session_name:
         if page:
-            page.snack_bar = ft.SnackBar(
-                ft.Text("Connect to Colab first"),
-                bgcolor=ft.Colors.ERROR,
-            )
-            page.snack_bar.open = True
-            page.update()
+            show_snack(page, "Connect to Colab first", error=True)
         return
 
     set_is_generating(True)
@@ -49,12 +43,7 @@ async def submit_prompt_async(
             ok, _ = await credits.spend(COST_CUSTOM_PROMPT)
             if not ok:
                 if page:
-                    page.snack_bar = ft.SnackBar(
-                        ft.Text("Not enough credits"),
-                        bgcolor=ft.Colors.ERROR,
-                    )
-                    page.snack_bar.open = True
-                    page.update()
+                    show_snack(page, "Not enough credits", error=True)
                 return
 
         from services.ai import analysis as ai_service
@@ -63,12 +52,11 @@ async def submit_prompt_async(
         code = meta.get("code", "")
         if not code:
             if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text("AI couldn't generate code. Try rephrasing."),
-                    bgcolor=ft.Colors.ERROR,
+                show_snack(
+                    page,
+                    "AI couldn't generate code. Try rephrasing.",
+                    error=True,
                 )
-                page.snack_bar.open = True
-                page.update()
             return
 
         cell = add_cell_fn("code", code)
@@ -79,94 +67,21 @@ async def submit_prompt_async(
         set_is_generating(False)
         await run_cell_fn(cell["id"])
 
-        # Auto-correct / Self-Healing on error
-        max_healing_retries = 2
-        for attempt in range(max_healing_retries):
-            if cell.get("outputs"):
-                last_out = cell["outputs"][-1]
-                if last_out.get("output_type") == "error":
-                    if page:
-                        page.snack_bar = ft.SnackBar(
-                            ft.Text(
-                                f"🩹 AI self-healing code execution (attempt {attempt + 1})..."
-                            ),
-                            duration=2500,
-                        )
-                        page.snack_bar.open = True
-                        page.update()
-                    error_text = "\n".join(last_out.get("traceback", []))
-                    current_bad_code = cell.get("source", code)
-                    corrected = await ai_service.generate_corrected_code(
-                        prompt, current_bad_code, error_text, schema_json
-                    )
-                    if corrected and corrected != current_bad_code:
-                        cell["source"] = corrected
-                        cell["outputs"] = []
-                        if on_cell_change:
-                            on_cell_change()
-                        await run_cell_fn(cell["id"])
-                    else:
-                        break
-                else:
-                    break
-
-        # Concurrently generate AI executive narration and follow-up suggestions for the completed cell
-        async def _narrate_and_suggest(c):
-            import asyncio
-
-            try:
-                stdout_str = ""
-                result_str = ""
-                for out in c.get("outputs", []):
-                    otype = out.get("output_type") or out.get("type", "")
-                    if otype == "stream":
-                        stdout_str += out.get("text", "")
-                    elif otype in ("execute_result", "display_data"):
-                        data = out.get("data", {})
-                        if "text/plain" in data:
-                            result_str += str(data["text/plain"])
-
-                init_desc = schema_json.get("description", "Dataset Analysis")
-                res_data = {
-                    "prompt": prompt,
-                    "code": code,
-                    "stdout": stdout_str,
-                    "result": result_str,
-                }
-
-                ctx = "\n".join(
-                    cell_item.get("prompt") or cell_item.get("source", "")[:80]
-                    for cell_item in state.notebook_cells
-                    if cell_item.get("type") == "code"
-                )
-
-                desc_task = ai_service.describe_result(init_desc, res_data)
-                sugg_task = ai_service.suggest(
-                    schema_json,
-                    initial_description=init_desc,
-                    analysis_context=ctx,
-                )
-                narration, suggs = await asyncio.gather(desc_task, sugg_task)
-                c["narration"] = narration
-                c["suggestions"] = suggs
-                state.suggestions = suggs
-                on_cell_change()
-            except Exception as ex:
-                logger.warning("Post-execution narration & suggestion failed: %s", ex)
-
-        if page:
-            page.run_task(_narrate_and_suggest, cell)
-
+    except asyncio.CancelledError:
+        logger.info("Prompt submission cancelled (app closing)")
+        return
     except Exception as e:
         logger.error("Prompt submission failed: %s", e)
         if page:
-            page.snack_bar = ft.SnackBar(
-                ft.Text(f"Error: {e}"), bgcolor=ft.Colors.ERROR
-            )
-            page.snack_bar.open = True
-            page.update()
+            try:
+                show_snack(page, f"Error: {e}", error=True)
+            except Exception:
+                pass
     finally:
-        set_is_generating(False)
+        try:
+            set_is_generating(False)
+        except Exception:
+            pass
 
 
 async def pick_and_upload_file_async(
@@ -178,19 +93,25 @@ async def pick_and_upload_file_async(
     fetch_suggestions_fn,
     set_schema_json,
     set_is_generating,
+    on_autopilot_trigger=None,
 ):
     """FilePicker dialog, upload to Colab /content/, generate load code, and extract schema."""
-    if not session_name:
+    active_sess = state.active_session_name or session_name
+    if not active_sess and colab:
+        try:
+            sessions = await colab.list_sessions()
+            if sessions and isinstance(sessions, list):
+                active_sess = sessions[0]["name"]
+                state.active_session_name = active_sess
+        except Exception:
+            pass
+
+    picker = getattr(page, "file_picker", None)
+    if not picker:
         if page:
-            page.snack_bar = ft.SnackBar(
-                ft.Text("Connect to Colab first"),
-                bgcolor=ft.Colors.ERROR,
-            )
-            page.snack_bar.open = True
-            page.update()
+            show_snack(page, "File picker service not available", error=True)
         return
 
-    picker = page.file_picker
     result = await picker.pick_files(
         allow_multiple=False,
         dialog_title="Select Dataset or Scientific Data File",
@@ -206,141 +127,43 @@ async def pick_and_upload_file_async(
             cache_file(state.active_project_id, picked.path)
         state.active_project_dataset = picked.name
 
-        # File size formatted string
-        size_str = ""
         try:
-            sz = os.path.getsize(picked.path)
-            if sz < 1024:
-                size_str = f" ({sz} B)"
-            elif sz < 1024 * 1024:
-                size_str = f" ({sz / 1024:.1f} KB)"
-            else:
-                size_str = f" ({sz / (1024 * 1024):.1f} MB)"
-        except Exception:
-            pass
-
-        prog_bar = ft.ProgressBar(
-            color=ft.Colors.PRIMARY,
-            bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY),
-        )
-        status_text = ft.Text(
-            f"Uploading to Colab VM…{size_str}",
-            size=tokens.FONT_XS,
-            color=ft.Colors.ON_SURFACE_VARIANT,
-        )
-        upload_dialog = ft.AlertDialog(
-            modal=True,
-            title=ft.Text(
-                f"Importing {picked.name}",
-                size=tokens.FONT_MD,
-                weight=ft.FontWeight.W_600,
-            ),
-            content=ft.Column(
-                [prog_bar, status_text],
-                spacing=tokens.SPACE_SM,
-                tight=True,
-            ),
-        )
-        if page:
-            page.show_dialog(upload_dialog)
-
-        def _update_status(msg: str):
-            status_text.value = msg
-            try:
-                status_text.update()
-            except Exception:
-                pass
-
-        try:
-            from services.file_service import suggest_load_code, validate_file
+            from services.file_service import validate_file
 
             validate_file(picked.path)
-
-            remote_path = f"/content/{picked.name}"
-            await colab.upload(picked.path, remote_path, session_name)
-
-            _update_status("Loading dataset & generating preview…")
-            load_code = suggest_load_code(picked.name)
-            cell = add_cell_fn("code", load_code)
-            cell["prompt"] = f"Load Dataset: {picked.name}"
-            set_is_generating(False)
-            await run_cell_fn(cell["id"])
-
-            _update_status("Analyzing schema & dataset statistics…")
-            schema_code = (
-                "import json\n"
-                "try:\n"
-                "  _schema = {\n"
-                '    "shape": list(df.shape),\n'
-                '    "columns": list(df.columns),\n'
-                '    "dtypes": {str(k): str(v) for k, v in df.dtypes.items()},\n'
-                '    "summary": df.describe(include="all").to_dict(),\n'
-                '    "head": df.head(5).to_dict(orient="records"),\n'
-                '    "nulls": df.isnull().sum().to_dict(),\n'
-                "  }\n"
-                "  print('__SPANINSIGHT_SCHEMA_START__')\n"
-                "  print(json.dumps(_schema, default=str))\n"
-                "  print('__SPANINSIGHT_SCHEMA_END__')\n"
-                "except Exception:\n"
-                "  pass\n"
-            )
-            res = await colab.exec_code(schema_code, session_name=session_name)
-
-            # Parse schema from silent execution output
-            raw_text = ""
-            if res and isinstance(res, dict):
-                for out in res.get("outputs", []):
-                    if out.get("output_type") == "stream":
-                        raw_text += out.get("text", "")
-                    elif out.get("data", {}).get("text/plain"):
-                        raw_text += str(out["data"]["text/plain"])
-
-            if "__SPANINSIGHT_SCHEMA_START__" in raw_text:
-                json_part = (
-                    raw_text.split("__SPANINSIGHT_SCHEMA_START__")[1]
-                    .split("__SPANINSIGHT_SCHEMA_END__")[0]
-                    .strip()
-                )
-                try:
-                    parsed = json.loads(json_part)
-                    from services.ai import analysis as ai_service
-
-                    _update_status("Compiling AI intelligence & suggestions…")
-                    try:
-                        desc = await ai_service.describe_dataset(parsed)
-                        parsed["description"] = desc
-                        suggs = await ai_service.suggest(
-                            parsed, initial_description=desc
-                        )
-                        parsed["suggestions"] = suggs
-                        state.suggestions = suggs
-                    except Exception as ai_err:
-                        logger.warning(
-                            "Initial AI schema description failed: %s", ai_err
-                        )
-                    set_schema_json(parsed)
-                except Exception as ex:
-                    logger.warning("Schema parsing failed: %s", ex)
-
-            if page:
-                page.snack_bar = ft.SnackBar(ft.Text(f"✅ Ready: {picked.name}"))
-                page.snack_bar.open = True
-
         except Exception as e:
-            logger.error("File import failed: %s", e)
-            if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text(f"Import failed: {e}"),
-                    bgcolor=ft.Colors.ERROR,
-                )
-                page.snack_bar.open = True
-        finally:
-            if page:
-                try:
-                    page.pop_dialog()
-                except Exception:
-                    pass
+            logger.error("File validation failed: %s", e)
             set_is_generating(False)
+            if page:
+                show_snack(page, f"Import failed: {e}", error=True)
+            return
+
+        active_sess = state.active_session_name or session_name
+        if not active_sess:
+            if page:
+                show_snack(page, "Connect to Colab first", error=True)
+            set_is_generating(False)
+            return
+
+        from screens.analysis.dataset_ops import run_dataset_import_dialog
+
+        ok = await run_dataset_import_dialog(
+            page,
+            colab,
+            active_sess,
+            picked.name,
+            add_cell_fn,
+            run_cell_fn,
+            set_schema_json,
+            set_is_generating=set_is_generating,
+            upload_local_path=picked.path,
+        )
+
+        if ok and getattr(state, "autopilot_enabled", False):
+            state.autopilot_enabled = False
+            schema = state.active_schema_json or {}
+            if on_autopilot_trigger and schema:
+                on_autopilot_trigger(schema)
 
 
 async def run_autopilot_async(
@@ -352,26 +175,17 @@ async def run_autopilot_async(
     run_cell_fn,
 ):
     """Execute autonomous multi-step analytical autopilot."""
-    if not session_name or not schema_json:
+    active_sess = state.active_session_name or session_name
+    if not active_sess or not schema_json:
         if page:
-            page.snack_bar = ft.SnackBar(
-                ft.Text("Upload a dataset first to use Autopilot"),
-                bgcolor=ft.Colors.ERROR,
-            )
-            page.snack_bar.open = True
-            page.update()
+            show_snack(page, "Upload a dataset first to use Autopilot", error=True)
         return
 
     if credits:
         ok, _ = await credits.spend(COST_AUTOPILOT)
         if not ok:
             if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text("Not enough credits for Autopilot"),
-                    bgcolor=ft.Colors.ERROR,
-                )
-                page.snack_bar.open = True
-                page.update()
+                show_snack(page, "Not enough credits for Autopilot", error=True)
             return
 
     state.autopilot_running = True
@@ -384,7 +198,8 @@ async def run_autopilot_async(
     history = []
     try:
         initial_desc = await ai_service.describe_dataset(schema_json)
-    except Exception:
+    except Exception as ex:
+        logger.warning("Autopilot initial describe failed: %s", ex)
         initial_desc = "Dataset loaded"
 
     for step in range(max_steps):
@@ -420,6 +235,8 @@ async def run_autopilot_async(
             cell["thought"] = meta.get("thought", "")
             cell["thought_duration"] = meta.get("duration", 0.0)
             cell["model"] = meta.get("model", "")
+            # Autopilot narrates each step itself — skip per-cell post-exec AI
+            cell["skip_narration"] = True
             await run_cell_fn(cell["id"])
 
             success = True
@@ -435,8 +252,14 @@ async def run_autopilot_async(
                             initial_desc,
                             {"prompt": prompt, "code": code},
                         )
-                    except Exception:
+                    except Exception as desc_ex:
+                        logger.warning("Autopilot step narration failed: %s", desc_ex)
                         desc = "Completed"
+
+            if success:
+                cell["pinned"] = True
+                if desc:
+                    cell["narration"] = desc
 
             history.append(
                 {
@@ -455,6 +278,32 @@ async def run_autopilot_async(
                     "description": str(e),
                 }
             )
+
+    # ── Auto-compile into a ready-to-share Report ────────────────
+    pinned_blocks = [c for c in state.notebook_cells if c.get("pinned")]
+    if pinned_blocks:
+        try:
+            from services.report_service import ReportService
+            from services.storage_service import StorageService
+
+            storage = StorageService(page)
+            rep_service = ReportService(storage)
+            dataset_label = state.active_project_dataset or "Dataset"
+            rep_title = f"Autopilot: {dataset_label}"
+            await rep_service.create_report(
+                title=rep_title,
+                dataset_name=dataset_label,
+                blocks=pinned_blocks,
+                description=f"Automated intelligence report generated by SpanInsight Autopilot for {dataset_label}.",
+            )
+            if page:
+                show_snack(
+                    page,
+                    "📊 Autopilot completed! Report compiled in Reports tab.",
+                    success=True,
+                )
+        except Exception as rep_err:
+            logger.warning("Autopilot report compilation error: %s", rep_err)
 
     state.autopilot_running = False
     state.autopilot_progress = ""

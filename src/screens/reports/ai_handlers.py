@@ -54,11 +54,9 @@ async def on_ai_edit(page: ft.Page, ui_state, action: str, text: str):
         except Exception as e:
             logger.error("AI edit failed: %s", e)
             if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text(f"AI edit failed: {e}"), duration=3000
-                )
-                page.snack_bar.open = True
-                page.update()
+                from core.utils import show_snack
+
+                show_snack(page, f"AI edit failed: {e}", error=True, duration=3000)
         ui_state.is_ai_editing["value"] = False
         ui_state.rebuild()
 

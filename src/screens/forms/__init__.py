@@ -8,7 +8,6 @@ import logging
 import flet as ft
 
 from components.form_editor import build_form_editor
-from core import theme
 from screens.forms.dashboard_view import build_forms_dashboard
 from screens.forms.detail_view import build_form_detail_view
 from screens.forms.handlers import (
@@ -67,11 +66,9 @@ def FormsScreen() -> ft.Control:
 
     def _show_error(msg: str):
         if page:
-            page.snack_bar = ft.SnackBar(
-                ft.Text(msg, color=ft.Colors.WHITE), bgcolor=theme.ERROR, duration=4000
-            )
-            page.snack_bar.open = True
-            page.update()
+            from core.utils import show_snack
+
+            show_snack(page, msg, error=True, duration=4000)
 
     def _load_forms():
         return load_forms_async(
@@ -193,22 +190,23 @@ def FormsScreen() -> ft.Control:
 
         url = f"{FORMS_PUBLIC_BASE_URL}/{form_id}"
         try:
-            await ft.Clipboard().set(url)
+            await page.clipboard.set(url)
         except Exception:
             pass
         if page:
-            page.snack_bar = ft.SnackBar(ft.Text("Link copied!"), duration=2000)
-            page.snack_bar.open = True
-            page.update()
+            from core.utils import show_snack
+
+            show_snack(page, "Link copied!", success=True, duration=2000)
 
     async def on_renew_form(form_id: str):
         new_exp = await forms_service.renew_form(form_id, state.active_project_id)
         if new_exp:
             if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text(f"Extended to {new_exp[:10]}"), duration=3000
+                from core.utils import show_snack
+
+                show_snack(
+                    page, f"Extended to {new_exp[:10]}", success=True, duration=3000
                 )
-                page.snack_bar.open = True
             await _load_forms()
         else:
             _show_error("Failed to renew.")

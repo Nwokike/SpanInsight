@@ -1,79 +1,63 @@
-"""File transfer and manipulation actions: upload, download, delete, new folder, load in analysis."""
+"""Action handlers for Files screen: upload, download, delete, new folder, and inspector."""
 
 from __future__ import annotations
 
 import logging
-import os
 import posixpath
 
 import flet as ft
 
 from core import tokens
 from core.state import state
-from screens.files.components import fmt_size
+from core.utils import show_snack
 
 logger = logging.getLogger("FilesActions")
 
 
 async def handle_upload_async(
-    page: ft.Page, colab, current_path: str, active_session: str, fetch_listing_fn
+    page: ft.Page,
+    colab,
+    current_path: str,
+    active_session: str,
+    fetch_listing_fn,
 ):
-    """FilePicker dialog to upload multiple local files to Colab filesystem."""
+    """Opens FilePicker, uploads selected file to Colab current_path with progress."""
     picker = page.file_picker
-    results = await picker.pick_files(
-        allow_multiple=True,
-        dialog_title="Select files to upload",
+    result = await picker.pick_files(
+        allow_multiple=False,
+        dialog_title="Upload File to Colab Session",
     )
-    if not results:
+    if not result or not result[0].path:
         return
 
-    for picked in results:
-        if not picked.path:
-            continue
-        remote_path = posixpath.join(current_path, picked.name)
+    picked = result[0]
+    remote_path = posixpath.join(current_path, picked.name)
 
-        status_text = ft.Text(
-            f"Uploading {picked.name}…",
-            size=tokens.FONT_XS,
-            color=ft.Colors.ON_SURFACE_VARIANT,
-        )
-        prog = ft.ProgressBar(
-            color=ft.Colors.PRIMARY,
-            bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY),
-        )
-        dlg = ft.AlertDialog(
-            title=ft.Text(
-                f"Uploading {picked.name}",
-                size=tokens.FONT_MD,
-                weight=ft.FontWeight.W_600,
-            ),
-            content=ft.Column(
-                [prog, status_text],
-                spacing=tokens.SPACE_SM,
-                tight=True,
-            ),
-        )
-        page.show_dialog(dlg)
+    prog = ft.ProgressBar(width=280)
+    status_text = ft.Text(f"Uploading {picked.name}…", size=tokens.FONT_SM)
+    dlg = ft.AlertDialog(
+        title=ft.Text("Uploading File", size=tokens.FONT_MD),
+        content=ft.Column(
+            controls=[prog, status_text],
+            spacing=tokens.SPACE_SM,
+            tight=True,
+        ),
+    )
+    page.show_dialog(dlg)
 
+    try:
+        await colab.upload(picked.path, remote_path, active_session)
+        if page:
+            show_snack(page, f"✅ Uploaded {picked.name}", success=True)
+    except Exception as ex:
+        logger.error("Upload failed: %s", ex)
+        if page:
+            show_snack(page, f"❌ Upload failed: {ex}", error=True)
+    finally:
         try:
-            await colab.upload(picked.path, remote_path, active_session)
-            if page:
-                page.snack_bar = ft.SnackBar(ft.Text(f"✅ Uploaded {picked.name}"))
-                page.snack_bar.open = True
-        except Exception as ex:
-            logger.error("Upload failed: %s", ex)
-            if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text(f"❌ Upload failed: {ex}"),
-                    bgcolor=ft.Colors.ERROR,
-                )
-                page.snack_bar.open = True
-        finally:
-            dlg.open = False
-            try:
-                page.update()
-            except Exception:
-                pass
+            page.pop_dialog()
+        except Exception:
+            pass
 
     await fetch_listing_fn(current_path)
 
@@ -83,80 +67,47 @@ async def handle_download_async(
     colab,
     current_path: str,
     selected_files: set[str],
-    listing: list[dict],
     active_session: str,
+    listing: list[dict],
     clear_selection_fn,
 ):
-    """Download selected files/directories locally (with mobile fallback)."""
+    """Downloads selected files/folders to local storage."""
     if not selected_files:
         return
 
-    for item_name in list(selected_files):
-        item = next((i for i in listing if i["name"] == item_name), None)
-        if not item:
-            continue
+    from services.storage_service import _STORAGE_DIR
 
-        is_dir = item.get("type") == "directory"
-        size_str = fmt_size(item.get("size"))
-        default_name = f"{item_name}.zip" if is_dir else item_name
+    downloads_dir = _STORAGE_DIR / "downloads"
+    downloads_dir.mkdir(parents=True, exist_ok=True)
 
-        if page.platform.is_mobile():
-            dl_dir = "/storage/emulated/0/Download"
-            if not os.path.exists(dl_dir):
-                dl_dir = os.path.join(os.path.expanduser("~"), "Downloads")
-            os.makedirs(dl_dir, exist_ok=True)
-            name_part, ext_part = os.path.splitext(default_name)
-            counter = 1
-            local_path = os.path.join(dl_dir, default_name)
-            while os.path.exists(local_path):
-                local_path = os.path.join(dl_dir, f"{name_part} ({counter}){ext_part}")
-                counter += 1
-        else:
-            try:
-                local_path = await page.file_picker.save_file(
-                    dialog_title=f"Save {default_name}",
-                    file_name=default_name,
-                )
-            except ValueError:
-                dl_dir = os.path.join(os.path.expanduser("~"), "Downloads")
-                os.makedirs(dl_dir, exist_ok=True)
-                local_path = os.path.join(dl_dir, default_name)
+    items_by_name = {item.get("name"): item for item in listing}
 
-        if not local_path:
-            continue
+    for name in list(selected_files):
+        item_info = items_by_name.get(name, {})
+        is_dir = item_info.get("is_dir", False)
+        remote_path = posixpath.join(current_path, name)
+        local_path = str(downloads_dir / name)
 
-        status_text = ft.Text(
-            f"Downloading…{(' ' + size_str) if size_str else ''}",
-            size=tokens.FONT_XS,
-            color=ft.Colors.ON_SURFACE_VARIANT,
-        )
-        prog = ft.ProgressBar(
-            color=ft.Colors.PRIMARY,
-            bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY),
-        )
+        prog = ft.ProgressBar(width=280)
+        status_text = ft.Text(f"Downloading {name}…", size=tokens.FONT_SM)
         dlg = ft.AlertDialog(
-            title=ft.Text(
-                f"Downloading {default_name}",
-                size=tokens.FONT_MD,
-                weight=ft.FontWeight.W_600,
-            ),
+            title=ft.Text("Downloading", size=tokens.FONT_MD),
             content=ft.Column(
-                [prog, status_text],
+                controls=[prog, status_text],
                 spacing=tokens.SPACE_SM,
                 tight=True,
             ),
         )
         page.show_dialog(dlg)
 
-        def _on_status(msg: str, _st=status_text):
-            _st.value = msg
+        def _on_status(msg: str, st=status_text):
+            st.value = msg
             try:
-                _st.update()
+                page.update()
             except Exception:
                 pass
 
         try:
-            remote_path = posixpath.join(current_path, item_name)
             if is_dir:
                 await colab.download_folder(
                     remote_path, local_path, active_session, on_status=_on_status
@@ -164,20 +115,14 @@ async def handle_download_async(
             else:
                 await colab.download(remote_path, local_path, active_session)
             if page:
-                page.snack_bar = ft.SnackBar(ft.Text(f"✅ Saved to {local_path}"))
-                page.snack_bar.open = True
+                show_snack(page, f"✅ Saved to {local_path}", success=True)
         except Exception as ex:
             logger.error("Download failed: %s", ex)
             if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text(f"❌ Download failed: {ex}"),
-                    bgcolor=ft.Colors.ERROR,
-                )
-                page.snack_bar.open = True
+                show_snack(page, f"❌ Download failed: {ex}", error=True)
         finally:
-            dlg.open = False
             try:
-                page.update()
+                page.pop_dialog()
             except Exception:
                 pass
 
@@ -185,49 +130,12 @@ async def handle_download_async(
 
 
 def handle_load_in_analysis(page: ft.Page, current_path: str, item_name: str):
-    """Generate appropriate pandas read_* Python code and navigate to Analysis tab."""
+    """Hand the remote file to the Analysis import pipeline (load + schema + AI)."""
     remote_path = posixpath.join(current_path, item_name)
-    _, ext = os.path.splitext(item_name.lower())
-
-    if ext in (".csv", ".tsv"):
-        code = (
-            f"import pandas as pd\n"
-            f"df = pd.read_csv('{remote_path}')\n"
-            f"print(f'Loaded {{len(df):,}} rows × {{len(df.columns)}} columns')\n"
-            f"df.head()"
-        )
-    elif ext in (".xlsx", ".xls"):
-        code = (
-            f"import pandas as pd\n"
-            f"df = pd.read_excel('{remote_path}')\n"
-            f"print(f'Loaded {{len(df):,}} rows × {{len(df.columns)}} columns')\n"
-            f"df.head()"
-        )
-    elif ext == ".json":
-        code = (
-            f"import pandas as pd\n"
-            f"df = pd.read_json('{remote_path}')\n"
-            f"print(f'Loaded {{len(df):,}} rows × {{len(df.columns)}} columns')\n"
-            f"df.head()"
-        )
-    elif ext == ".parquet":
-        code = (
-            f"import pandas as pd\n"
-            f"df = pd.read_parquet('{remote_path}')\n"
-            f"print(f'Loaded {{len(df):,}} rows × {{len(df.columns)}} columns')\n"
-            f"df.head()"
-        )
-    else:
-        code = f"import pandas as pd\ndf = pd.read_csv('{remote_path}')\ndf.head()"
-
-    state.add_cell("code", code)
+    state.pending_dataset_load = {"remote_path": remote_path, "name": item_name}
     state.current_tab = 1
     if page:
-        page.snack_bar = ft.SnackBar(
-            ft.Text(f"Added load cell for {item_name} → Analysis")
-        )
-        page.snack_bar.open = True
-        page.update()
+        show_snack(page, f"Loading {item_name} → Analysis")
 
 
 async def do_delete_async(
@@ -251,15 +159,12 @@ async def do_delete_async(
 
     if failed:
         if page:
-            page.snack_bar = ft.SnackBar(
-                ft.Text(f"❌ Some deletes failed:\n{chr(10).join(failed)}"),
-                bgcolor=ft.Colors.ERROR,
+            show_snack(
+                page, f"❌ Some deletes failed:\n{chr(10).join(failed)}", error=True
             )
-            page.snack_bar.open = True
     else:
         if page:
-            page.snack_bar = ft.SnackBar(ft.Text(f"✅ Deleted {len(names)} item(s)"))
-            page.snack_bar.open = True
+            show_snack(page, f"✅ Deleted {len(names)} item(s)", success=True)
 
     clear_selection_fn()
     await fetch_listing_fn(current_path)
@@ -285,12 +190,10 @@ async def do_new_folder_async(
             active_session,
         )
         if page:
-            page.snack_bar = ft.SnackBar(ft.Text(f"✅ Created: {name}"))
-            page.snack_bar.open = True
+            show_snack(page, f"✅ Created: {name}", success=True)
     except Exception as ex:
         if page:
-            page.snack_bar = ft.SnackBar(ft.Text(f"❌ {ex}"), bgcolor=ft.Colors.ERROR)
-            page.snack_bar.open = True
+            show_snack(page, f"❌ {ex}", error=True)
     await fetch_listing_fn(current_path)
 
 
@@ -301,26 +204,45 @@ async def handle_inspect_dataset_async(
     item_name: str,
     active_session: str,
 ):
-    """Fetches fast schema snapshot and opens Dataset Inspector modal."""
+    """Fetches fast schema snapshot and opens Dataset Inspector modal for any supported format."""
     import json
 
     from components.dataset_inspector import show_dataset_inspector
+    from services.file_service import suggest_load_code
 
-    full_path = posixpath.join(current_path, item_name)
-    inspect_code = (
-        f"import json, pandas as pd\n"
-        f"try:\n"
-        f"    df = pd.read_csv('{full_path}') if '{item_name}'.endswith('.csv') else pd.read_excel('{full_path}')\n"
-        f"    schema = {{\n"
-        f"        'shape': [int(df.shape[0]), int(df.shape[1])],\n"
-        f"        'columns': list(df.columns),\n"
-        f"        'dtypes': {{str(col): str(dtype) for col, dtype in df.dtypes.items()}},\n"
-        f"        'summary': {{str(col): {{'mean': float(df[col].mean()), 'min': float(df[col].min()), 'max': float(df[col].max())}} for col in df.select_dtypes(include=['number']).columns[:10]}}\n"
-        f"    }}\n"
-        f"    print('__SCHEMA_START__' + json.dumps(schema) + '__SCHEMA_END__')\n"
-        f"except Exception as e:\n"
-        f"    print('ERR:' + str(e))\n"
-    )
+    load_stmt = suggest_load_code(item_name)
+    inspect_code = f"""
+import json, math
+def _si_clean(v):
+    if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+        return None
+    if isinstance(v, dict):
+        return {{str(k): _si_clean(x) for k, x in v.items()}}
+    if isinstance(v, (list, tuple)):
+        return [_si_clean(x) for x in v]
+    return v
+
+try:
+{load_stmt}
+    _cand = globals().get('df', globals().get('result', globals().get('data')))
+    if _cand is not None and hasattr(_cand, 'columns') and hasattr(_cand, 'dtypes'):
+        try:
+            _raw_sum = _cand.describe(include='all').to_dict()
+        except Exception:
+            _raw_sum = _cand.describe().to_dict()
+        schema = {{
+            'shape': [int(_cand.shape[0]), int(_cand.shape[1])],
+            'columns': [str(c) for c in _cand.columns],
+            'dtypes': {{str(col): str(dtype) for col, dtype in _cand.dtypes.items()}},
+            'nulls': {{str(k): int(v) for k, v in _cand.isnull().sum().items()}},
+            'summary': _si_clean(_raw_sum),
+        }}
+        print('__SCHEMA_START__' + json.dumps(schema, default=str) + '__SCHEMA_END__')
+    else:
+        print('ERR:No tabular dataframe extracted')
+except Exception as e:
+    print('ERR:' + str(e))
+"""
     try:
         res = await colab.exec_code(inspect_code, active_session)
         text = res.get("text", "")

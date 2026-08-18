@@ -9,8 +9,13 @@ Each cell is either Code or Markdown. Code cells have:
 
 import flet as ft
 
-from components.notebook_cell.actions import copy_code, copy_output, make_actions_row
-from components.notebook_cell.output import parse_outputs_to_controls
+from components.notebook_cell.actions import (
+    copy_code,
+    copy_output,
+    fix_with_ai,
+    make_actions_row,
+)
+from components.notebook_cell.output import parse_cell_outputs
 from core import theme, tokens
 
 
@@ -62,12 +67,18 @@ def build_notebook_cell(
         code_val = editor_ref.current.value if editor_ref.current else source
         await copy_code(page, code_val)
 
+    async def _fix_ai_task(e=None):
+        await fix_with_ai(page, cell, on_change)
+
     def _make_actions():
+        last_out = outputs[-1] if outputs else {}
+        has_error = (last_out.get("output_type") or last_out.get("type", "")) == "error"
         return make_actions_row(
             on_move_up=on_move_up,
             on_move_down=on_move_down,
             on_delete=on_delete,
             on_copy=lambda: page.run_task(_copy_code_task),
+            on_fix=(lambda: page.run_task(_fix_ai_task)) if has_error else None,
         )
 
     # ── Markdown Cell ────────────────────────────────────────────
@@ -208,7 +219,7 @@ def build_notebook_cell(
         ), refs
 
     # ── Code Cell ────────────────────────────────────────────────
-    output_controls = parse_outputs_to_controls(outputs)
+    output_controls = parse_cell_outputs(cell)
 
     # Dynamic height calculation based on raw text lines
     raw_output_text = ""

@@ -133,19 +133,18 @@ def AppShell() -> Control:
                     )
                     state.colab_connected = True
                     if page:
-                        page.snack_bar = ft.SnackBar(
-                            ft.Text(f"Connected to Colab ({state.session_hardware})")
+                        from core.utils import show_snack
+
+                        show_snack(
+                            page,
+                            f"Connected to Colab ({state.session_hardware})",
+                            success=True,
                         )
-                        page.snack_bar.open = True
-                        page.update()
             except Exception as ex:
                 if page:
-                    page.snack_bar = ft.SnackBar(
-                        ft.Text(f"Colab connect failed: {ex}"),
-                        bgcolor=ft.Colors.ERROR,
-                    )
-                    page.snack_bar.open = True
-                    page.update()
+                    from core.utils import show_snack
+
+                    show_snack(page, f"Colab connect failed: {ex}", error=True)
             finally:
                 set_is_connecting(False)
 
@@ -243,10 +242,37 @@ def AppShell() -> Control:
             alignment=ft.Alignment.CENTER_LEFT,
         )
 
+        # Global busy chip — generation/autopilot can take 1-2+ minutes at the
+        # gateway; users navigating other tabs must still SEE that it's running.
+        ai_busy = state.is_analyzing or state.autopilot_running
+        ai_busy_chip = ft.Container(
+            content=ft.Row(
+                [
+                    ft.ProgressRing(width=12, height=12, stroke_width=2),
+                    ft.Text(
+                        "AI working…",
+                        size=tokens.FONT_XS,
+                        weight=ft.FontWeight.W_600,
+                        color=ft.Colors.PRIMARY,
+                    ),
+                ],
+                spacing=tokens.SPACE_XXS,
+                tight=True,
+            ),
+            padding=ft.Padding(
+                tokens.SPACE_SM, tokens.SPACE_XXS, tokens.SPACE_SM, tokens.SPACE_XXS
+            ),
+            border_radius=tokens.RADIUS_SM,
+            bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PRIMARY),
+            tooltip="An AI task is running — results appear on the Analysis tab",
+            margin=ft.Margin(0, 0, 4, 0),
+            visible=ai_busy,
+        )
+
         page.views[0].appbar = ft.AppBar(
             leading=page_tag,
             leading_width=120,
-            actions=[colab_indicator, theme_btn, badge_container],
+            actions=[ai_busy_chip, colab_indicator, theme_btn, badge_container],
             center_title=True,
             bgcolor=ft.Colors.TRANSPARENT,
         )
@@ -269,6 +295,8 @@ def AppShell() -> Control:
             state.session_hardware,
             state.credits_remaining,
             state.theme_mode,
+            state.is_analyzing,
+            state.autopilot_running,
             is_connecting,
         ],
     )

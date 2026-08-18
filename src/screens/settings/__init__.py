@@ -110,51 +110,71 @@ def SettingsScreen() -> ft.Control:
 
     # ── Colab account ───────────────────────────────────────────
     async def _sign_out(e=None):
+        from core.constants import STORAGE_ONBOARDING_DONE
+
         if services.colab:
             await services.colab.clear_token()
+        if services.storage:
+            await services.storage.delete(STORAGE_ONBOARDING_DONE)
+        state.onboarding_done = False
         state.is_authenticated = False
         state.colab_authenticated = False
         state.auth_email = ""
         state.colab_connected = False
+        state.active_session_name = ""
         state.active_sessions = []
+        state.current_tab = 0
         if page:
-            page.open(
-                ft.SnackBar(
-                    content=ft.Text("Signed out from Google"),
-                    duration=2000,
-                )
-            )
+            from core.utils import show_snack
+
+            show_snack(page, "Signed out successfully", duration=2000)
+            page.update()
 
     async def _check_auth(e=None):
         if not services.colab:
             return
-        result = await services.colab.check_auth()
+        if page:
+            from core.utils import show_snack
+
+            show_snack(page, "Checking Google account…", duration=1500)
+        try:
+            result = await services.colab.check_auth()
+        except Exception as ex:
+            logger.warning("Auth check failed: %s", ex)
+            if page:
+                from core.utils import show_snack
+
+                show_snack(page, f"Auth check failed: {ex}", error=True, duration=3000)
+            return
         if result.get("authenticated"):
             state.is_authenticated = True
             state.auth_email = result.get("email", "")
             if page:
-                page.open(
-                    ft.SnackBar(
-                        content=ft.Text(f"✓ Authenticated as {state.auth_email}"),
-                        duration=3000,
-                    )
+                from core.utils import show_snack
+
+                show_snack(
+                    page,
+                    f"✓ Authenticated as {state.auth_email}",
+                    success=True,
+                    duration=3000,
                 )
         else:
             state.is_authenticated = False
             state.auth_email = ""
             if page:
-                page.open(
-                    ft.SnackBar(
-                        content=ft.Text("Not authenticated — sign in from onboarding"),
-                        duration=3000,
-                    )
+                from core.utils import show_snack
+
+                show_snack(
+                    page,
+                    "Not authenticated — sign in from onboarding",
+                    duration=3000,
                 )
 
     # ── Clear data ──────────────────────────────────────────────
     async def on_clear_data(e=None):
         def close_dialog(confirmed):
             async def _close(ev):
-                page.close(dialog)
+                page.pop_dialog()
                 if confirmed and services.storage:
                     for key in [
                         STORAGE_UUID,
@@ -167,12 +187,9 @@ def SettingsScreen() -> ft.Control:
                         except Exception:
                             pass
                     state.user_uuid = ""
-                    page.open(
-                        ft.SnackBar(
-                            content=ft.Text("Local settings cleared."),
-                            duration=2000,
-                        )
-                    )
+                    from core.utils import show_snack
+
+                    show_snack(page, "Local settings cleared.", duration=2000)
 
             return _close
 
@@ -191,7 +208,7 @@ def SettingsScreen() -> ft.Control:
                 ),
             ],
         )
-        page.open(dialog)
+        page.show_dialog(dialog)
 
     # ── Debug terminal ──────────────────────────────────────────
     async def _run_debug(e=None):

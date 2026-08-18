@@ -50,14 +50,15 @@ class ProjectService:
             return None
         try:
             project = json.loads(raw)
-            # Ensure notebook cells are present from notebook.ipynb if available
-            nb_raw = await self._storage.get(f"notebook_{project_id}")
-            if nb_raw:
-                try:
-                    nb_dict = json.loads(nb_raw)
-                    project["notebook_cells"] = ipynb_to_cells(nb_dict)
-                except Exception:
-                    pass
+            # Only reconstruct from notebook.ipynb if project record has no notebook_cells
+            if not project.get("notebook_cells"):
+                nb_raw = await self._storage.get(f"notebook_{project_id}")
+                if nb_raw:
+                    try:
+                        nb_dict = json.loads(nb_raw)
+                        project["notebook_cells"] = ipynb_to_cells(nb_dict)
+                    except Exception:
+                        pass
             return project
         except Exception as e:
             logger.error("Failed to load project %s: %s", project_id, e)

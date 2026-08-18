@@ -7,70 +7,31 @@ import flet as ft
 from core import theme, tokens
 
 
-def build_agent_progress_pill(
+@ft.component
+def AgentProgressPill(
     is_active: bool,
     stage_text: str = "",
     duration: float = 0.0,
     steps: list[dict] | None = None,
-    is_expanded: bool = False,
-    on_toggle_expand=None,
-) -> ft.Control | None:
-    """Renders a compact, non-intrusive 32px live AI agent progress pill."""
+) -> ft.Control:
+    """Renders a compact, non-intrusive 32px live AI agent progress pill with expandable timeline."""
     if not is_active:
-        return None
+        return ft.Container(visible=False)
 
-    display_stage = stage_text or "AI Agent reasoning in progress..."
+    is_expanded, set_is_expanded = ft.use_state(False)
+
+    display_stage = stage_text or "Reasoning & analyzing data…"
     duration_str = f" ({duration:.1f}s)" if duration > 0 else ""
 
-    header_content = ft.Row(
-        controls=[
-            ft.Row(
-                [
-                    ft.ProgressRing(
-                        width=14,
-                        height=14,
-                        stroke_width=2,
-                        color=theme.PRIMARY,
-                    ),
-                    ft.Text(
-                        f"{display_stage}{duration_str}",
-                        size=tokens.FONT_XS,
-                        weight=ft.FontWeight.W_500,
-                        color=ft.Colors.ON_SURFACE,
-                    ),
-                ],
-                spacing=tokens.SPACE_XS,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            ft.IconButton(
-                icon=ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
-                if is_expanded
-                else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED,
-                icon_size=16,
-                icon_color=ft.Colors.ON_SURFACE_VARIANT,
-                style=ft.ButtonStyle(padding=0),
-                tooltip="Toggle timeline",
-                on_click=lambda _: on_toggle_expand() if on_toggle_expand else None,
-            ),
-        ],
-        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-    )
+    if not steps:
+        steps = [
+            {"text": "Inspect dataset schema & statistics", "status": "done"},
+            {"text": "Deep reasoning & analytical formulation", "status": "running"},
+            {"text": "Generate specialized Python code", "status": "pending"},
+            {"text": "Execute in Colab kernel & render visuals", "status": "pending"},
+        ]
 
-    pill_container = ft.Container(
-        content=header_content,
-        height=32,
-        padding=ft.Padding(tokens.SPACE_SM, 0, tokens.SPACE_XS, 0),
-        bgcolor=ft.Colors.with_opacity(0.08, theme.PRIMARY),
-        border_radius=tokens.RADIUS_SM,
-        border=ft.Border.all(1, ft.Colors.with_opacity(0.2, theme.PRIMARY)),
-        margin=ft.Margin(0, tokens.SPACE_XXS, 0, tokens.SPACE_XXS),
-    )
-
-    if not is_expanded or not steps:
-        return pill_container
-
-    # Render expanded timeline
+    # Render timeline steps
     step_rows = []
     for s in steps:
         stype = s.get("status", "done")
@@ -112,21 +73,86 @@ def build_agent_progress_pill(
             )
         )
 
-    timeline_box = ft.Container(
+    timeline_drawer = ft.Container(
+        content=ft.Column(step_rows, spacing=tokens.SPACE_XXS),
+        padding=tokens.SPACE_SM,
+        bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.BLACK),
+        border_radius=tokens.RADIUS_SM,
+        border=ft.Border.all(1, ft.Colors.with_opacity(0.1, ft.Colors.ON_SURFACE)),
+        visible=is_expanded,
+    )
+
+    def _toggle(_):
+        set_is_expanded(not is_expanded)
+
+    header_content = ft.Row(
+        controls=[
+            ft.Row(
+                [
+                    ft.ProgressRing(
+                        width=14,
+                        height=14,
+                        stroke_width=2,
+                        color=theme.PRIMARY,
+                    ),
+                    ft.Text(
+                        f"{display_stage}{duration_str}",
+                        size=tokens.FONT_XS,
+                        weight=ft.FontWeight.W_500,
+                        color=ft.Colors.ON_SURFACE,
+                    ),
+                ],
+                spacing=tokens.SPACE_XS,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            ft.IconButton(
+                icon=ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
+                if is_expanded
+                else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED,
+                icon_size=16,
+                icon_color=ft.Colors.ON_SURFACE_VARIANT,
+                style=ft.ButtonStyle(padding=0),
+                tooltip="Toggle timeline",
+                on_click=_toggle,
+            ),
+        ],
+        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+    )
+
+    pill_container = ft.Container(
+        content=header_content,
+        height=32,
+        padding=ft.Padding(tokens.SPACE_SM, 0, tokens.SPACE_XS, 0),
+        bgcolor=ft.Colors.with_opacity(0.08, theme.PRIMARY),
+        border_radius=tokens.RADIUS_SM,
+        border=ft.Border.all(1, ft.Colors.with_opacity(0.2, theme.PRIMARY)),
+        margin=ft.Margin(0, tokens.SPACE_XXS, 0, tokens.SPACE_XXS),
+        on_click=_toggle,
+    )
+
+    return ft.Container(
         content=ft.Column(
             [
                 pill_container,
-                ft.Container(
-                    content=ft.Column(step_rows, spacing=tokens.SPACE_XXS),
-                    padding=tokens.SPACE_SM,
-                    bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.BLACK),
-                    border_radius=tokens.RADIUS_SM,
-                    border=ft.Border.all(
-                        1, ft.Colors.with_opacity(0.1, ft.Colors.ON_SURFACE)
-                    ),
-                ),
+                timeline_drawer,
             ],
             spacing=tokens.SPACE_XXS,
         )
     )
-    return timeline_box
+
+
+def build_agent_progress_pill(
+    is_active: bool,
+    stage_text: str = "",
+    duration: float = 0.0,
+    steps: list[dict] | None = None,
+    is_expanded: bool = False,
+    on_toggle_expand=None,
+) -> ft.Control:
+    return AgentProgressPill(
+        is_active=is_active,
+        stage_text=stage_text,
+        duration=duration,
+        steps=steps,
+    )

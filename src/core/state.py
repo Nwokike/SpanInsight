@@ -39,6 +39,8 @@ class AppState:
     # ── Notebook ────────────────────────────────────────────────────
     notebook_cells: list[dict] = None  # [{id, type, source, outputs, is_running}]
     current_notebook_name: str = ""
+    # Cross-screen handoff: Files → Analysis full import pipeline
+    pending_dataset_load: dict = None  # {"remote_path": str, "name": str}
 
     # ── Credits ─────────────────────────────────────────────────────
     credits_remaining: int = 50
@@ -59,6 +61,7 @@ class AppState:
 
     # ── AI / Analysis State ─────────────────────────────────────────
     suggestions: list[dict] = None
+    active_schema_json: dict = None  # synced by AnalysisScreen for cross-module use
     analysis_blocks: list = None
     is_analyzing: bool = False
     autopilot_enabled: bool = True
@@ -90,12 +93,14 @@ class AppState:
 
     def __init__(self):
         self.notebook_cells = []
+        self.pending_dataset_load = None
         self.active_sessions = []
         self.forms = []
         self.projects_list = []
         self.user_projects = {}
         self.user_reports = []
         self.suggestions = []
+        self.active_schema_json = {}
         self.analysis_blocks = []
         self.current_df_columns = []
         self.file_listing = []

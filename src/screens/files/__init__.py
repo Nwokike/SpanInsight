@@ -57,10 +57,9 @@ def FilesScreen() -> Control:
         except Exception as e:
             logger.error("ls failed: %s", e)
             if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text(f"Failed: {e}"), bgcolor=ft.Colors.ERROR
-                )
-                page.snack_bar.open = True
+                from core.utils import show_snack
+
+                show_snack(page, f"Failed: {e}", error=True)
         finally:
             set_is_loading(False)
             if page:

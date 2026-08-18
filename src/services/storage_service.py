@@ -71,24 +71,27 @@ class StorageService:
 
     def _load_web(self) -> None:
         try:
-            cs = self._page.client_storage
-            raw_s = cs.get("spaninsight_settings")
-            raw_h = cs.get("spaninsight_history")
-            self._settings = json.loads(raw_s) if raw_s else {}
-            self._history = json.loads(raw_h) if raw_h else {}
+            if self._page:
+                # Synchronous fallback: split local files if available, otherwise initialized empty
+                self._load()
         except Exception as e:
             logger.warning("StorageService._load_web failed: %s", e)
             self._settings, self._history = {}, {}
 
     def _save_now_web(self) -> None:
         try:
-            cs = self._page.client_storage
-            if self._settings_dirty:
-                cs.set("spaninsight_settings", json.dumps(self._settings))
-                self._settings_dirty = False
-            if self._history_dirty:
-                cs.set("spaninsight_history", json.dumps(self._history))
-                self._history_dirty = False
+            if self._page:
+                prefs = ft.SharedPreferences()
+                if self._settings_dirty:
+                    self._page.run_task(
+                        prefs.set, "spaninsight_settings", json.dumps(self._settings)
+                    )
+                    self._settings_dirty = False
+                if self._history_dirty:
+                    self._page.run_task(
+                        prefs.set, "spaninsight_history", json.dumps(self._history)
+                    )
+                    self._history_dirty = False
             self._last_write = time.monotonic()
         except Exception as e:
             logger.warning("StorageService._save_now_web failed: %s", e)

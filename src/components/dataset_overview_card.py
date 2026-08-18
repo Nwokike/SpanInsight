@@ -1,12 +1,14 @@
 """DatasetOverviewCard — SpanInsight's rich initial dataset overview component.
 
-Renders dataset shape, memory footprint, column type chips, statistical summary
-table (df.describe()), and initial AI starter suggestions.
+Renders dataset shape, memory footprint, column type chips with null badges,
+dynamic statistical summary table (df.describe() with categorical + numeric support),
+and initial AI starter suggestions.
 """
 
 from __future__ import annotations
 
 import logging
+import math
 from collections.abc import Callable
 
 import flet as ft
@@ -28,6 +30,7 @@ def build_dataset_overview_card(
     """Build a rich glassmorphic Dataset Overview Card."""
     columns = schema.get("columns", [])
     dtypes = schema.get("dtypes", {})
+    nulls = schema.get("nulls", {})
     shape = schema.get("shape", [0, 0])
     summary_stats = schema.get("summary", {})
 
@@ -37,10 +40,37 @@ def build_dataset_overview_card(
     controls: list[ft.Control] = []
 
     # ── 1. Header ──────────────────────────────────────────────
+    header_right_controls: list[ft.Control] = [
+        ft.Container(
+            content=ft.Text(
+                f"{rows_count:,} rows × {cols_count} cols",
+                size=tokens.FONT_XS,
+                weight=ft.FontWeight.W_600,
+                color=theme.PRIMARY,
+            ),
+            padding=ft.Padding(
+                tokens.SPACE_SM, tokens.SPACE_XXS, tokens.SPACE_SM, tokens.SPACE_XXS
+            ),
+            bgcolor=ft.Colors.with_opacity(0.12, theme.PRIMARY),
+            border_radius=tokens.RADIUS_SM,
+        )
+    ]
+
+    if on_view_raw_data:
+        header_right_controls.append(
+            ft.IconButton(
+                icon=ft.Icons.TABLE_VIEW_ROUNDED,
+                tooltip="Preview Raw Data",
+                icon_size=18,
+                icon_color=theme.ACCENT,
+                on_click=lambda _: on_view_raw_data(),
+            )
+        )
+
     header_row = ft.Row(
-        [
+        controls=[
             ft.Row(
-                [
+                controls=[
                     ft.Icon(
                         ft.Icons.DATASET_ROUNDED,
                         size=20,
@@ -54,18 +84,10 @@ def build_dataset_overview_card(
                 ],
                 spacing=tokens.SPACE_XS,
             ),
-            ft.Container(
-                content=ft.Text(
-                    f"{rows_count:,} rows × {cols_count} cols",
-                    size=tokens.FONT_XS,
-                    weight=ft.FontWeight.W_600,
-                    color=theme.PRIMARY,
-                ),
-                padding=ft.Padding(
-                    tokens.SPACE_SM, tokens.SPACE_XXS, tokens.SPACE_SM, tokens.SPACE_XXS
-                ),
-                bgcolor=ft.Colors.with_opacity(0.12, theme.PRIMARY),
-                border_radius=tokens.RADIUS_SM,
+            ft.Row(
+                controls=header_right_controls,
+                spacing=tokens.SPACE_XS,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
         ],
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -74,15 +96,20 @@ def build_dataset_overview_card(
     controls.append(header_row)
 
     # ── 2. AI Dataset Description Callout ───────────────────────
-    if initial_description:
+    if initial_description and initial_description.strip():
+        is_fallback = "unavailable" in initial_description.lower()
+        callout_color = ft.Colors.ON_SURFACE_VARIANT if is_fallback else theme.ACCENT
+        callout_icon = (
+            ft.Icons.INFO_OUTLINE_ROUNDED if is_fallback else ft.Icons.LIGHTBULB_ROUNDED
+        )
         controls.append(
             ft.Container(
                 content=ft.Row(
-                    [
+                    controls=[
                         ft.Icon(
-                            ft.Icons.LIGHTBULB_ROUNDED,
+                            callout_icon,
                             size=18,
-                            color=theme.ACCENT,
+                            color=callout_color,
                         ),
                         ft.Text(
                             initial_description,
@@ -96,36 +123,60 @@ def build_dataset_overview_card(
                     spacing=tokens.SPACE_SM,
                 ),
                 padding=tokens.SPACE_MD,
-                bgcolor=ft.Colors.with_opacity(0.08, theme.ACCENT),
+                bgcolor=ft.Colors.with_opacity(0.08, callout_color),
                 border_radius=tokens.RADIUS_MD,
-                border=ft.Border.all(1, ft.Colors.with_opacity(0.2, theme.ACCENT)),
+                border=ft.Border.all(1, ft.Colors.with_opacity(0.2, callout_color)),
             )
         )
 
-    # ── 3. Column Chips ─────────────────────────────────────────
+    # ── 3. Column Chips with Null Indicators ────────────────────
     if columns:
         col_chips = []
-        for col in columns[:20]:
-            dtype = dtypes.get(col, "object")
+        for col in columns[:30]:
+            col_str = str(col)
+            dtype = dtypes.get(col_str, "object")
+            null_ct = nulls.get(col_str, 0)
+            null_badge_color = theme.ERROR if null_ct > 0 else theme.SUCCESS
+            null_badge_txt = f"{null_ct:,} null" if null_ct > 0 else "0 null"
+
             col_chips.append(
                 ft.Container(
                     content=ft.Column(
-                        [
+                        controls=[
                             ft.Text(
-                                str(col)[:18],
+                                col_str[:18],
                                 size=tokens.FONT_XS,
                                 weight=ft.FontWeight.W_600,
                                 max_lines=1,
                                 overflow=ft.TextOverflow.ELLIPSIS,
                             ),
-                            ft.Text(
-                                str(dtype),
-                                size=9,
-                                color=ft.Colors.ON_SURFACE_VARIANT,
+                            ft.Row(
+                                controls=[
+                                    ft.Text(
+                                        str(dtype),
+                                        size=9,
+                                        color=ft.Colors.ON_SURFACE_VARIANT,
+                                    ),
+                                    ft.Container(
+                                        content=ft.Text(
+                                            null_badge_txt,
+                                            size=8,
+                                            weight=ft.FontWeight.W_700,
+                                            color=null_badge_color,
+                                        ),
+                                        padding=ft.Padding(3, 0, 3, 0),
+                                        bgcolor=ft.Colors.with_opacity(
+                                            0.12, null_badge_color
+                                        ),
+                                        border_radius=tokens.RADIUS_SM,
+                                    ),
+                                ],
+                                spacing=4,
+                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
                             ),
                         ],
-                        spacing=1,
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=2,
+                        horizontal_alignment=ft.CrossAxisAlignment.START,
                     ),
                     padding=ft.Padding(
                         tokens.SPACE_XS,
@@ -135,14 +186,17 @@ def build_dataset_overview_card(
                     ),
                     border_radius=tokens.RADIUS_SM,
                     bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.ON_SURFACE),
+                    border=ft.Border.all(
+                        1, ft.Colors.with_opacity(0.1, ft.Colors.ON_SURFACE)
+                    ),
                 )
             )
 
         controls.append(
             ft.Column(
-                [
+                controls=[
                     ft.Row(
-                        [
+                        controls=[
                             ft.Icon(
                                 ft.Icons.VIEW_COLUMN_ROUNDED,
                                 size=14,
@@ -156,13 +210,13 @@ def build_dataset_overview_card(
                         ],
                         spacing=tokens.SPACE_XXS,
                     ),
-                    ft.Row(col_chips, wrap=True, spacing=tokens.SPACE_XXS),
+                    ft.Row(controls=col_chips, wrap=True, spacing=tokens.SPACE_XXS),
                 ],
                 spacing=tokens.SPACE_XS,
             )
         )
 
-    # ── 4. Statistical Summary (df.describe()) ──────────────────
+    # ── 4. Dynamic Statistical Summary (df.describe()) ──────────
     if summary_stats and isinstance(summary_stats, dict):
         try:
             stat_cols = [
@@ -174,19 +228,47 @@ def build_dataset_overview_card(
                     )
                 )
             ]
-            feature_names = list(summary_stats.keys())[:15]
+            total_features = len(summary_stats)
+            feature_names = list(summary_stats.keys())[:30]
+            hidden_cols = total_features - len(feature_names)
             for col_name in feature_names:
                 stat_cols.append(
                     ft.DataColumn(
                         ft.Text(
-                            str(col_name)[:12],
+                            str(col_name)[:14],
                             size=tokens.FONT_XS,
                             weight=ft.FontWeight.W_600,
                         )
                     )
                 )
 
-            stat_keys = ["count", "mean", "std", "min", "25%", "50%", "75%", "max"]
+            # Discover all statistic keys across features (both numerical and categorical)
+            ordered_standard = [
+                "count",
+                "unique",
+                "top",
+                "freq",
+                "mean",
+                "std",
+                "min",
+                "25%",
+                "50%",
+                "75%",
+                "max",
+            ]
+            discovered_keys: list[str] = []
+            for fn in feature_names:
+                feat_dict = summary_stats.get(fn)
+                if isinstance(feat_dict, dict):
+                    for k in feat_dict:
+                        k_str = str(k)
+                        if k_str not in discovered_keys:
+                            discovered_keys.append(k_str)
+
+            stat_keys = [k for k in ordered_standard if k in discovered_keys] + [
+                k for k in discovered_keys if k not in ordered_standard
+            ]
+
             stat_rows = []
             for sk in stat_keys:
                 cells = [
@@ -201,16 +283,28 @@ def build_dataset_overview_card(
                 ]
                 has_any_val = False
                 for fn in feature_names:
-                    val = summary_stats[fn].get(sk, "")
+                    feat_dict = summary_stats.get(fn, {})
+                    val = feat_dict.get(sk, "") if isinstance(feat_dict, dict) else ""
                     if val != "" and val is not None:
-                        has_any_val = True
-                        val_str = (
-                            f"{float(val):.2f}"
-                            if isinstance(val, (int, float))
-                            else str(val)
-                        )
+                        if isinstance(val, float):
+                            if math.isnan(val) or math.isinf(val):
+                                val_str = "—"
+                            elif val == int(val):
+                                val_str = f"{int(val):,}"
+                                has_any_val = True
+                            else:
+                                val_str = f"{val:.2f}"
+                                has_any_val = True
+                        elif isinstance(val, int):
+                            val_str = f"{val:,}"
+                            has_any_val = True
+                        else:
+                            s = str(val)
+                            val_str = s[:16] + "…" if len(s) > 16 else s
+                            has_any_val = True
                     else:
                         val_str = "—"
+
                     cells.append(
                         ft.DataCell(
                             ft.Text(
@@ -226,16 +320,21 @@ def build_dataset_overview_card(
             if stat_rows:
                 controls.append(
                     ft.Column(
-                        [
+                        controls=[
                             ft.Row(
-                                [
+                                controls=[
                                     ft.Icon(
                                         ft.Icons.QUERY_STATS_ROUNDED,
                                         size=14,
                                         color=theme.PRIMARY,
                                     ),
                                     ft.Text(
-                                        "Statistical Summary (df.describe)",
+                                        "Statistical Summary (df.describe)"
+                                        + (
+                                            f" · +{hidden_cols} more cols"
+                                            if hidden_cols > 0
+                                            else ""
+                                        ),
                                         size=tokens.FONT_XS,
                                         weight=ft.FontWeight.W_600,
                                     ),
@@ -244,7 +343,7 @@ def build_dataset_overview_card(
                             ),
                             ft.Container(
                                 content=ft.Row(
-                                    [
+                                    controls=[
                                         ft.DataTable(
                                             columns=stat_cols,
                                             rows=stat_rows,
@@ -276,42 +375,6 @@ def build_dataset_overview_card(
                 )
         except Exception as ex:
             logger.debug("Summary stats table generation error: %s", ex)
-
-    # ── 5. Starter Suggestion Chips ─────────────────────────────
-    if suggestions and on_suggestion_selected:
-        chips = []
-        for s in suggestions[:5]:
-            if isinstance(s, dict):
-                label_txt = s.get("label") or s.get("prompt", "")
-                icon_txt = s.get("icon", "✨")
-                prompt_val = s.get("prompt") or label_txt
-                disp = f"{icon_txt} {label_txt}".strip()
-            else:
-                prompt_val = str(s)
-                disp = str(s)
-
-            chips.append(
-                ft.Chip(
-                    label=ft.Text(disp, size=tokens.FONT_XS),
-                    tooltip=prompt_val,
-                    on_click=lambda _, p=prompt_val: on_suggestion_selected(p),
-                )
-            )
-
-        controls.append(
-            ft.Column(
-                [
-                    ft.Text(
-                        "Recommended analyses to explore:",
-                        size=tokens.FONT_XS,
-                        weight=ft.FontWeight.W_600,
-                        color=ft.Colors.ON_SURFACE_VARIANT,
-                    ),
-                    ft.Row(chips, wrap=True, spacing=tokens.SPACE_XXS),
-                ],
-                spacing=tokens.SPACE_XXS,
-            )
-        )
 
     return ft.Container(
         content=ft.Column(controls=controls, spacing=tokens.SPACE_SM),

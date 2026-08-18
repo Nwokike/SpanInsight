@@ -80,6 +80,65 @@ def _try_parse_dataframe_text(text: str) -> ft.Control | None:
     return None
 
 
+def _shimmer_bar(width=None, height=12, radius=6, expand=False) -> ft.Shimmer:
+    """One shimmering skeleton bar (v1-style loading placeholder)."""
+    return ft.Shimmer(
+        content=ft.Container(
+            width=width,
+            height=height,
+            border_radius=radius,
+            expand=expand,
+            bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.ON_SURFACE),
+        ),
+        # Shimmer validation requires gradient OR both base+highlight colors
+        base_color=ft.Colors.with_opacity(0.06, ft.Colors.ON_SURFACE),
+        highlight_color=ft.Colors.with_opacity(0.22, ft.Colors.ON_SURFACE),
+        period=1200,
+    )
+
+
+def _build_running_skeleton() -> ft.Control:
+    """Shimmering placeholder shown while a cell executes on Colab."""
+    header = ft.Row(
+        [
+            ft.ProgressRing(width=14, height=14, stroke_width=2),
+            ft.Text(
+                "Executing analysis code…",
+                size=tokens.FONT_XS,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+            ),
+        ],
+        spacing=tokens.SPACE_SM,
+    )
+    skeleton = ft.Column(
+        [
+            ft.Row(
+                [
+                    _shimmer_bar(120, 16, 8),
+                    _shimmer_bar(70, 16, 8),
+                ],
+                spacing=tokens.SPACE_SM,
+                alignment=ft.MainAxisAlignment.END,
+            ),
+            _shimmer_bar(height=14),
+            _shimmer_bar(height=14),
+            _shimmer_bar(width=180, height=14),
+            ft.Row(
+                [
+                    _shimmer_bar(110, 110, tokens.RADIUS_MD),
+                    _shimmer_bar(expand=True, height=110, radius=tokens.RADIUS_MD),
+                ],
+                spacing=tokens.SPACE_SM,
+            ),
+        ],
+        spacing=8,
+    )
+    return ft.Container(
+        content=ft.Column([header, skeleton], spacing=tokens.SPACE_SM),
+        padding=tokens.SPACE_SM,
+    )
+
+
 def build_insight_card(
     block: dict,
     index: int = 0,
@@ -158,24 +217,9 @@ def build_insight_card(
     if thought_ctrl:
         controls.append(thought_ctrl)
 
-    # ── 2. Running Spinner ────────────────────────────────────────
+    # ── 2. Running Skeleton (v1 parity: shimmer placeholder) ─────
     if is_running:
-        controls.append(
-            ft.Container(
-                content=ft.Row(
-                    [
-                        ft.ProgressRing(width=16, height=16, stroke_width=2),
-                        ft.Text(
-                            "Executing analysis code...",
-                            size=tokens.FONT_XS,
-                            color=ft.Colors.ON_SURFACE_VARIANT,
-                        ),
-                    ],
-                    spacing=tokens.SPACE_SM,
-                ),
-                padding=tokens.SPACE_SM,
-            )
-        )
+        controls.append(_build_running_skeleton())
         return ft.Container(
             content=ft.Column(controls=controls, spacing=tokens.SPACE_SM),
             padding=tokens.SPACE_MD,
@@ -213,8 +257,29 @@ def build_insight_card(
                     text_plain += ("\n" if text_plain else "") + tp
                     raw_output_full += ("\n" if raw_output_full else "") + tp
 
+    # Structured result → native chart / styled table / metric tiles (with
+    # static-PNG fallback baked into the chart branch of the visualizer)
+    structured = block.get("structured_result")
+    structured_vis = None
+    if isinstance(structured, dict) and structured.get("type"):
+        try:
+            from components.report_editor.visualizers import (
+                build_serialized_result_visualizer,
+            )
+
+            structured_vis = build_serialized_result_visualizer(structured)
+        except Exception as ex:
+            logger.warning("Structured result render failed: %s", ex)
+
+    # If a native chart already rendered, don't duplicate the cell's PNG figure
+    native_chart_rendered = bool(
+        isinstance(structured, dict)
+        and structured.get("type") == "chart"
+        and structured_vis is not None
+    )
+
     # Render Chart if available
-    if figure_png:
+    if figure_png and not native_chart_rendered:
         try:
             b64_str = (
                 base64.b64encode(figure_png).decode("utf-8")
@@ -223,7 +288,7 @@ def build_insight_card(
             )
             chart_container = ft.Container(
                 content=ft.Image(
-                    src_base64=b64_str,
+                    src=b64_str,
                     fit=ft.BoxFit.CONTAIN,
                     border_radius=tokens.RADIUS_MD,
                 ),
@@ -235,25 +300,32 @@ def build_insight_card(
             logger.error("Chart render error: %s", ex)
 
     # Render Structured Table or Rich Text Output
-    result_val = block.get("result") or text_plain or raw_output_full
-    if result_val and str(result_val).strip() and str(result_val).strip() != "None":
-        val_str = str(result_val).strip()
-        table_ctrl = _try_parse_dataframe_text(val_str)
-        if table_ctrl:
-            controls.append(table_ctrl)
-        else:
-            parsed_ctrl = parse_ansi_to_flet_text(val_str, default_size=tokens.FONT_SM)
-            controls.append(
-                ft.Container(
-                    content=parsed_ctrl,
-                    padding=tokens.SPACE_SM,
-                    bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ON_SURFACE),
-                    border_radius=tokens.RADIUS_SM,
-                    border=ft.Border.all(
-                        1, ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE)
-                    ),
+    if structured_vis is not None:
+        # Native visualizer already covers tables/metrics/charts — the raw
+        # text repr stays available in the Raw Output drawer below.
+        controls.append(structured_vis)
+    else:
+        result_val = block.get("result") or text_plain or raw_output_full
+        if result_val and str(result_val).strip() and str(result_val).strip() != "None":
+            val_str = str(result_val).strip()
+            table_ctrl = _try_parse_dataframe_text(val_str)
+            if table_ctrl:
+                controls.append(table_ctrl)
+            else:
+                parsed_ctrl = parse_ansi_to_flet_text(
+                    val_str, default_size=tokens.FONT_SM
                 )
-            )
+                controls.append(
+                    ft.Container(
+                        content=parsed_ctrl,
+                        padding=tokens.SPACE_SM,
+                        bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ON_SURFACE),
+                        border_radius=tokens.RADIUS_SM,
+                        border=ft.Border.all(
+                            1, ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE)
+                        ),
+                    )
+                )
 
     # ── 4. Collapsible Raw Output Drawer (Complete Telemetry) ────
     if raw_output_full:
@@ -267,15 +339,10 @@ def build_insight_card(
             if not page:
                 return
             try:
-                if hasattr(page, "set_clipboard_async"):
-                    await page.set_clipboard_async(raw_output_full)
-                else:
-                    await ft.Clipboard().set(raw_output_full)
-                page.snack_bar = ft.SnackBar(
-                    ft.Text("📋 Raw output copied to clipboard!"), duration=2000
-                )
-                page.snack_bar.open = True
-                page.update()
+                await ft.Clipboard().set(raw_output_full)
+                from core.utils import show_snack
+
+                show_snack(page, "📋 Raw output copied to clipboard!", duration=2000)
             except Exception as ex:
                 logger.error("Copy raw output failed: %s", ex)
 

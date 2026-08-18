@@ -35,11 +35,11 @@ def build_project_switcher(
                 if on_project_selected:
                     on_project_selected(full_proj)
                 if page:
-                    page.snack_bar = ft.SnackBar(
-                        ft.Text(f"Switched to {full_proj.get('name')}")
+                    from core.utils import show_snack
+
+                    show_snack(
+                        page, f"Switched to {full_proj.get('name')}", success=True
                     )
-                    page.snack_bar.open = True
-                    page.update()
 
         async def _create_new(_=None):
             _close()

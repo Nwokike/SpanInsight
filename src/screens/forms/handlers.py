@@ -132,12 +132,16 @@ async def publish_form_async(
             set_draft_schema([])
             set_prompt_text("")
             if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text(f"Published! Link: {result['url']}"), duration=5000
+                from core.utils import show_snack
+
+                show_snack(
+                    page,
+                    f"Published! Link: {result['url']}",
+                    success=True,
+                    duration=5000,
                 )
-                page.snack_bar.open = True
             try:
-                await ft.Clipboard().set(result["url"])
+                await page.clipboard.set(result["url"])
             except Exception:
                 pass
             await load_forms_fn()
@@ -163,7 +167,7 @@ async def delete_form_async(
 
     def _close_dlg(_=None):
         if page:
-            page.close_dialog()
+            page.pop_dialog()
 
     async def _confirm_delete(_=None):
         _close_dlg()
@@ -173,10 +177,11 @@ async def delete_form_async(
             set_active_form(None)
             set_mode("dashboard")
             if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text("Form permanently deleted from project."), duration=2000
+                from core.utils import show_snack
+
+                show_snack(
+                    page, "Form permanently deleted from project.", duration=2000
                 )
-                page.snack_bar.open = True
             await load_forms_fn()
         else:
             set_is_loading(False)
@@ -204,7 +209,7 @@ async def delete_form_async(
         ],
     )
     if page:
-        page.open_dialog(confirm_dlg)
+        page.show_dialog(confirm_dlg)
 
 
 async def download_csv_async(form: dict, page: ft.Page, show_error):
@@ -235,8 +240,8 @@ async def download_csv_async(form: dict, page: ft.Page, show_error):
 
             await asyncio.to_thread(_write)
             if page:
-                page.snack_bar = ft.SnackBar(ft.Text("Saved!"), duration=3000)
-                page.snack_bar.open = True
-                page.update()
+                from core.utils import show_snack
+
+                show_snack(page, "Saved!", success=True, duration=3000)
         except Exception as err:
             show_error(f"Save failed: {err}")

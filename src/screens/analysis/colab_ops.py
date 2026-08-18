@@ -8,13 +8,13 @@ import time
 
 import flet as ft
 
-from components.notebook_cell.output import parse_outputs_to_controls
+from components.notebook_cell.output import parse_cell_outputs
 from core.constants import COLAB_DEFAULT_TIMEOUT
 from core.state import state
 
 logger = logging.getLogger("ColabHandlers")
 
-_OUTPUT_THROTTLE_MS = 150
+_OUTPUT_THROTTLE_MS = 400
 
 
 async def connect_colab_async(colab, page: ft.Page, set_is_connecting):
@@ -24,12 +24,9 @@ async def connect_colab_async(colab, page: ft.Page, set_is_connecting):
         auth_result = await colab.check_auth()
         if not auth_result.get("authenticated"):
             if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text("Please sign in to Google Colab first."),
-                    action="Sign In",
-                )
-                page.snack_bar.open = True
-                page.update()
+                from core.utils import show_snack
+
+                show_snack(page, "Please sign in to Google Colab first.", error=True)
             set_is_connecting(False)
             return
 
@@ -59,23 +56,72 @@ async def connect_colab_async(colab, page: ft.Page, set_is_connecting):
         await setup_colab_environment(colab, state.active_session_name, is_dark=is_dark)
 
         if page:
-            page.snack_bar = ft.SnackBar(
-                ft.Text(f"Connected — {state.session_hardware} session ready")
+            from core.utils import show_snack
+
+            show_snack(
+                page,
+                f"Connected — {state.session_hardware} session ready",
+                success=True,
             )
-            page.snack_bar.open = True
-            page.update()
 
     except Exception as e:
         logger.error("Connect failed: %s", e)
         if page:
-            page.snack_bar = ft.SnackBar(
-                ft.Text(f"Connection failed: {e}"),
-                bgcolor=ft.Colors.ERROR,
-            )
-            page.snack_bar.open = True
-            page.update()
+            from core.utils import show_snack
+
+            show_snack(page, f"Connection failed: {e}", error=True)
     finally:
         set_is_connecting(False)
+
+
+def _session_expired(msg: str) -> bool:
+    lowered = msg.lower()
+    return (
+        "session has expired" in lowered
+        or "session lost" in lowered
+        or "kernel not found" in lowered
+        or "timeout waiting for output" in lowered
+        or "404" in lowered
+        or "nameerror: name 'df' is not defined" in lowered
+    )
+
+
+async def ensure_active_dataset_in_kernel(colab, session_name: str) -> bool:
+    """Ensure the active project's dataset is present on Colab and loaded into df."""
+    if not session_name or not state.active_project_id:
+        return False
+    from services.dataset_cache import get_cached_path
+    from services.file_service import suggest_load_code
+
+    cached = get_cached_path(state.active_project_id)
+    if cached and cached.exists():
+        remote_path = f"/content/{cached.name}"
+        try:
+            await colab.upload(str(cached), remote_path, session_name)
+            load_code = suggest_load_code(cached.name)
+            await colab.exec_code(load_code, session_name=session_name)
+            return True
+        except Exception as ex:
+            logger.warning("Failed to hydrate dataset in kernel: %s", ex)
+            return False
+    return False
+
+
+async def recover_session_async(colab, page: ft.Page | None) -> None:
+    """Rebuild a dead Colab session: new session → theme bootstrap → cached dataset reload.
+
+    Called automatically when the kernel reports the session expired (404), so
+    the user never silently loses their work — the locally cached dataset is
+    re-uploaded and analysis continues on the fresh session.
+    """
+    await connect_colab_async(colab, page, lambda _v: None)
+    if not state.active_session_name:
+        raise RuntimeError("No active session after reconnect")
+
+    try:
+        await ensure_active_dataset_in_kernel(colab, state.active_session_name)
+    except Exception as ex:
+        logger.warning("Cached dataset reload after reconnect failed: %s", ex)
 
 
 async def run_cell_async(
@@ -115,11 +161,13 @@ async def run_cell_async(
         cell["outputs"] = list(output_buffer)
         _flush_output_to_ui(refs, cell, page)
 
-    try:
+    async def _exec_once(sess: str):
+        # Re-read source on every attempt so healed code actually executes
+        src = cell.get("source", "").strip()
         timeout = state.default_timeout or COLAB_DEFAULT_TIMEOUT
         outputs = await colab.exec_code(
-            code=code,
-            session_name=session_name,
+            code=src,
+            session_name=sess,
             timeout=float(timeout),
             on_output=_on_output,
         )
@@ -128,6 +176,107 @@ async def run_cell_async(
         elif output_buffer:
             cell["outputs"] = list(output_buffer)
 
+    def _has_error() -> bool:
+        from services.colab.output_utils import extract_error_text
+
+        return extract_error_text(cell.get("outputs", [])) is not None
+
+    async def _serialize_result(sess: str):
+        """Silently serialize the kernel's `result` variable for native rendering."""
+        try:
+            from services.colab.introspection import (
+                build_result_serialization_code,
+                parse_result_from_outputs,
+            )
+
+            ser_outputs = await colab.exec_code(
+                build_result_serialization_code(),
+                session_name=sess,
+                timeout=15.0,
+            )
+            structured = parse_result_from_outputs(ser_outputs)
+            if structured:
+                cell["structured_result"] = structured
+        except Exception as ser_ex:
+            logger.warning("Structured result serialization failed: %s", ser_ex)
+
+    async def _heal(attempt: int) -> bool:
+        """Ask the AI to correct the failing code (v1-style self-healing).
+
+        Only cells that carry a `prompt` (AI-generated, dataset loads, autopilot
+        steps) are auto-healed — hand-written Expert-mode code is never touched.
+        """
+        from services.ai import analysis as ai_service
+        from services.colab.output_utils import extract_error_text
+
+        if page:
+            from core.utils import show_snack
+
+            show_snack(
+                page,
+                f"🩹 AI self-healing code execution (attempt {attempt + 1})…",
+                duration=2500,
+            )
+
+        error_text = extract_error_text(cell.get("outputs", [])) or "Unknown error"
+        try:
+            corrected = await ai_service.generate_corrected_code(
+                cell.get("prompt", ""),
+                cell.get("source", ""),
+                error_text,
+                state.active_schema_json or {},
+            )
+        except Exception as ex:
+            logger.warning("Self-healing code generation failed: %s", ex)
+            return False
+        if not corrected or corrected == cell.get("source", ""):
+            return False
+        cell["source"] = corrected
+        cell["outputs"] = []
+        cell["heal_count"] = attempt + 1
+        on_cell_change()
+        return True
+
+    MAX_HEAL_ATTEMPTS = 2
+    can_heal = bool(cell.get("prompt"))
+    session_used = session_name
+
+    try:
+        heal_attempt = 0
+        while True:
+            try:
+                await _exec_once(session_used)
+            except Exception as exec_err:
+                if not _session_expired(str(exec_err)):
+                    raise
+                # Session died on Colab — auto-recover and retry instead of
+                # dumping a dead-session traceback on the user.
+                cell["outputs"] = [
+                    {
+                        "output_type": "stream",
+                        "name": "stdout",
+                        "text": "🔄 Colab session reset — re-attaching workspace & dataset…",
+                    }
+                ]
+                _flush_output_to_ui(refs, cell, page)
+                await recover_session_async(colab, page)
+                session_used = state.active_session_name or session_name
+                await ensure_active_dataset_in_kernel(colab, session_used)
+                cell["outputs"] = []
+                output_buffer.clear()
+                continue  # session recovery does not consume a heal attempt
+
+            if not _has_error():
+                await _serialize_result(session_used)
+                cell["failed"] = False
+                break
+            if not can_heal or heal_attempt >= MAX_HEAL_ATTEMPTS:
+                cell["failed"] = True
+                break
+            if not await _heal(heal_attempt):
+                cell["failed"] = True
+                break
+            heal_attempt += 1
     except Exception as e:
         err_msg = str(e)
         cell["outputs"] = [
@@ -138,14 +287,25 @@ async def run_cell_async(
                 "traceback": [err_msg],
             }
         ]
+        cell["failed"] = True
     finally:
         cell["is_running"] = False
-        set_is_executing(False)
-        _flush_output_to_ui(refs, cell, page)
-        on_cell_change()
+        try:
+            set_is_executing(False)
+        except Exception:
+            # Session may already be destroyed during app shutdown
+            pass
+        try:
+            _flush_output_to_ui(refs, cell, page)
+            on_cell_change()
+        except Exception:
+            pass
 
         # Trigger AI executive narration and suggestions for the completed cell
-        if cell.get("outputs"):
+        # (load cells and autopilot steps run their own describe flows).
+        # Double-guarded: the flag OR the load-prompt prefix skips narration.
+        is_load_cell = str(cell.get("prompt", "")).startswith("Load Dataset:")
+        if cell.get("outputs") and not cell.get("skip_narration") and not is_load_cell:
             last_out = cell["outputs"][-1]
             if last_out.get("output_type") != "error":
 
@@ -166,48 +326,71 @@ async def run_cell_async(
                                 if "text/plain" in data:
                                     result_str += str(data["text/plain"])
 
+                        structured = c.get("structured_result")
+                        if structured:
+                            import json as _json
+
+                            result_str += (
+                                "\n" + _json.dumps(structured, default=str)[:2000]
+                            )
+
                         res_data = {
                             "prompt": c.get("prompt") or c.get("source", ""),
                             "code": c.get("source", ""),
-                            "stdout": stdout_str,
-                            "result": result_str,
+                            "stdout": stdout_str[:4000],
+                            "result": result_str[:4000],
                         }
-                        ctx = "\n".join(
-                            cell_item.get("prompt") or cell_item.get("source", "")[:80]
-                            for cell_item in state.notebook_cells
-                            if cell_item.get("type") == "code"
-                        )
-                        schema = getattr(state, "active_schema_json", {}) or {}
+                        from core.utils import build_analysis_context
+
+                        ctx = build_analysis_context(state.notebook_cells)
+                        schema = state.active_schema_json or {}
                         desc_task = ai_service.describe_result(
-                            "Dataset Analysis", res_data
+                            schema.get("description", "Dataset Analysis"), res_data
                         )
                         sugg_task = ai_service.suggest(schema, analysis_context=ctx)
                         narration, suggs = await asyncio.gather(desc_task, sugg_task)
                         c["narration"] = narration
                         c["suggestions"] = suggs
                         state.suggestions = suggs
-                        on_cell_change()
-                    except Exception:
-                        pass
+                        try:
+                            on_cell_change()
+                        except Exception:
+                            pass
+                    except Exception as ai_ex:
+                        logger.warning("Post-execution narration failed: %s", ai_ex)
 
                 if page:
                     page.run_task(_post_exec_ai, cell)
 
 
 def _flush_output_to_ui(refs_dict: dict, c: dict, page: ft.Page):
-    """Helper to push updated cell outputs to ListView refs safely."""
+    """Push updated cell outputs to the cell's own refs — NEVER a full page.update().
+
+    Full-page updates fired every ~150ms while a kernel streams output used to
+    saturate the event loop and freeze the whole UI (clicks stopped responding).
+    Only the changed cell's subtree is patched here.
+    """
     try:
         output_lv = refs_dict.get("output")
         output_panel = refs_dict.get("output_panel")
-        if output_lv and output_lv.current:
-            new_controls = parse_outputs_to_controls(c["outputs"])
-            output_lv.current.controls = new_controls
-        if output_panel and output_panel.current:
-            output_panel.current.visible = True
+
+        def _apply():
+            try:
+                if output_lv and output_lv.current:
+                    output_lv.current.controls = parse_cell_outputs(c)
+                    output_lv.current.update()
+                if output_panel and output_panel.current:
+                    output_panel.current.visible = True
+                    output_panel.current.update()
+            except Exception:
+                logger.debug("Cell output patch skipped", exc_info=True)
+
         if page and page.loop:
-            page.loop.call_soon_threadsafe(page.update)
+            page.loop.call_soon_threadsafe(_apply)
+        else:
+            _apply()
     except Exception:
-        pass
+        logger.debug("Cell output flush skipped", exc_info=True)
 
 
 async def export_ipynb_async(page: ft.Page):
@@ -229,14 +412,11 @@ async def export_ipynb_async(page: ft.Page):
 
             pathlib.Path(path).write_text(json.dumps(ipynb, indent=2))
             if page:
-                page.snack_bar = ft.SnackBar(ft.Text(f"Exported to {path}"))
-                page.snack_bar.open = True
-                page.update()
+                from core.utils import show_snack
+
+                show_snack(page, f"Exported to {path}", success=True)
         except Exception as e:
             if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text(f"Export failed: {e}"),
-                    bgcolor=ft.Colors.ERROR,
-                )
-                page.snack_bar.open = True
-                page.update()
+                from core.utils import show_snack
+
+                show_snack(page, f"Export failed: {e}", error=True)

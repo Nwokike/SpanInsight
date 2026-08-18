@@ -83,11 +83,9 @@ def ProjectsScreen() -> ft.Control:
                             )
                             state.load_project(new_p)
                     await _fetch_projects()
-                    page.snack_bar = ft.SnackBar(
-                        ft.Text(f"🗑️ Project '{pname}' deleted")
-                    )
-                    page.snack_bar.open = True
-                    page.update()
+                    from core.utils import show_snack
+
+                    show_snack(page, f"🗑️ Project '{pname}' deleted")
                 except Exception as ex:
                     logger.error("Delete project failed: %s", ex)
 

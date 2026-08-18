@@ -8,11 +8,53 @@ from core import theme, tokens
 
 
 def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
-    """Renders structured analysis output (DataFrames, Series, Dicts, Arrays) as UI tables & metric tiles."""
+    """Renders structured analysis output (DataFrames, Series, Dicts, Arrays, Charts) as native UI."""
     if not ser_res or not isinstance(ser_res, dict):
         return None
 
     res_type = ser_res.get("type")
+
+    # 0. Native interactive chart (flet_charts) with static-PNG fallback
+    if res_type == "chart":
+        from components.native_chart import build_native_chart
+
+        native = build_native_chart(ser_res.get("data") or {})
+        if native is not None:
+            return native
+        png_b64 = ser_res.get("png_b64")
+        if png_b64:
+            # Worst-case fallback: render the Colab-generated matplotlib PNG
+            # exactly like the legacy app displayed charts.
+            return ft.Container(
+                content=ft.Image(
+                    src=png_b64,
+                    fit=ft.BoxFit.CONTAIN,
+                    border_radius=tokens.RADIUS_MD,
+                ),
+                alignment=ft.Alignment.CENTER,
+                padding=ft.Padding(0, tokens.SPACE_XS, 0, tokens.SPACE_XS),
+            )
+        return None
+
+    # 0.5 Scalar metric tile
+    if res_type == "scalar":
+        val = ser_res.get("data")
+        if val is None:
+            return None
+        val_str = f"{val:.4f}" if isinstance(val, float) else str(val)
+        return ft.Container(
+            content=ft.Text(
+                val_str,
+                size=tokens.FONT_TITLE,
+                weight=ft.FontWeight.BOLD,
+                color=theme.PRIMARY,
+            ),
+            padding=ft.Padding(12, 8, 12, 8),
+            alignment=ft.Alignment.CENTER,
+            border_radius=tokens.RADIUS_MD,
+            bgcolor=ft.Colors.with_opacity(0.05, theme.PRIMARY),
+            border=ft.Border.all(1, theme.GLASS_BORDER_COLOR),
+        )
 
     # 1. DataFrame or Series Table
     if res_type in ("dataframe", "series"):
@@ -145,7 +187,7 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
                 c.col = {"xs": 6, "sm": 4}
             controls.append(
                 ft.ResponsiveRow(
-                    metric_cards,
+                    controls=metric_cards,
                     spacing=6,
                     run_spacing=6,
                 )

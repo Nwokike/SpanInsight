@@ -100,22 +100,15 @@ async def on_save(page: ft.Page, ui_state, report_service):
                 },
             )
             if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text("Report saved!", color=ft.Colors.WHITE),
-                    bgcolor=theme.SUCCESS,
-                    duration=2000,
-                )
-                page.snack_bar.open = True
-                page.update()
+                from core.utils import show_snack
+
+                show_snack(page, "Report saved!", success=True, duration=2000)
     except Exception as e:
         logger.error("Save failed: %s", e)
         if page:
-            page.snack_bar = ft.SnackBar(
-                ft.Text(f"Save failed: {e}"),
-                duration=3000,
-            )
-            page.snack_bar.open = True
-            page.update()
+            from core.utils import show_snack
+
+            show_snack(page, f"Save failed: {e}", error=True, duration=3000)
     finally:
         ui_state.is_saving["value"] = False
         if ui_state.save_btn_ref.current:
@@ -136,55 +129,31 @@ async def on_share(page: ft.Page, ui_state, report_service, ad_service):
     try:
         if ad_service:
             await ad_service.show_interstitial()
-
-        if report_service:
-            ui_state.active_report["data"]["blocks"] = list(ui_state.editor_blocks)
-            ui_state.active_report["data"]["title"] = ui_state.draft_title["value"]
-            url = await report_service.share_report(
-                ui_state.active_report["data"], state.user_uuid
-            )
+        report = ui_state.active_report["data"]
+        report["blocks"] = list(ui_state.editor_blocks)
+        report["title"] = ui_state.draft_title["value"]
+        report["description"] = ui_state.draft_desc["value"]
+        report["is_arranged"] = True
+        report["is_public"] = ui_state.is_public["value"]
+        url = await report_service.share_report(report, state.user_uuid)
+        if page:
             if url:
                 try:
-                    await ft.Clipboard().set(url)
+                    await page.clipboard.set(url)
                 except Exception:
                     pass
-                if page:
-                    page.snack_bar = ft.SnackBar(
-                        content=ft.Row(
-                            [
-                                ft.Icon(
-                                    ft.Icons.CHECK_CIRCLE_ROUNDED,
-                                    color=theme.SUCCESS,
-                                    size=20,
-                                ),
-                                ft.Column(
-                                    [
-                                        ft.Text(
-                                            "Link copied!", weight=ft.FontWeight.W_600
-                                        ),
-                                        ft.Text(
-                                            "Open in browser for PDF/PPTX export. Link expires in 7 days.",
-                                            size=12,
-                                            color=ft.Colors.ON_SURFACE_VARIANT,
-                                        ),
-                                    ],
-                                    spacing=2,
-                                    expand=True,
-                                ),
-                            ],
-                            spacing=12,
-                        ),
-                        duration=5000,
-                    )
-                    page.snack_bar.open = True
+                from core.utils import show_snack
+
+                show_snack(
+                    page,
+                    "Link copied to clipboard! (Expires in 7 days)",
+                    success=True,
+                    duration=5000,
+                )
             else:
-                if page:
-                    page.snack_bar = ft.SnackBar(
-                        ft.Text("Share failed. Try again."), duration=3000
-                    )
-                    page.snack_bar.open = True
-            if page:
-                page.update()
+                from core.utils import show_snack
+
+                show_snack(page, "Share failed. Try again.", error=True, duration=3000)
     except Exception as e:
         logger.error("Share failed: %s", e)
     finally:
@@ -208,12 +177,14 @@ async def on_import(page: ft.Page, ui_state):
     cells = state.notebook_cells
     if not cells:
         if page:
-            page.snack_bar = ft.SnackBar(
-                ft.Text("No notebook cells available. Run an analysis first."),
+            from core.utils import show_snack
+
+            show_snack(
+                page,
+                "No notebook cells available. Run an analysis first.",
+                error=True,
                 duration=3000,
             )
-            page.snack_bar.open = True
-            page.update()
         return
 
     async def on_select_block(idx):
@@ -238,9 +209,9 @@ async def on_import(page: ft.Page, ui_state):
             page.pop_dialog()
         ui_state.rebuild()
         if page:
-            page.snack_bar = ft.SnackBar(ft.Text("Block imported!"), duration=2000)
-            page.snack_bar.open = True
-            page.update()
+            from core.utils import show_snack
+
+            show_snack(page, "Block imported!", success=True, duration=2000)
 
     items = []
     for i, cell in enumerate(cells):
@@ -334,19 +305,17 @@ async def on_view_live(page: ft.Page, ui_state, report_service, ad_service):
             await ft.UrlLauncher().launch_url(url)
         else:
             if page:
-                page.snack_bar = ft.SnackBar(
-                    ft.Text("View live failed. Try again."), duration=3000
+                from core.utils import show_snack
+
+                show_snack(
+                    page, "View live failed. Try again.", error=True, duration=3000
                 )
-                page.snack_bar.open = True
-                page.update()
     except Exception as e:
         logger.error("View live failed: %s", e)
         if page:
-            page.snack_bar = ft.SnackBar(
-                ft.Text(f"View live failed: {e}"), duration=3000
-            )
-            page.snack_bar.open = True
-            page.update()
+            from core.utils import show_snack
+
+            show_snack(page, f"View live failed: {e}", error=True, duration=3000)
     finally:
         ui_state.is_viewing_live["value"] = False
         if ui_state.view_live_btn_ref.current:

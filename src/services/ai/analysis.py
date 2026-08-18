@@ -30,6 +30,11 @@ _EXEC_RULES = (
     "- Always .dropna() or .fillna() before algebraic/statistical operations.\\n"
     "- Plotting: always create figures with plt.figure() or plt.subplots(). Do NOT call plt.savefig().\\n"
     "- Assign key results to a variable named `result`.\\n"
+    "- For simple visual summaries (bar/line/pie), PREFER assigning a chart spec to `result` "
+    'as a dict: {"chart": {"type": "bar" or "line" or "pie", "title": str, '
+    '"x": [labels], "series": [{"name": str, "y": [numbers]}]}} — '
+    "the app renders it as a NATIVE interactive chart.\\n"
+    "- For complex visuals, use matplotlib figures; the app displays the rendered image.\\n"
     "- Do NOT print human-readable text summaries. Only output raw tables, statistics, or plots.\\n"
     "- Keep code efficient and focused on the user's request.\\n"
     "- Return only executable Python code, no remarks.\\n"
@@ -113,7 +118,7 @@ async def suggest(
     )
 
     ai_schema = dict(schema_json)
-    for key in ("head", "tail", "describe"):
+    for key in ("head", "tail", "describe", "summary"):
         ai_schema.pop(key, None)
     context_parts = [json.dumps(ai_schema, default=str)]
 
@@ -135,9 +140,25 @@ async def suggest(
         content = extract_content(data)
         cleaned = extract_block_by_pattern(content, is_json=True)
         cleaned = re.sub(r'"icon"\s*:\s*([^"\s,{}]+)', r'"icon": "\1"', cleaned)
-        suggestions = json.loads(cleaned)
+        try:
+            suggestions = json.loads(cleaned)
+        except ValueError:
+            # Reasoning models sometimes emit a broken string mid-array —
+            # salvage the complete objects instead of losing every suggestion.
+            salvaged = _salvage_json_objects(cleaned)
+            salvaged = [s for s in salvaged if isinstance(s, dict) and s.get("label")]
+            if salvaged:
+                logger.info(
+                    "Suggest JSON was malformed; salvaged %d complete item(s)",
+                    len(salvaged),
+                )
+                return salvaged
+            raise
         if isinstance(suggestions, list):
             return suggestions
+        if isinstance(suggestions, dict) and suggestions.get("label"):
+            # The extractor trimmed a corrupt array down to one valid object
+            return [suggestions]
         return []
     except Exception as e:
         model_used = (
@@ -150,6 +171,55 @@ async def suggest(
             content[:200] if content else "",
         )
         return fallback_suggestions()
+
+
+def _salvage_json_objects(text: str) -> list:
+    """Extract every complete, well-formed JSON object from corrupt text.
+
+    Scans for balanced ``{...}`` blocks (string/escape aware) and parses each
+    individually, so one truncated object never destroys its neighbours.
+    """
+    items = []
+    i = 0
+    n = len(text)
+    while i < n:
+        start = text.find("{", i)
+        if start == -1:
+            break
+        depth = 0
+        j = start
+        in_str = False
+        esc = False
+        end = -1
+        while j < n:
+            ch = text[j]
+            if in_str:
+                if esc:
+                    esc = False
+                elif ch == "\\":
+                    esc = True
+                elif ch == '"':
+                    in_str = False
+            elif ch == '"':
+                in_str = True
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    end = j
+                    break
+            j += 1
+        if end == -1:
+            break  # truncated object — nothing after it can be complete either
+        try:
+            obj = json.loads(text[start : end + 1])
+            if isinstance(obj, dict):
+                items.append(obj)
+        except ValueError:
+            pass
+        i = end + 1
+    return items
 
 
 def _compress_schema(schema_json: dict) -> dict:

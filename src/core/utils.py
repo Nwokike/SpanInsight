@@ -12,14 +12,14 @@ logger = logging.getLogger(__name__)
 
 
 def show_snack(
-    page: ft.Page,
+    page: ft.Page | None,
     message: str,
     *,
     error: bool = False,
     success: bool = False,
     duration: int = 3000,
 ) -> None:
-    """Show a styled snackbar notification.
+    """Show a styled snackbar notification using Flet 0.86+ DialogControl API.
 
     Args:
         page: The Flet page instance.
@@ -28,6 +28,9 @@ def show_snack(
         success: If True, show with green success styling.
         duration: Display duration in milliseconds.
     """
+    if not page:
+        return
+
     from core import theme
 
     bgcolor = None
@@ -39,13 +42,15 @@ def show_snack(
         bgcolor = theme.SUCCESS
         text_color = ft.Colors.WHITE
 
-    page.snack_bar = ft.SnackBar(
+    snack = ft.SnackBar(
         content=ft.Text(message, color=text_color),
         bgcolor=bgcolor,
         duration=duration,
     )
-    page.snack_bar.open = True
-    page.update()
+    try:
+        page.show_dialog(snack)
+    except Exception as ex:
+        logger.warning("Failed to show snack dialog: %s", ex)
 
 
 def parse_version(version_str: str) -> tuple[int, ...]:
@@ -63,7 +68,7 @@ def parse_version(version_str: str) -> tuple[int, ...]:
 
 
 def png_bytes_to_base64(png_bytes: bytes) -> str:
-    """Encode PNG bytes as a base64 string for ft.Image(src_base64=...)."""
+    """Encode PNG bytes as a base64 string for ft.Image(src=...)."""
     return base64.b64encode(png_bytes).decode("utf-8")
 
 
@@ -172,3 +177,25 @@ def sanitize_numpy(val):
     if isinstance(val, dict):
         return {k: sanitize_numpy(v) for k, v in val.items()}
     return val
+
+
+def build_analysis_context(
+    cells: list[dict], max_cells: int = 6, max_chars: int = 2500
+) -> str:
+    """Compact 'recent work' context for AI prompts.
+
+    Long notebooks used to inflate suggest/code prompts (10K+ chars observed
+    live), multiplying gateway latency on reasoning models. Only the most
+    recent code steps matter for "do NOT repeat" guidance.
+    """
+    steps = []
+    for c in cells or []:
+        if c.get("type") != "code":
+            continue
+        step = (c.get("prompt") or c.get("source", "")[:80] or "").strip()
+        if step:
+            steps.append(step)
+    ctx = "\n".join(steps[-max_cells:])
+    if len(ctx) > max_chars:
+        ctx = "…\n" + ctx[-max_chars:]
+    return ctx

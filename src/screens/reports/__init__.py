@@ -81,7 +81,7 @@ def ReportsScreen() -> ft.Control:
     """Reports screen routing between dashboard, AI arranger, and rich report editor."""
     ft.use_context(AppStateCtx)
     services = ft.use_context(ServiceCtx)
-    ft.use_context(ControllerMethodsCtx)
+    controller = ft.use_context(ControllerMethodsCtx)
     page = ft.context.page
 
     # Service instances
@@ -152,9 +152,12 @@ def ReportsScreen() -> ft.Control:
     ft.use_effect(_on_mount, [])
 
     def _on_start_analysis(e=None):
-        from core.state import state as _st
+        if controller:
+            controller.navigate_tab(1)
+        else:
+            from core.state import state as _st
 
-        _st.current_tab = 1
+            _st.current_tab = 1
 
     show_arranger = is_arranging
     show_editor = editor_active and not show_arranger
@@ -203,7 +206,7 @@ def ReportsScreen() -> ft.Control:
                             blocks=editor_blocks,
                             title=draft_title,
                             description=draft_desc,
-                            on_blocks_changed=lambda: None,
+                            on_blocks_changed=set_editor_blocks,
                             on_title_changed=set_draft_title,
                             on_desc_changed=set_draft_desc,
                             on_save=lambda: (
