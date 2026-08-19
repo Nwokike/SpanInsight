@@ -45,12 +45,34 @@ EXEC_RULES = (
 )
 
 
-def compress_schema(schema_json: dict) -> dict:
-    """Optimize LLM context usage while maintaining high code quality."""
+def compress_schema(schema_json: dict, max_columns: int = 40) -> dict:
+    """Optimize LLM context usage while maintaining high code quality.
+
+    For wide datasets (e.g. MNIST with 785 columns or genomic data), samples
+    the most representative columns to keep prompt size under ~4KB instead of 150KB.
+    """
+    if not schema_json:
+        return {}
     compressed = dict(schema_json)
     if "head" in compressed and isinstance(compressed["head"], list):
         compressed["head"] = compressed["head"][:2]
     compressed.pop("tail", None)
+
+    cols = compressed.get("columns", [])
+    if isinstance(cols, list) and len(cols) > max_columns:
+        # Keep first 30 and last 10 columns
+        sample_cols = cols[:30] + cols[-10:]
+        compressed["columns"] = sample_cols
+        compressed["total_columns"] = len(cols)
+        compressed["columns_note"] = (
+            f"Showing {len(sample_cols)} sampled columns out of {len(cols)} total"
+        )
+
+        for key in ("dtypes", "nulls", "summary"):
+            val = compressed.get(key)
+            if isinstance(val, dict):
+                compressed[key] = {c: val[c] for c in sample_cols if c in val}
+
     return compressed
 
 

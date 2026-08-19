@@ -104,7 +104,7 @@ async def suggest(
         '- "prompt": full analysis instruction for code generation\n'
     )
 
-    ai_schema = dict(schema_json)
+    ai_schema = compress_schema(schema_json)
     for key in ("head", "tail", "describe", "summary"):
         ai_schema.pop(key, None)
     context_parts = [json.dumps(ai_schema, default=str)]

@@ -46,3 +46,28 @@ async def test_ai_error_correction():
             schema_json=schema,
         )
         assert "fillna(0)" in corrected
+
+
+def test_compress_schema_wide_dataset():
+    from services.ai.analysis.code_gen import compress_schema
+
+    # Simulate 785 columns (like MNIST with pixel0 ... pixel783 + label)
+    columns = [f"pixel{i}" for i in range(784)] + ["label"]
+    summary = {col: {"count": 20000, "mean": 12.3} for col in columns}
+    dtypes = {col: "int64" for col in columns}
+    nulls = {col: 0 for col in columns}
+    schema = {
+        "columns": columns,
+        "summary": summary,
+        "dtypes": dtypes,
+        "nulls": nulls,
+        "shape": [20000, 785],
+    }
+
+    compressed = compress_schema(schema, max_columns=40)
+    assert len(compressed["columns"]) == 40
+    assert compressed["total_columns"] == 785
+    assert len(compressed["summary"]) == 40
+    assert len(compressed["dtypes"]) == 40
+    assert "label" in compressed["columns"]
+    assert "pixel0" in compressed["columns"]

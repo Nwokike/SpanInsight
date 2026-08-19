@@ -6,6 +6,7 @@ import json
 import logging
 
 from core.constants import TASK_INTERPRET
+from services.ai.analysis.code_gen import compress_schema
 from services.ai.client import call_gateway, extract_content
 
 logger = logging.getLogger(__name__)
@@ -20,9 +21,7 @@ async def describe_dataset(schema_json: dict) -> str:
         "Do NOT use any markdown (no bold, no italics, no bullet points, no headers). "
         "Write strictly as clear, plain-text prose, limited to at most 2 to 3 sentences."
     )
-    ai_schema = dict(schema_json)
-    ai_schema.pop("head", None)
-    ai_schema.pop("tail", None)
+    ai_schema = compress_schema(schema_json)
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": json.dumps(ai_schema, default=str)},
