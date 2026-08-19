@@ -17,7 +17,7 @@ def build_agent_progress_pill(
     steps: list[dict] | None = None,
     on_stop: Callable | None = None,
     is_expanded: bool = False,
-    on_toggle_expand: Callable | None = None,
+    on_toggle: Callable | None = None,
 ) -> ft.Container:
     """Unified AI Agent Progress Pill with live timeline drawer and Autopilot control."""
     if not is_active:
@@ -199,9 +199,38 @@ def build_agent_progress_pill(
         visible=is_expanded,
     )
 
-    def _handle_click(e):
-        if on_toggle_expand:
-            on_toggle_expand()
+    chevron_ref = ft.Ref[ft.IconButton]()
+
+    def _handle_toggle(e=None):
+        if on_toggle:
+            on_toggle()
+        else:
+            # Fallback for standalone/testing contexts without parent reactive hook
+            if hasattr(timeline_drawer, "_frozen"):
+                try:
+                    del timeline_drawer._frozen
+                except AttributeError:
+                    pass
+            timeline_drawer.visible = not timeline_drawer.visible
+            if chevron_ref.current:
+                if hasattr(chevron_ref.current, "_frozen"):
+                    try:
+                        del chevron_ref.current._frozen
+                    except AttributeError:
+                        pass
+                chevron_ref.current.icon = (
+                    ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
+                    if timeline_drawer.visible
+                    else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED
+                )
+                try:
+                    chevron_ref.current.update()
+                except Exception:
+                    pass
+            try:
+                timeline_drawer.update()
+            except Exception:
+                pass
 
     # Left controls: Spinner + Badge + Text
     left_controls = [
@@ -275,16 +304,21 @@ def build_agent_progress_pill(
             )
         )
 
+    chevron_icon = (
+        ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
+        if is_expanded
+        else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED
+    )
+
     right_controls.append(
         ft.IconButton(
-            icon=ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
-            if is_expanded
-            else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED,
+            ref=chevron_ref,
+            icon=chevron_icon,
             icon_size=tokens.ICON_SM,
             icon_color=ft.Colors.ON_SURFACE_VARIANT,
             style=ft.ButtonStyle(padding=tokens.SPACE_NONE),
             tooltip="Toggle timeline drawer",
-            on_click=_handle_click,
+            on_click=_handle_toggle,
         )
     )
 
@@ -321,7 +355,7 @@ def build_agent_progress_pill(
         margin=ft.Margin(
             tokens.SPACE_NONE, tokens.SPACE_XXS, tokens.SPACE_NONE, tokens.SPACE_XXS
         ),
-        on_click=_handle_click,
+        on_click=_handle_toggle,
     )
 
     return ft.Container(

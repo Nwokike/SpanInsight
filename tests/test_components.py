@@ -185,6 +185,34 @@ class TestAgentProgressPill:
                 {"text": "Anomaly detection", "status": "pending", "time": ""},
             ],
             on_stop=lambda _: stopped.append(True),
+            is_expanded=True,
         )
         assert pill is not None
         assert pill.content is not None
+        # Verify drawer is visible when is_expanded=True
+        drawer = pill.content.controls[1]
+        assert drawer.visible is True
+
+    def test_agent_progress_pill_toggle_callback(self):
+        from components.agent_progress_pill import build_agent_progress_pill
+
+        toggled = []
+        pill = build_agent_progress_pill(
+            is_active=True,
+            is_expanded=False,
+            on_toggle=lambda: toggled.append(True),
+        )
+        assert pill is not None
+        drawer = pill.content.controls[1]
+        assert drawer.visible is False
+
+    def test_thought_accordion_toggle(self):
+        from components.thought_accordion import build_thought_accordion
+
+        changed = []
+        block = {
+            "thought": "1. Step one\n2. Step two",
+            "_show_thought": False,
+        }
+        acc = build_thought_accordion(block, on_change=lambda: changed.append(True))
+        assert acc is not None

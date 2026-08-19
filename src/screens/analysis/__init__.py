@@ -64,11 +64,11 @@ def AnalysisScreen() -> Control:
     is_generating, set_is_generating = ft.use_state(False)
     is_recording, set_is_recording = ft.use_state(False)
     is_expert_mode, set_is_expert_mode = ft.use_state(False)
-    is_progress_expanded, set_is_progress_expanded = ft.use_state(False)
     suggestions, set_suggestions = ft.use_state([])
     suggestions_loading, set_suggestions_loading = ft.use_state(False)
     cells_version, set_cells_version = ft.use_state(0)
     schema_json, set_schema_json = ft.use_state({})
+    is_pill_expanded, set_is_pill_expanded = ft.use_state(False)
 
     def set_schema(schema: dict):
         state.active_schema_json = schema or {}
@@ -565,8 +565,8 @@ def AnalysisScreen() -> Control:
         is_expert_mode=is_expert_mode,
         set_is_expert_mode=set_is_expert_mode,
         session_name=session_name,
-        is_progress_expanded=is_progress_expanded,
-        on_toggle_progress=lambda: set_is_progress_expanded(not is_progress_expanded),
+        is_pill_expanded=is_pill_expanded,
+        on_toggle_pill=lambda: set_is_pill_expanded(not is_pill_expanded),
     )
 
     feed = build_analysis_feed(

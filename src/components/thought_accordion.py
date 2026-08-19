@@ -51,8 +51,18 @@ def build_thought_accordion(block: dict, on_change=None) -> ft.Control | None:
     )
 
     def _apply_state(expanded: bool):
+        if hasattr(body, "_frozen"):
+            try:
+                del body._frozen
+            except AttributeError:
+                pass
         body.visible = expanded
         if icon_ref.current:
+            if hasattr(icon_ref.current, "_frozen"):
+                try:
+                    del icon_ref.current._frozen
+                except AttributeError:
+                    pass
             icon_ref.current.icon = (
                 ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
                 if expanded
@@ -62,17 +72,16 @@ def build_thought_accordion(block: dict, on_change=None) -> ft.Control | None:
     def _toggle(_):
         expanded = not block.get("_show_thought", False)
         block["_show_thought"] = expanded
+        if on_change:
+            on_change()
+            return
         _apply_state(expanded)
         try:
             body.update()
             if icon_ref.current:
                 icon_ref.current.update()
         except Exception:
-            # Control not mounted yet (or session shutting down) - fall back
-            # to a full parent rebuild.
-            logger.debug("In-place accordion update failed; falling back")
-            if on_change:
-                on_change()
+            pass
 
     toggle_btn = ft.Container(
         content=ft.Row(
