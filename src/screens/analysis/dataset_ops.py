@@ -29,7 +29,7 @@ async def extract_dataset_schema(
 ) -> tuple[dict | None, str | None]:
     """Run the silent schema extractor on Colab and parse its marker payload."""
     outputs = await colab.exec_code(
-        build_schema_extraction_code(), session_name=session_name
+        build_schema_extraction_code(), session_name=session_name, timeout=60.0
     )
     return parse_schema_from_outputs(outputs)
 
@@ -232,6 +232,28 @@ async def run_dataset_import_dialog(
                         page.pop_dialog()
                     except Exception:
                         pass
+
+            # Validate that the file actually landed on Colab VM disk
+            try:
+                chk_out = await colab.exec_code(
+                    f"import os; print('EXISTS:' + str(os.path.exists({remote!r})))",
+                    session_name=session_name,
+                    timeout=15.0,
+                )
+                stdout = "".join(
+                    o.get("text", "")
+                    for o in chk_out
+                    if o.get("type") in ("stdout", "text")
+                    or o.get("output_type") == "stream"
+                )
+                if "EXISTS:True" not in stdout:
+                    logger.warning(
+                        "Remote verification warning for %s. Kernel check: %s",
+                        remote,
+                        stdout,
+                    )
+            except Exception as v_err:
+                logger.debug("Non-fatal verification warning: %s", v_err)
 
         # Load & extract schema transparently in notebook view
         schema, error = await load_and_extract_schema(

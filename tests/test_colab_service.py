@@ -75,3 +75,54 @@ async def test_colab_upload_forwards_progress():
             "oauth2",
             my_cb,
         )
+
+
+@pytest.mark.asyncio
+async def test_chunked_upload_multi_chunk(tmp_path):
+    from unittest.mock import MagicMock
+
+    from services.colab.files_ops import upload_impl
+
+    # Create a 5MB test file (which requires 3 chunks with 2MB chunk size)
+    test_file = tmp_path / "large_dataset.bin"
+    file_bytes = b"X" * (5 * 1024 * 1024)
+    test_file.write_bytes(file_bytes)
+
+    mock_service = MagicMock()
+    mock_service._ensure_online = AsyncMock()
+
+    mock_session = MagicMock()
+    mock_session.url = "https://colab.research.google.com/test"
+    mock_session.token = "test_token"
+
+    mock_state = MagicMock()
+    mock_state.store.get.return_value = mock_session
+
+    progress_ticks = []
+
+    def cb(cur, tot):
+        progress_ticks.append((cur, tot))
+
+    with (
+        patch("colab_cli.common.State", return_value=mock_state),
+        patch("requests.put") as mock_put,
+    ):
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.return_value = None
+        mock_put.return_value = mock_resp
+
+        ok = await upload_impl(
+            mock_service,
+            "sess1",
+            str(test_file),
+            "/content/large_dataset.bin",
+            progress_callback=cb,
+        )
+        assert ok is True
+        # 5MB with 2MB chunks -> 3 chunks sent (2MB, 2MB, 1MB)
+        assert mock_put.call_count == 3
+        # Check last chunk had chunk = -1
+        last_call_json = mock_put.call_args_list[-1].kwargs.get("json")
+        assert last_call_json["chunk"] == -1
+        assert len(progress_ticks) > 0
+        assert progress_ticks[-1][0] == len(file_bytes)

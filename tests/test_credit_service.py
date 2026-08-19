@@ -20,12 +20,15 @@ async def test_initial_credits(tmp_path):
 
 @pytest.mark.asyncio
 async def test_spend_credits(tmp_path):
+    from core.state import state
+
     storage = StorageService(data_dir=str(tmp_path))
     credit_svc = CreditService(storage=storage)
 
     ok, rem = await credit_svc.spend(5)
     assert ok is True
     assert rem == DAILY_FREE_CREDITS - 5
+    assert state.credits_remaining == DAILY_FREE_CREDITS - 5
 
     balance = await credit_svc.get_balance()
     assert balance == DAILY_FREE_CREDITS - 5
@@ -43,11 +46,14 @@ async def test_spend_insufficient_credits(tmp_path):
 
 @pytest.mark.asyncio
 async def test_add_credits(tmp_path):
+    from core.state import state
+
     storage = StorageService(data_dir=str(tmp_path))
     credit_svc = CreditService(storage=storage)
 
     new_bal = await credit_svc.add_credits(25)
     assert new_bal == DAILY_FREE_CREDITS + 25
+    assert state.credits_remaining == DAILY_FREE_CREDITS + 25
 
     balance = await credit_svc.get_balance()
     assert balance == DAILY_FREE_CREDITS + 25

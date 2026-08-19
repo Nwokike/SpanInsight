@@ -71,26 +71,29 @@ def AppShell() -> Control:
             logger.info("Navigated to tab '%s' (index %d)", _TAB_NAMES[idx], idx)
             controller.navigate_tab(idx)
 
-        destinations = [
-            ft.NavigationBarDestination(
-                icon=icon,
-                selected_icon=sel_icon,
-                label=label,
+        if page.views[0].navigation_bar is None:
+            destinations = [
+                ft.NavigationBarDestination(
+                    icon=icon,
+                    selected_icon=sel_icon,
+                    label=label,
+                )
+                for icon, sel_icon, label in zip(
+                    _TAB_ICONS, _TAB_SELECTED_ICONS, _TAB_NAMES, strict=True
+                )
+            ]
+            page.views[0].navigation_bar = ft.NavigationBar(
+                destinations=destinations,
+                selected_index=state.current_tab,
+                on_change=_on_tab_change,
+                bgcolor=ft.Colors.SURFACE,
+                indicator_color=ft.Colors.with_opacity(
+                    tokens.OPACITY_CONTAINER, ft.Colors.PRIMARY
+                ),
+                label_behavior=ft.NavigationBarLabelBehavior.ALWAYS_SHOW,
             )
-            for icon, sel_icon, label in zip(
-                _TAB_ICONS, _TAB_SELECTED_ICONS, _TAB_NAMES, strict=True
-            )
-        ]
-        page.views[0].navigation_bar = ft.NavigationBar(
-            destinations=destinations,
-            selected_index=state.current_tab,
-            on_change=_on_tab_change,
-            bgcolor=ft.Colors.SURFACE,
-            indicator_color=ft.Colors.with_opacity(
-                tokens.OPACITY_CONTAINER, ft.Colors.PRIMARY
-            ),
-            label_behavior=ft.NavigationBarLabelBehavior.ALWAYS_SHOW,
-        )
+        else:
+            page.views[0].navigation_bar.selected_index = state.current_tab
 
         from components.credit_badge import build_credit_badge, show_credits_dialog
 
@@ -332,13 +335,22 @@ def AppShell() -> Control:
             visible=ai_busy,
         )
 
-        page.views[0].appbar = ft.AppBar(
-            leading=page_tag,
-            leading_width=tokens.INPUT_WIDTH_SM,
-            actions=[ai_busy_chip, colab_indicator, theme_btn, badge_container],
-            center_title=True,
-            bgcolor=ft.Colors.TRANSPARENT,
-        )
+        if page.views[0].appbar is None:
+            page.views[0].appbar = ft.AppBar(
+                leading=page_tag,
+                leading_width=tokens.INPUT_WIDTH_SM,
+                actions=[ai_busy_chip, colab_indicator, theme_btn, badge_container],
+                center_title=True,
+                bgcolor=ft.Colors.TRANSPARENT,
+            )
+        else:
+            page.views[0].appbar.leading = page_tag
+            page.views[0].appbar.actions = [
+                ai_busy_chip,
+                colab_indicator,
+                theme_btn,
+                badge_container,
+            ]
 
         if (
             state.current_tab != 1

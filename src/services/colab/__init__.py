@@ -122,7 +122,7 @@ class ColabService:
         self,
         code: str,
         session_name: str,
-        timeout: float = 30.0,
+        timeout: float = 60.0,
         auth_method: str = "oauth2",
         on_output: Callable | None = None,
         intercept_oauth: bool = False,

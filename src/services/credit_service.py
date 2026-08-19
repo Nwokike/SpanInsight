@@ -72,6 +72,8 @@ class CreditService:
 
     async def commit(self, tx_id: str) -> int:
         """Finalize a reservation - deduct from actual balance."""
+        from core.state import state
+
         task = self._rollback_tasks.pop(tx_id, None)
         if task:
             task.cancel()
@@ -82,6 +84,7 @@ class CreditService:
         current = await self._get_credits()
         new_balance = max(0, current - amount)
         await self._storage.set(STORAGE_CREDITS, str(new_balance))
+        state.credits_remaining = new_balance
         logger.info(
             "Committed %d credits (tx: %s). Remaining: %d", amount, tx_id, new_balance
         )
@@ -96,20 +99,26 @@ class CreditService:
 
     async def spend(self, amount: int) -> tuple[bool, int]:
         """Deduct credits directly (no reservation). Returns (success, remaining)."""
+        from core.state import state
+
         current = await self._get_credits()
         total_reserved = sum(self._reservations.values())
         if current - total_reserved < amount:
             return False, current
         new_balance = current - amount
         await self._storage.set(STORAGE_CREDITS, str(new_balance))
+        state.credits_remaining = new_balance
         logger.info("Spent %d credits. Remaining: %d", amount, new_balance)
         return True, new_balance
 
     async def add_credits(self, amount: int) -> int:
         """Add credits to the user's balance. Returns the new balance."""
+        from core.state import state
+
         current = await self._get_credits()
         new_balance = current + amount
         await self._storage.set(STORAGE_CREDITS, str(new_balance))
+        state.credits_remaining = new_balance
         logger.info("Added %d credits. New Balance: %d", amount, new_balance)
         return new_balance
 
@@ -128,6 +137,8 @@ class CreditService:
 
     async def _check_daily_reset(self) -> None:
         """Reset credits if the date has changed, topping up to the daily cap while preserving higher balances."""
+        from core.state import state
+
         today = datetime.now(tz=UTC).date().isoformat()
         last_reset = await self._storage.get(STORAGE_LAST_RESET)
         if last_reset != today:
@@ -136,6 +147,7 @@ class CreditService:
             new_balance = max(current, daily_cap)
             await self._storage.set(STORAGE_CREDITS, str(new_balance))
             await self._storage.set(STORAGE_LAST_RESET, today)
+            state.credits_remaining = new_balance
             self._reservations.clear()
             logger.info(
                 "Daily credit reset check: balance topped up/preserved at %d.",

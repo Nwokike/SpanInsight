@@ -102,12 +102,11 @@ async def upload_impl(
     auth_method: str = "oauth2",
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> bool:
-    """Upload a local file to the remote session with optional progress tracking."""
+    """Upload a local file to the remote session with high-capacity chunked streaming."""
     await service._ensure_online()
 
     def _upload():
         import base64
-        import json
         import os
         import posixpath
         from urllib.parse import quote
@@ -115,7 +114,6 @@ async def upload_impl(
         import requests
         from colab_cli.auth import AuthProvider
         from colab_cli.common import State
-        from colab_cli.contents import ContentsClient
 
         norm_remote = posixpath.normpath(remote_path)
 
@@ -131,51 +129,75 @@ async def upload_impl(
         if progress_callback:
             progress_callback(0, total_file_bytes)
 
-        if not progress_callback:
-            client = ContentsClient(s)
-            client.upload(local_path, norm_remote)
-        else:
-            with open(local_path, "rb") as f:
-                content = f.read()
+        filename = norm_remote.split("/")[-1]
+        quoted_path = quote(norm_remote.strip("/"), safe="/")
+        base_url = s.url.rstrip("/")
+        url = f"{base_url}/api/contents/{quoted_path}"
+        req_params = {"authuser": "0", "colab-runtime-proxy-token": s.token}
+        headers = {"Content-Type": "application/json"}
 
-            b64_content = base64.b64encode(content).decode("ascii")
-            filename = norm_remote.split("/")[-1]
+        # 2MB binary chunk size (converts to ~2.6MB base64 JSON payload, well below 32MB Colab limit)
+        CHUNK_SIZE = 2 * 1024 * 1024
 
-            payload = {
-                "name": filename,
-                "path": norm_remote,
-                "type": "file",
-                "format": "base64",
-                "content": b64_content,
-                "chunk": 1,
-            }
-
-            payload_bytes = json.dumps(payload).encode("utf-8")
-
-            def _on_chunk(sent_bytes: int, total_bytes: int):
-                file_sent = (
-                    int((sent_bytes / total_bytes) * total_file_bytes)
-                    if total_bytes > 0
-                    else sent_bytes
+        with open(local_path, "rb") as f:
+            if total_file_bytes <= CHUNK_SIZE:
+                # Single chunk upload for small files (<2MB)
+                raw_bytes = f.read()
+                b64_content = base64.b64encode(raw_bytes).decode("ascii")
+                payload = {
+                    "name": filename,
+                    "path": norm_remote,
+                    "type": "file",
+                    "format": "base64",
+                    "content": b64_content,
+                    "chunk": 1,
+                }
+                resp = requests.put(
+                    url,
+                    params=req_params,
+                    json=payload,
+                    headers=headers,
+                    timeout=180.0,
                 )
-                progress_callback(min(file_sent, total_file_bytes), total_file_bytes)
+                resp.raise_for_status()
+                if progress_callback:
+                    progress_callback(total_file_bytes, total_file_bytes)
+            else:
+                # Multi-chunk streaming upload for large files (40MB to 1GB+)
+                sent_bytes = 0
+                chunk_index = 1
+                while True:
+                    raw_bytes = f.read(CHUNK_SIZE)
+                    if not raw_bytes:
+                        break
 
-            reader = ProgressReader(payload_bytes, callback=_on_chunk)
-            quoted_path = quote(norm_remote.strip("/"), safe="/")
-            base_url = s.url.rstrip("/")
-            url = f"{base_url}/api/contents/{quoted_path}"
-            req_params = {"authuser": "0", "colab-runtime-proxy-token": s.token}
-            headers = {"Content-Type": "application/json"}
+                    is_last = (sent_bytes + len(raw_bytes)) >= total_file_bytes
+                    b64_content = base64.b64encode(raw_bytes).decode("ascii")
 
-            resp = requests.put(
-                url,
-                params=req_params,
-                data=reader,
-                headers=headers,
-                timeout=180.0,
-            )
-            resp.raise_for_status()
-            progress_callback(total_file_bytes, total_file_bytes)
+                    payload = {
+                        "name": filename,
+                        "path": norm_remote,
+                        "type": "file",
+                        "format": "base64",
+                        "content": b64_content,
+                        "chunk": -1 if is_last else chunk_index,
+                    }
+
+                    resp = requests.put(
+                        url,
+                        params=req_params,
+                        json=payload,
+                        headers=headers,
+                        timeout=180.0,
+                    )
+                    resp.raise_for_status()
+
+                    sent_bytes += len(raw_bytes)
+                    chunk_index += 1
+                    if progress_callback:
+                        progress_callback(
+                            min(sent_bytes, total_file_bytes), total_file_bytes
+                        )
 
         st.history.log_event(
             name,
@@ -184,6 +206,7 @@ async def upload_impl(
                 "op": "upload",
                 "local": local_path,
                 "remote": norm_remote,
+                "bytes": total_file_bytes,
             },
         )
         return True
