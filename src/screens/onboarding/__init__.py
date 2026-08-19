@@ -74,7 +74,6 @@ def OnboardingScreen() -> ft.Control:
             if result.get("success"):
                 state.is_authenticated = True
                 state.colab_authenticated = True
-                state.onboarding_done = True
                 state.auth_email = result.get("email", "")
                 set_auth_status(f"✓ Signed in as {state.auth_email}")
                 set_auth_status_color(theme.SUCCESS)
@@ -133,10 +132,13 @@ def OnboardingScreen() -> ft.Control:
         if slide_index < TOTAL_SLIDES - 1:
             set_slide_index(slide_index + 1)
         else:
+            if not state.is_authenticated:
+                return
+            state.onboarding_done = True
             if services.storage:
                 await services.storage.set(STORAGE_ONBOARDING_DONE, "true")
-            state.is_authenticated = True
-            state.onboarding_done = True
+            if page:
+                page.update()
 
     def on_back(e):
         if slide_index > 0:

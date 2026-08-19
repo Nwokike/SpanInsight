@@ -117,7 +117,7 @@ def SettingsScreen() -> ft.Control:
                     if services.colab:
                         await services.colab.clear_token()
                     if services.storage:
-                        await services.storage.delete(STORAGE_ONBOARDING_DONE)
+                        await services.storage.set(STORAGE_ONBOARDING_DONE, "false")
                     state.onboarding_done = False
                     state.is_authenticated = False
                     state.colab_authenticated = False

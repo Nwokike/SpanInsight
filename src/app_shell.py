@@ -53,6 +53,7 @@ def AppShell() -> Control:
         if (
             not state.app_ready
             or not state.onboarding_done
+            or not state.is_authenticated
             or state.active_subview == "projects"
         ):
             if page.views[0].navigation_bar is not None:
@@ -397,10 +398,10 @@ def AppShell() -> Control:
             expand=True,
             alignment=ft.Alignment.CENTER,
         )
-    elif not state.onboarding_done:
+    elif not state.onboarding_done or not state.is_authenticated:
         from screens.onboarding import OnboardingScreen
 
-        screen = OnboardingScreen()
+        screen = OnboardingScreen(key=ft.ValueKey("onboarding"))
     elif state.active_subview == "projects":
         from screens.projects import ProjectsScreen
 

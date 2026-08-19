@@ -294,12 +294,19 @@ class AppController:
             state.is_online = True  # Assume online if check fails
 
         if not state.is_online:
-            # Offline on launch: honour saved onboarding/auth, skip auth check
-            onboarding_done = await self.storage.get(STORAGE_ONBOARDING_DONE)
-            state.onboarding_done = onboarding_done == "true"
-            # If they've onboarded before, let them in - just no Colab features
-            if state.onboarding_done:
-                state.is_authenticated = True  # trust stored auth offline
+            # Offline on launch: check if token exists locally
+            try:
+                auth_info = await self.colab_service.check_auth()
+                state.is_authenticated = auth_info.get("authenticated", False)
+                state.auth_email = auth_info.get("email", "")
+            except Exception:
+                state.is_authenticated = False
+
+            if state.is_authenticated:
+                state.onboarding_done = True
+            else:
+                state.is_authenticated = False
+                state.onboarding_done = False
             state.app_ready = True
             return  # AppShell will show offline banner via connectivity monitor
 
@@ -337,9 +344,10 @@ class AppController:
             except Exception as ex:
                 logger.debug("Session auto-discovery: %s", ex)
         else:
-            # No valid token → check if they've ever onboarded
-            onboarding_done = await self.storage.get(STORAGE_ONBOARDING_DONE)
-            state.onboarding_done = onboarding_done == "true"
+            # No valid token → enforce onboarding requirement
+            state.is_authenticated = False
+            state.onboarding_done = False
+            await self.storage.set(STORAGE_ONBOARDING_DONE, "false")
 
         # Run health/version checks in background
         self.page.run_task(self._startup_checks)
