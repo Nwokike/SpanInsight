@@ -115,9 +115,24 @@ def build_native_chart(spec: dict) -> ft.Control | None:
         legend_names = [name for name, _ in series]
     legend = _build_legend(legend_names) if len(legend_names) > 1 else []
 
+    if chart_type == "bar" and len(x_labels) > 6:
+        chart_container = ft.Container(
+            content=ft.Row(
+                [
+                    ft.Container(
+                        content=chart, width=max(320, len(x_labels) * 48), height=220
+                    )
+                ],
+                scroll=ft.ScrollMode.AUTO,
+            ),
+            height=220,
+        )
+    else:
+        chart_container = ft.Container(content=chart, height=220)
+
     return ft.Container(
         content=ft.Column(
-            header_controls + [ft.Container(content=chart, height=220)] + legend,
+            header_controls + [chart_container] + legend,
             spacing=tokens.SPACE_XS,
         ),
         padding=tokens.SPACE_MD,

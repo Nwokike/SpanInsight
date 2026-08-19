@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 import flet as ft
@@ -14,32 +15,55 @@ logger = logging.getLogger("Analysis.VoiceOps")
 
 async def toggle_voice_recording(
     page: ft.Page | None,
-    is_recording: bool,
+    audio_service,
+    rec_state_ref,
     set_is_recording,
+    set_recording_time,
     set_prompt_text,
 ):
     """Toggle microphone recording and send audio bytes to transcription API."""
-    if is_recording:
-        set_is_recording(False)
-        try:
-            from services.audio_service import AudioService
+    if not audio_service:
+        return
 
-            audio_svc = AudioService(page)
-            result = await audio_svc.stop_recording()
+    if rec_state_ref.current["is_recording"]:
+        rec_state_ref.current["is_recording"] = False
+        set_is_recording(False)
+        set_recording_time(0)
+        try:
+            result = await audio_service.stop_recording()
             if result:
                 audio_bytes, mime_type = result
                 text = await transcribe_audio(audio_bytes, mime_type)
                 if text and not text.startswith("["):
                     set_prompt_text(text)
+                else:
+                    if page:
+                        show_snack(
+                            page, "Could not transcribe audio. Try again.", error=True
+                        )
         except Exception as ex:
             logger.warning("Voice processing error: %s", ex)
+            if page:
+                show_snack(page, f"Transcription failed: {ex}", error=True)
     else:
-        set_is_recording(True)
         try:
-            from services.audio_service import start_recording
+            started = await audio_service.start_recording()
+            if started:
+                rec_state_ref.current["is_recording"] = True
+                rec_state_ref.current["seconds"] = 0
+                set_is_recording(True)
+                set_recording_time(0)
 
-            ok = await start_recording()
-            if not ok:
+                async def _timer_loop():
+                    while rec_state_ref.current["is_recording"]:
+                        await asyncio.sleep(1)
+                        if rec_state_ref.current["is_recording"]:
+                            rec_state_ref.current["seconds"] += 1
+                            set_recording_time(rec_state_ref.current["seconds"])
+
+                if page:
+                    page.run_task(_timer_loop)
+            else:
                 set_is_recording(False)
                 if page:
                     show_snack(
@@ -50,4 +74,4 @@ async def toggle_voice_recording(
         except Exception as ex:
             set_is_recording(False)
             if page:
-                show_snack(page, f"Voice recording not supported: {ex}", error=True)
+                show_snack(page, f"Voice recording error: {ex}", error=True)

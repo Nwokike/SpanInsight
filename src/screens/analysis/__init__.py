@@ -63,6 +63,7 @@ def AnalysisScreen() -> Control:
     is_connecting, set_is_connecting = ft.use_state(False)
     is_generating, set_is_generating = ft.use_state(False)
     is_recording, set_is_recording = ft.use_state(False)
+    recording_time, set_recording_time = ft.use_state(0)
     is_expert_mode, set_is_expert_mode = ft.use_state(False)
     suggestions, set_suggestions = ft.use_state([])
     suggestions_loading, set_suggestions_loading = ft.use_state(False)
@@ -74,7 +75,11 @@ def AnalysisScreen() -> Control:
         state.active_schema_json = schema or {}
         set_schema_json(schema)
 
-    # ── Refs ─────────────────────────────────────────────────────
+    # ── Services & Refs ──────────────────────────────────────────
+    from services.audio_service import AudioService
+
+    audio_svc = ft.use_memo(lambda: AudioService(page), [page])
+    rec_state_ref = ft.use_ref({"is_recording": False, "seconds": 0})
     cell_refs_map = ft.use_ref({})
     prompt_ref = ft.Ref[ft.TextField]()
     session_name = app_state.active_session_name
@@ -635,12 +640,15 @@ def AnalysisScreen() -> Control:
         on_toggle_voice=lambda _: page.run_task(
             toggle_voice_recording,
             page,
-            is_recording,
+            audio_svc,
+            rec_state_ref,
             set_is_recording,
+            set_recording_time,
             set_prompt_text,
         ),
         on_toggle_expert_mode=lambda _: set_is_expert_mode(not is_expert_mode),
         is_expert_mode=is_expert_mode,
+        recording_time=recording_time,
     )
 
     bottom_bar = ft.Column(

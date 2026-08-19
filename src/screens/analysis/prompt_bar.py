@@ -19,6 +19,7 @@ def build_prompt_bar(
     on_toggle_voice,
     on_toggle_expert_mode=None,
     is_expert_mode: bool = False,
+    recording_time: int = 0,
 ) -> ft.Container:
     """Bottom-docked or inline AI prompt input with file picker, voice, and send."""
     disabled = is_generating or autopilot_running
@@ -50,6 +51,27 @@ def build_prompt_bar(
             )
         )
 
+    voice_controls = []
+    if is_recording:
+        voice_controls.append(
+            ft.Text(
+                f"00:{recording_time:02d} / 01:00",
+                size=tokens.FONT_SM,
+                color=theme.ERROR,
+                weight="bold",
+            )
+        )
+    voice_controls.append(
+        ft.IconButton(
+            icon=ft.Icons.MIC_ROUNDED if not is_recording else ft.Icons.STOP_ROUNDED,
+            icon_size=tokens.ICON_MD,
+            icon_color=theme.ERROR if is_recording else None,
+            tooltip="Voice" if not is_recording else "Stop",
+            on_click=on_toggle_voice,
+            style=ft.ButtonStyle(padding=tokens.SPACE_SM_XS),
+        )
+    )
+
     return ft.Container(
         content=ft.Row(
             controls=[
@@ -80,16 +102,7 @@ def build_prompt_bar(
                     max_lines=6 if is_expert_mode else 3,
                     disabled=disabled,
                 ),
-                ft.IconButton(
-                    icon=ft.Icons.MIC_ROUNDED
-                    if not is_recording
-                    else ft.Icons.STOP_ROUNDED,
-                    icon_size=tokens.ICON_MD,
-                    icon_color=theme.ERROR if is_recording else None,
-                    tooltip="Voice" if not is_recording else "Stop",
-                    on_click=on_toggle_voice,
-                    style=ft.ButtonStyle(padding=tokens.SPACE_SM_XS),
-                ),
+                *voice_controls,
                 ft.Container(
                     content=ft.IconButton(
                         icon=ft.Icons.PLAY_ARROW_ROUNDED

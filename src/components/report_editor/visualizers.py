@@ -12,19 +12,43 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
     if not ser_res or not isinstance(ser_res, dict):
         return None
 
+    # Handle direct chart spec: {"type": "bar"|"line"|"pie", ...}
     res_type = ser_res.get("type")
+    if res_type in ("bar", "line", "pie"):
+        from components.native_chart import build_native_chart
+
+        return build_native_chart(ser_res)
+
+    # Handle {"chart": {...}} embedded inside result dict
+    if "chart" in ser_res and isinstance(ser_res["chart"], dict):
+        from components.native_chart import build_native_chart
+
+        chart_ctrl = build_native_chart(ser_res["chart"])
+        if chart_ctrl is not None:
+            other_entries = {k: v for k, v in ser_res.items() if k != "chart"}
+            if not other_entries:
+                return chart_ctrl
+            from services.ai.analysis.serializer import serialize_data
+
+            other_vis = build_serialized_result_visualizer(
+                serialize_data(other_entries)
+            )
+            if other_vis is not None:
+                return ft.Column([chart_ctrl, other_vis], spacing=tokens.SPACE_SM)
+            return chart_ctrl
 
     # 0. Native interactive chart (flet_charts) with static-PNG fallback
     if res_type == "chart":
         from components.native_chart import build_native_chart
 
-        native = build_native_chart(ser_res.get("data") or {})
+        chart_spec = (
+            ser_res.get("data") if isinstance(ser_res.get("data"), dict) else ser_res
+        )
+        native = build_native_chart(chart_spec)
         if native is not None:
             return native
         png_b64 = ser_res.get("png_b64")
         if png_b64:
-            # Worst-case fallback: render the Colab-generated matplotlib PNG
-            # exactly like the legacy app displayed charts.
             return ft.Container(
                 content=ft.Image(
                     src=png_b64,

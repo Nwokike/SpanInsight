@@ -164,7 +164,7 @@ def parse_cell_outputs(cell: dict) -> list[ft.Control]:
     """Structured result visualizer first (native chart/table/metrics), then raw outputs."""
     controls: list[ft.Control] = []
     structured = cell.get("structured_result")
-    if isinstance(structured, dict) and structured.get("type"):
+    if isinstance(structured, dict):
         try:
             from components.report_editor.visualizers import (
                 build_serialized_result_visualizer,
