@@ -136,7 +136,7 @@ async def run_dataset_import_dialog(
     upload_local_path: str | None = None,
     remote_path: str | None = None,
 ) -> bool:
-    """Run the dataset import pipeline and extract schema without blocking modals.
+    """Run the dataset import pipeline and extract schema with an active progress modal.
 
     - ``upload_local_path``: local file to upload first (Analysis import flow)
     - ``remote_path``: already-on-Colab path (Files "Load in Analysis" flow);
@@ -144,22 +144,81 @@ async def run_dataset_import_dialog(
 
     Returns True when the dataset is loaded, schema extracted and enriched.
     """
+    import os
+
+    from core import tokens
     from core.utils import show_snack
     from services.file_service import suggest_load_code
 
     remote = remote_path or f"/content/{file_name}"
+    size_str = ""
+    if upload_local_path and os.path.exists(upload_local_path):
+        try:
+            sz = os.path.getsize(upload_local_path)
+            if sz < 1024:
+                size_str = f" ({sz} B)"
+            elif sz < 1024 * 1024:
+                size_str = f" ({sz / 1024:.1f} KB)"
+            else:
+                size_str = f" ({sz / (1024 * 1024):.1f} MB)"
+        except Exception:
+            pass
+
+    prog_bar = ft.ProgressBar(
+        color=ft.Colors.PRIMARY,
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_CONTAINER, ft.Colors.PRIMARY),
+    )
+    status_text = ft.Text(
+        f"Uploading to Colab VM…{size_str}"
+        if upload_local_path
+        else "Loading dataset…",
+        size=tokens.FONT_XS,
+        color=ft.Colors.ON_SURFACE_VARIANT,
+    )
+    upload_dialog = ft.AlertDialog(
+        modal=True,
+        title=ft.Row(
+            [
+                ft.Icon(
+                    ft.Icons.TABLE_CHART_ROUNDED,
+                    color=ft.Colors.PRIMARY,
+                    size=tokens.ICON_MD,
+                ),
+                ft.Text(
+                    f"Importing {file_name}",
+                    size=tokens.FONT_MD,
+                    weight=ft.FontWeight.W_600,
+                ),
+            ],
+            spacing=tokens.SPACE_SM,
+        ),
+        content=ft.Column(
+            [prog_bar, status_text],
+            spacing=tokens.SPACE_SM,
+            tight=True,
+        ),
+    )
 
     if page:
-        show_snack(page, f"Importing {file_name}…", duration=3000)
+        page.show_dialog(upload_dialog)
+
+    def _update_status(msg: str):
+        status_text.value = msg
+        try:
+            status_text.update()
+        except Exception:
+            pass
 
     try:
         if upload_local_path:
             await colab.upload(upload_local_path, remote, session_name)
 
+        _update_status("Loading dataset & building preview…")
         schema, error = await load_and_extract_schema(
             colab,
             session_name,
             suggest_load_code(file_name),
+            status_cb=_update_status,
             add_cell_fn=add_cell_fn,
             run_cell_fn=run_cell_fn,
             cell_prompt=f"Load Dataset: {file_name}",
@@ -168,26 +227,40 @@ async def run_dataset_import_dialog(
             err_msg = error or "Could not read a tabular dataset."
             logger.error("Dataset load failed: %s", err_msg)
             if page:
+                try:
+                    page.pop_dialog()
+                except Exception:
+                    pass
                 show_snack(page, f"Dataset load failed: {err_msg}", error=True)
             return False
 
-        # Enrich schema with AI description + suggestions (was missing - this is
-        # what caused the empty description after upload).
-        if page:
-            show_snack(page, "🤖 Compiling AI intelligence…", duration=4000)
-        schema = await enrich_schema_with_ai(schema)
+        _update_status("Compiling AI intelligence & suggestions…")
+        schema = await enrich_schema_with_ai(schema, status_cb=_update_status)
 
         state.suggestions = schema.get("suggestions", [])
         set_schema_json(schema)
 
         if page:
+            try:
+                page.pop_dialog()
+            except Exception:
+                pass
             show_snack(page, f"✅ Ready: {file_name}", success=True, duration=2500)
         return True
     except Exception as e:
         logger.error("Dataset import failed: %s", e)
         if page:
+            try:
+                page.pop_dialog()
+            except Exception:
+                pass
             show_snack(page, f"Import failed: {e}", error=True)
         return False
     finally:
+        if page:
+            try:
+                page.pop_dialog()
+            except Exception:
+                pass
         if set_is_generating:
             set_is_generating(False)

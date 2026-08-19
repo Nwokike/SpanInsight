@@ -89,31 +89,17 @@ def apply_storage_patches() -> None:
 
     ctx = sys.modules.get("jupyter_kernel_client")
     if ctx is not None:
-        _jupyter_kernel_client_attrs = {
-            "JupyterSubprotocol": None,
-            "KernelClient": None,
-            "KernelHttpManager": None,
-            "KernelWebSocketClient": None,
-            "KonsoleApp": None,
-            "LanguageSnippets": None,
-            "SNIPPETS_REGISTRY": None,
-            "VariableDescription": None,
-            "client": None,
-            "constants": None,
-            "konsoleapp": None,
-            "log": None,
-            "manager": None,
-            "models": None,
-            "shell": None,
-            "snippets": None,
-            "utils": None,
-            "wsclient": None,
-        }
-        for name in _jupyter_kernel_client_attrs:
-            if not hasattr(ctx, name):
-                setattr(ctx, name, None)
+        # colab_cli expects KernelClient which jupyter_kernel_client exports as JupyterKernelClient
+        if (
+            not hasattr(ctx, "KernelClient")
+            or getattr(ctx, "KernelClient", None) is None
+        ) and hasattr(ctx, "JupyterKernelClient"):
+            ctx.KernelClient = ctx.JupyterKernelClient
 
-        if ctx.JupyterSubprotocol is None:
+        if (
+            not hasattr(ctx, "JupyterSubprotocol")
+            or getattr(ctx, "JupyterSubprotocol", None) is None
+        ):
             import enum
 
             class MockJupyterSubprotocol(enum.Enum):
