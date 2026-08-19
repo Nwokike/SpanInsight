@@ -482,20 +482,20 @@ def AnalysisScreen() -> Control:
                 logger.debug("Project auto-rename/create: %s", ex)
 
     # ── FAB Sync ────────────────────────────────────────────────
+    def _cleanup_fab():
+        if page and page.views:
+            try:
+                page.views[0].floating_action_button = None
+                page.update()
+            except Exception:
+                pass
+
     def _sync_fab():
         if not page or not page.views:
             return
 
-        def _cleanup():
-            if page and page.views:
-                try:
-                    page.views[0].floating_action_button = None
-                    page.update()
-                except Exception:
-                    pass
-
         if not session_name or state.autopilot_running:
-            _cleanup()
+            _cleanup_fab()
             return
 
         has_schema = bool(schema_json)
@@ -524,11 +524,10 @@ def AnalysisScreen() -> Control:
         except Exception:
             pass
 
-        return _cleanup
-
     ft.use_effect(
         _sync_fab,
         [session_name, cells_version, bool(schema_json), state.autopilot_running],
+        cleanup=_cleanup_fab,
     )
 
     if not session_name:
