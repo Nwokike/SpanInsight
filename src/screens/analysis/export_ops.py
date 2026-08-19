@@ -17,7 +17,7 @@ logger = logging.getLogger("ExportOps")
 
 
 async def export_ipynb_async(page: ft.Page | None):
-    """Convert state notebook cells to standard .ipynb format and save to app storage."""
+    """Convert state notebook cells to standard .ipynb format and save to user Downloads or chosen path."""
     if not state.notebook_cells:
         return
 
@@ -25,20 +25,28 @@ async def export_ipynb_async(page: ft.Page | None):
     ipynb_text = json.dumps(ipynb, indent=2)
 
     try:
-        storage_data = os.getenv("FLET_APP_STORAGE_DATA")
-        export_dir = (
-            pathlib.Path(storage_data)
-            if storage_data
-            else pathlib.Path(".flet") / "storage" / "data"
+        from core.utils import resolve_save_path
+
+        dataset_name = (
+            state.current_dataset.get("name", "") if state.current_dataset else ""
         )
-        export_dir.mkdir(parents=True, exist_ok=True)
-        export_path = export_dir / "spaninsight_notebook.ipynb"
-        export_path.write_text(ipynb_text, encoding="utf-8")
+        safe_name = (
+            dataset_name.split(".")[0].replace(" ", "_")
+            if dataset_name
+            else "spaninsight_notebook"
+        )
+        default_name = f"{safe_name}.ipynb"
+
+        save_path = await resolve_save_path(page, default_name)
+        if not save_path:
+            return  # User canceled the save dialog
+
+        pathlib.Path(save_path).write_text(ipynb_text, encoding="utf-8")
 
         if page:
             show_snack(
                 page,
-                "📓 Notebook exported to app storage",
+                f"📓 Notebook saved: {os.path.basename(save_path)}",
                 success=True,
                 duration=4000,
             )

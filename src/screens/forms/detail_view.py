@@ -19,10 +19,10 @@ def build_form_detail_view(
     on_download_csv,
     on_analyze,
     on_delete,
-) -> ft.Control:
+) -> list[ft.Control]:
     """Detailed summary of form fields, expiration, link sharing, and submitted data table."""
     if not form:
-        return ft.Container()
+        return []
 
     resp_count = form.get("_count", form.get("response_count", 0))
     expires_at = form.get("expires_at", "")[:10]
@@ -452,36 +452,41 @@ def build_form_detail_view(
                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             ),
                             ft.Container(
-                                content=ft.DataTable(
-                                    columns=[
-                                        ft.DataColumn(
-                                            ft.Text(
-                                                c,
-                                                size=tokens.FONT_SM,
-                                                weight=ft.FontWeight.W_600,
-                                            )
-                                        )
-                                        for c in columns
-                                    ],
-                                    rows=[
-                                        ft.DataRow(
-                                            cells=[
-                                                ft.DataCell(
+                                content=ft.Row(
+                                    controls=[
+                                        ft.DataTable(
+                                            columns=[
+                                                ft.DataColumn(
                                                     ft.Text(
-                                                        str(row.get(c, "—")),
+                                                        c,
                                                         size=tokens.FONT_SM,
+                                                        weight=ft.FontWeight.W_600,
                                                     )
                                                 )
                                                 for c in columns
-                                            ]
+                                            ],
+                                            rows=[
+                                                ft.DataRow(
+                                                    cells=[
+                                                        ft.DataCell(
+                                                            ft.Text(
+                                                                str(row.get(c, "—")),
+                                                                size=tokens.FONT_SM,
+                                                            )
+                                                        )
+                                                        for c in columns
+                                                    ]
+                                                )
+                                                for row in rows_data
+                                            ],
+                                            column_spacing=tokens.SPACE_LG,
+                                            horizontal_lines=ft.BorderSide(
+                                                tokens.DIVIDER_THICKNESS,
+                                                ft.Colors.OUTLINE_VARIANT,
+                                            ),
                                         )
-                                        for row in rows_data
                                     ],
-                                    column_spacing=tokens.SPACE_LG,
-                                    horizontal_lines=ft.BorderSide(
-                                        tokens.DIVIDER_THICKNESS,
-                                        ft.Colors.OUTLINE_VARIANT,
-                                    ),
+                                    scroll=ft.ScrollMode.AUTO,
                                 ),
                                 border_radius=tokens.RADIUS_MD,
                                 border=ft.Border.all(
@@ -581,4 +586,4 @@ def build_form_detail_view(
         )
 
     controls.append(ft.Container(height=tokens.INPUT_WIDTH_SM))
-    return ft.Column(controls)
+    return controls

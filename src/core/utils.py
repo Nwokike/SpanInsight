@@ -73,6 +73,71 @@ async def set_clipboard(_page: ft.Page | None, text: str) -> bool:
         return False
 
 
+async def resolve_save_path(page: ft.Page | None, default_name: str) -> str | None:
+    """Resolve destination file save path across Android/iOS mobile and desktop platforms.
+
+    - On mobile (Android/iOS): saves directly to /storage/emulated/0/Download or ~/Downloads.
+    - On desktop: prompts the user via FilePicker.save_file dialog, falling back to ~/Downloads.
+    """
+    import os
+
+    is_mobile = False
+    if page and hasattr(page, "platform"):
+        is_mobile = page.platform in (
+            ft.PagePlatform.ANDROID,
+            getattr(ft.PagePlatform, "ANDROID_TV", ft.PagePlatform.ANDROID),
+            ft.PagePlatform.IOS,
+        )
+
+    if is_mobile:
+        dl_dir = "/storage/emulated/0/Download"
+        if not os.path.exists(dl_dir):
+            dl_dir = os.path.join(os.path.expanduser("~"), "Downloads")
+        os.makedirs(dl_dir, exist_ok=True)
+
+        name_part, ext_part = os.path.splitext(default_name)
+        counter = 1
+        unique_name = default_name
+        while os.path.exists(os.path.join(dl_dir, unique_name)):
+            unique_name = f"{name_part} ({counter}){ext_part}"
+            counter += 1
+        return os.path.join(dl_dir, unique_name)
+
+    # Desktop: try native file_picker
+    file_picker = getattr(page, "file_picker", None) if page else None
+    if not file_picker and page:
+        file_picker = ft.FilePicker()
+        page.services.append(file_picker)
+        try:
+            page.update()
+        except Exception:
+            pass
+
+    path = None
+    if file_picker:
+        try:
+            path = await file_picker.save_file(
+                dialog_title=f"Save {default_name}",
+                file_name=default_name,
+            )
+        except Exception as ex:
+            logger.debug("FilePicker save_file canceled or failed: %s", ex)
+            path = None
+
+    if not path:
+        dl_dir = os.path.join(os.path.expanduser("~"), "Downloads")
+        os.makedirs(dl_dir, exist_ok=True)
+        name_part, ext_part = os.path.splitext(default_name)
+        counter = 1
+        unique_name = default_name
+        while os.path.exists(os.path.join(dl_dir, unique_name)):
+            unique_name = f"{name_part} ({counter}){ext_part}"
+            counter += 1
+        path = os.path.join(dl_dir, unique_name)
+
+    return path
+
+
 def parse_version(version_str: str) -> tuple[int, ...]:
     """Parse a semver string into a comparable tuple.
 

@@ -10,6 +10,7 @@ import flet as ft
 
 from components.form_editor import build_form_editor
 from core import tokens
+from core.utils import show_snack
 from screens.forms.dashboard_view import build_forms_dashboard
 from screens.forms.detail_view import build_form_detail_view
 from screens.forms.handlers import (
@@ -25,7 +26,6 @@ from services import forms_service
 from services.audio_service import AudioService
 from state import AppStateCtx
 from state.controller_ctx import ControllerMethodsCtx
-from state.service_ctx import ServiceCtx
 
 logger = logging.getLogger("FormsScreen")
 
@@ -35,7 +35,6 @@ def FormsScreen() -> ft.Control:
     """Forms & survey builder screen with dashboard, editor, and responses view."""
     page = ft.context.page
     state = ft.use_context(AppStateCtx)
-    services = ft.use_context(ServiceCtx)
     ft.use_context(ControllerMethodsCtx)
 
     # Mode: "dashboard", "editor", "detail"
@@ -77,8 +76,8 @@ def FormsScreen() -> ft.Control:
                 duration=tokens.SNACK_DURATION_EXTENDED_MS,
             )
 
-    def _load_forms():
-        return load_forms_async(
+    async def _load_forms():
+        await load_forms_async(
             state.active_project_id, state, set_user_forms, set_is_loading, _show_error
         )
 
@@ -232,108 +231,88 @@ def FormsScreen() -> ft.Control:
             return
 
         form_title = form_data.get("title", "Survey")
+        rows = [r.get("data", r) for r in responses]
+
         code = (
-            f"# Analysis for: {form_title}\n"
-            f"# Responses collected: {len(responses)}\n"
-            f"import json\n\n"
-            f"responses_data = {json.dumps(responses, indent=2)}\n"
-            f"df = pd.DataFrame(responses_data)\n"
-            f"print(f'Survey: {form_title}')\n"
-            f"print(f'Total Responses: {{len(df)}}')\n"
-            f'print(df.describe(include="all"))\n'
+            f"# Survey Dataset: {form_title}\n"
+            f"# Total Collected Responses: {len(rows)}\n"
+            f"import pandas as pd\n\n"
+            f"responses_data = {json.dumps(rows, indent=2)}\n"
+            f"df = pd.DataFrame(responses_data)\n\n"
+            f"print(f\"Loaded survey '{form_title}': {{len(df)}} responses, {{len(df.columns)}} columns\")\n"
+            f"df.head()"
         )
 
-        has_active_project = (
-            state.active_project_id and state.active_project_id != "default"
-        )
-        if not has_active_project:
-            import uuid
-
-            async def _create_survey_project():
-                proj = await services.projects.create_project(
-                    name=f"{form_title} Analysis",
-                    primary_dataset=f"{form_title}_responses",
-                    initial_cells=[
-                        {
-                            "id": str(uuid.uuid4()),
-                            "type": "code",
-                            "source": code,
-                            "outputs": [],
-                            "is_running": False,
-                        }
-                    ],
-                )
-                state.load_project(proj)
-                state.current_tab = 1
-
-            if page:
-                page.run_task(_create_survey_project)
-        else:
-            state.add_cell("code", code)
-            state.current_tab = 1
+        dataset_name = f"{form_title.replace(' ', '_')}_responses.csv"
+        state.current_dataset = {"name": dataset_name}
+        state.add_cell("code", code)
+        state.current_tab = 1
+        if page:
+            show_snack(
+                page,
+                f"📊 Loaded {len(rows)} responses into Notebook!",
+                success=True,
+            )
 
     # ── View Router ──────────────────────────────────────────────
     if mode == "editor":
-        view_content = ft.Column(
-            build_form_editor(
-                schema=draft_schema,
-                title=draft_title,
-                description=draft_desc,
-                on_schema_changed=set_draft_schema,
-                on_title_changed=set_draft_title,
-                on_desc_changed=set_draft_desc,
-                on_publish=lambda: (
-                    page.run_task(
-                        publish_form_async,
-                        state.active_project_id,
-                        draft_title,
-                        draft_desc,
-                        draft_schema,
-                        page,
-                        set_is_publishing,
-                        set_mode,
-                        set_draft_schema,
-                        set_prompt_text,
-                        _load_forms,
-                        _show_error,
-                    )
-                    if page
-                    else None
-                ),
-                on_cancel=lambda: (set_mode("dashboard"), set_draft_schema([])),
-                on_ai_edit=lambda action, text="": (
-                    page.run_task(
-                        ai_edit_schema_async,
-                        action,
-                        text,
-                        ai_edit_text,
-                        draft_schema,
-                        draft_title,
-                        draft_desc,
-                        set_ai_edit_text,
-                        set_is_ai_editing,
-                        set_draft_schema,
-                        set_draft_title,
-                        set_draft_desc,
-                        _show_error,
-                    )
-                    if page
-                    else None
-                ),
-                on_voice_toggle=lambda e: (
-                    page.run_task(on_editor_voice_toggle, e) if page else None
-                ),
-                is_publishing=is_publishing,
-                is_recording=editor_recording,
-                is_transcribing=editor_transcribing,
-                is_ai_editing=is_ai_editing,
-                recording_time=editor_recording_time,
-                ai_prompt_text=ai_edit_text,
-                recording_timer_ref=None,
-            )
+        view_controls = build_form_editor(
+            page=page,
+            schema=draft_schema,
+            title=draft_title,
+            description=draft_desc,
+            on_schema_changed=set_draft_schema,
+            on_title_changed=set_draft_title,
+            on_desc_changed=set_draft_desc,
+            on_ai_edit=lambda action, val: (
+                page.run_task(
+                    ai_edit_schema_async,
+                    action,
+                    val,
+                    ai_edit_text,
+                    draft_schema,
+                    draft_title,
+                    draft_desc,
+                    set_ai_edit_text,
+                    set_is_ai_editing,
+                    set_draft_schema,
+                    set_draft_title,
+                    set_draft_desc,
+                    _show_error,
+                )
+                if page
+                else None
+            ),
+            on_voice_toggle=lambda e: (
+                page.run_task(on_editor_voice_toggle, e) if page else None
+            ),
+            on_publish=lambda e: (
+                page.run_task(
+                    publish_form_async,
+                    draft_title,
+                    draft_desc,
+                    draft_schema,
+                    state.active_project_id,
+                    page,
+                    set_is_publishing,
+                    set_mode,
+                    _load_forms,
+                    _show_error,
+                )
+                if page
+                else None
+            ),
+            on_cancel=lambda _: (set_mode("dashboard"), set_draft_schema([])),
+            is_publishing=is_publishing,
+            is_recording=editor_recording,
+            is_transcribing=editor_transcribing,
+            is_ai_editing=is_ai_editing,
+            recording_time=editor_recording_time,
+            ai_prompt_text=ai_edit_text,
+            recording_timer_ref=None,
         )
     elif mode == "detail":
-        view_content = build_form_detail_view(
+        view_controls = build_form_detail_view(
             page=page,
             form=active_form,
             on_back=lambda _: (set_active_form(None), set_mode("dashboard")),
@@ -362,7 +341,7 @@ def FormsScreen() -> ft.Control:
             ),
         )
     else:
-        view_content = build_forms_dashboard(
+        view_controls = build_forms_dashboard(
             page=page,
             user_forms=user_forms,
             is_loading=is_loading,
@@ -394,7 +373,7 @@ def FormsScreen() -> ft.Control:
         )
 
     return ft.Column(
-        controls=[view_content],
+        controls=view_controls,
         scroll=ft.ScrollMode.AUTO,
         expand=True,
     )

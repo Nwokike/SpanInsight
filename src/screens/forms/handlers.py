@@ -212,7 +212,7 @@ async def delete_form_async(
 
 
 async def download_csv_async(form: dict, page: ft.Page, show_error):
-    """Exports all form submission responses to a CSV file in app storage."""
+    """Exports all form submission responses to a user-accessible CSV file."""
     responses = form.get("_responses", [])
     if not responses:
         show_error("No responses to download.")
@@ -222,25 +222,24 @@ async def download_csv_async(form: dict, page: ft.Page, show_error):
     import os
     from pathlib import Path
 
+    from core.utils import resolve_save_path, show_snack
+
     try:
-        storage_data = os.getenv("FLET_APP_STORAGE_DATA")
-        export_dir = (
-            Path(storage_data) if storage_data else Path(".flet") / "storage" / "data"
-        )
-        export_dir.mkdir(parents=True, exist_ok=True)
-        safe_name = form["title"].replace(" ", "_").replace("/", "-")
-        export_path = export_dir / f"{safe_name}_responses.csv"
+        safe_name = form.get("title", "form").replace(" ", "_").replace("/", "-")
+        default_name = f"{safe_name}_responses.csv"
+
+        save_path = await resolve_save_path(page, default_name)
+        if not save_path:
+            return  # User canceled the save dialog
 
         def _write():
-            export_path.write_bytes(csv_bytes)
+            Path(save_path).write_bytes(csv_bytes)
 
         await asyncio.to_thread(_write)
         if page:
-            from core.utils import show_snack
-
             show_snack(
                 page,
-                f"📄 Responses saved: {export_path.name}",
+                f"📄 Responses saved: {os.path.basename(save_path)}",
                 success=True,
                 duration=tokens.SNACK_DURATION_MD_MS,
             )
