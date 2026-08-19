@@ -66,16 +66,11 @@ class FilePickerService:
 
         Returns the full path written, or None on failure.
         """
-        import os
-        from pathlib import Path
 
         try:
-            storage_data = os.getenv("FLET_APP_STORAGE_DATA")
-            export_dir = (
-                Path(storage_data)
-                if storage_data
-                else Path(".flet") / "storage" / "data"
-            )
+            from core.storage_patch import resolve_storage_dir
+
+            export_dir = resolve_storage_dir()
             export_dir.mkdir(parents=True, exist_ok=True)
             export_path = export_dir / file_name
             if isinstance(content, bytes):

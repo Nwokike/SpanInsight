@@ -8,8 +8,6 @@ Shows the local dataset cache size and provides tiles to:
 from __future__ import annotations
 
 import logging
-import os
-from pathlib import Path
 
 import flet as ft
 
@@ -22,12 +20,9 @@ logger = logging.getLogger("DataSection")
 def _get_cache_stats() -> tuple[int, str]:
     """Return (file_count, human_readable_size) for the local dataset cache."""
     try:
-        storage_env = os.getenv("FLET_APP_STORAGE_DATA")
-        cache_dir = (
-            Path(storage_env) / "datasets"
-            if storage_env
-            else Path(".flet") / "storage" / "data" / "datasets"
-        )
+        from core.storage_patch import resolve_storage_dir
+
+        cache_dir = resolve_storage_dir() / "datasets"
         if not cache_dir.exists():
             return 0, "0 B"
         files = [f for f in cache_dir.iterdir() if f.is_file()]

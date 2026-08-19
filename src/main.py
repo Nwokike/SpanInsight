@@ -12,6 +12,10 @@ import sys
 
 import flet as ft
 
+from core.storage_patch import apply_storage_patches
+
+apply_storage_patches()
+
 from core import tokens
 from core.state import state
 from core.theme import AppTheme

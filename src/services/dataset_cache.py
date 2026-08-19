@@ -8,22 +8,18 @@ re-prompting the user.
 from __future__ import annotations
 
 import logging
-import os
 import shutil
 import time
 from pathlib import Path
+
+from core.storage_patch import resolve_storage_dir
 
 logger = logging.getLogger("dataset_cache")
 
 CACHE_MAX_AGE_DAYS = 30
 _CACHE_MAX_AGE_SEC = CACHE_MAX_AGE_DAYS * 24 * 60 * 60
 
-_storage_env = os.getenv("FLET_APP_STORAGE_DATA")
-if _storage_env:
-    _DATASETS_DIR = Path(_storage_env) / "datasets"
-else:
-    # Dev fallback - mirrors what Flet sets as FLET_APP_STORAGE_DATA at runtime
-    _DATASETS_DIR = Path(".flet") / "storage" / "data" / "datasets"
+_DATASETS_DIR = resolve_storage_dir() / "datasets"
 
 
 def _ensure_dir() -> None:

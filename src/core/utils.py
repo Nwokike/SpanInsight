@@ -176,18 +176,9 @@ def figure_to_png_bytes(fig) -> bytes:
 
 def get_temp_dir() -> Path:
     """Resolve a writeable temporary directory using Flet's app storage paths."""
-    import os
-    from pathlib import Path
+    from core.storage_patch import resolve_temp_dir
 
-    # FLET_APP_STORAGE_TEMP is always set by Flet at runtime (→ .flet/storage/temp/ locally,
-    # app private temp dir on Android)
-    temp_env = os.getenv("FLET_APP_STORAGE_TEMP")
-    if temp_env:
-        path = Path(temp_env)
-    else:
-        # Dev fallback - matches the .flet folder structure Flet creates locally
-        path = Path(".flet") / "storage" / "temp"
-
+    path = resolve_temp_dir()
     try:
         path.mkdir(parents=True, exist_ok=True)
         return path

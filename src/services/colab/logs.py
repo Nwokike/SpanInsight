@@ -1,16 +1,12 @@
 import asyncio
 import os
 
+from core.storage_patch import resolve_storage_dir
+
 
 def _resolve_log_dir() -> str:
     """Return the history log directory path."""
-    storage_env = os.getenv("FLET_APP_STORAGE_DATA")
-    if storage_env:
-        base_dir = storage_env
-    else:
-        # Dev fallback - mirrors .flet/storage/data/ that Flet creates locally
-        base_dir = os.path.join(".flet", "storage", "data")
-    log_dir = os.path.join(base_dir, "history")
+    log_dir = str(resolve_storage_dir() / "history")
     os.makedirs(log_dir, exist_ok=True)
     return log_dir
 

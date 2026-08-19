@@ -12,22 +12,17 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 import time
 from pathlib import Path
 
 import flet as ft
 
+from core.storage_patch import resolve_storage_dir
+
 logger = logging.getLogger(__name__)
 
-# Use FLET_APP_STORAGE_DATA when set by Flet at runtime (Android: app private data dir)
-# Dev fallback mirrors the .flet/storage/data/ folder Flet creates locally
-storage_env = os.getenv("FLET_APP_STORAGE_DATA")
-if storage_env:
-    _STORAGE_DIR = Path(storage_env)
-else:
-    _STORAGE_DIR = Path(".flet") / "storage" / "data"
-
+# Use Flet sandbox data storage path (FLET_APP_STORAGE_DATA on Android, .flet/storage/data in dev)
+_STORAGE_DIR = resolve_storage_dir()
 _SETTINGS_FILE = _STORAGE_DIR / "settings.json"
 _HISTORY_FILE = _STORAGE_DIR / "history.json"
 
