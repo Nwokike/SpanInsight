@@ -36,7 +36,16 @@ def get_client() -> httpx.AsyncClient:
     global _client
     if _is_shutting_down:
         raise httpx.HTTPError("Client is shutting down")
-    if _client is None or _client.is_closed:
+
+    try:
+        current_loop = asyncio.get_running_loop()
+    except RuntimeError:
+        current_loop = None
+
+    if _client is None or _client.is_closed or (
+        getattr(_client, "_active_loop", None) is not None
+        and _client._active_loop is not current_loop
+    ):
         _client = httpx.AsyncClient(
             headers=COMMON_HEADERS,
             timeout=httpx.Timeout(30.0, connect=10.0),
@@ -47,6 +56,7 @@ def get_client() -> httpx.AsyncClient:
             ),
             http2=False,
         )
+        _client._active_loop = current_loop
     return _client
 
 

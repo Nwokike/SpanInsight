@@ -14,7 +14,8 @@ from components.notebook_cell.output import (
 )
 from components.report_editor.visualizers import build_serialized_result_visualizer
 from core.state import state
-from screens.analysis.colab_ops import _session_expired, run_cell_async
+from screens.analysis.colab_connection import session_expired as _session_expired
+from screens.analysis.execution_runner import run_cell_async
 from services.colab.introspection import build_result_serialization_code
 
 _BAR_SPEC = {
@@ -162,6 +163,12 @@ class RecoveryFakeColab:
         self.calls = []
         self.reconnected = False
 
+    async def check_auth(self):
+        return True
+
+    async def list_sessions(self):
+        return []
+
     async def exec_code(self, code, session_name=None, **kwargs):
         self.calls.append((session_name, code))
         if not self.reconnected and "print('hello')" in code:
@@ -178,6 +185,7 @@ class HealingColab:
     def __init__(self, fail_times):
         self.fail_times = fail_times
         self.cell_execs = 0
+        self.heal_execs = 0
 
     async def exec_code(self, code, session_name=None, **kwargs):
         if "__SPANINSIGHT" in code:  # silent introspection snippets
@@ -187,12 +195,15 @@ class HealingColab:
             return [
                 {
                     "output_type": "error",
-                    "ename": "ValueError",
-                    "evalue": "BAD code failed",
-                    "traceback": ["ValueError: BAD code failed"],
+                    "ename": "NameError",
+                    "evalue": "name 'BAD' is not defined",
+                    "traceback": [
+                        "Traceback (most recent call last):",
+                        "NameError: BAD",
+                    ],
                 }
             ]
-        return [{"output_type": "stream", "name": "stdout", "text": "ok"}]
+        return [{"output_type": "stream", "name": "stdout", "text": "good"}]
 
 
 class TestSelfHealing:
@@ -212,7 +223,7 @@ class TestSelfHealing:
             return "print('good')"
 
         with patch(
-            "services.ai.analysis.generate_corrected_code",
+            "services.ai.generate_corrected_code",
             new=AsyncMock(side_effect=fake_correct),
         ):
             await run_cell_async(
@@ -246,7 +257,7 @@ class TestSelfHealing:
             return bad_code + "\n# retry"
 
         with patch(
-            "services.ai.analysis.generate_corrected_code",
+            "services.ai.generate_corrected_code",
             new=AsyncMock(side_effect=fake_correct),
         ):
             await run_cell_async(
@@ -297,7 +308,7 @@ class TestSelfHealing:
             return bad_code  # AI returns identical code
 
         with patch(
-            "services.ai.analysis.generate_corrected_code",
+            "services.ai.generate_corrected_code",
             new=AsyncMock(side_effect=same_code),
         ):
             await run_cell_async(
@@ -336,7 +347,7 @@ class TestSessionRecovery:
 
         with (
             patch(
-                "screens.analysis.colab_ops.connect_colab_async",
+                "screens.analysis.colab_connection.connect_colab_async",
                 new=AsyncMock(side_effect=fake_connect),
             ),
             patch("services.dataset_cache.get_cached_path", return_value=None),
@@ -391,9 +402,9 @@ class TestControlValidation:
     def test_skeleton_validates(self):
         from flet.utils.validation import validate
 
-        from components.insight_card import _build_running_skeleton
+        from components.insight_card.skeleton import build_running_skeleton
 
-        validate(_build_running_skeleton())
+        validate(build_running_skeleton())
 
     def test_native_charts_validate(self):
         from flet.utils.validation import validate

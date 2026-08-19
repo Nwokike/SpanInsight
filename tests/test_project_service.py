@@ -108,7 +108,9 @@ async def test_project_delete(tmp_path):
     storage = StorageService(data_dir=str(tmp_path))
     project_svc = ProjectService(storage=storage)
 
-    created = await project_svc.create_project(name="Temporary Project")
+    created = await project_svc.create_project(
+        name="Temporary Project", primary_dataset="temp.csv"
+    )
     pid = created["id"]
 
     assert len(await project_svc.list_projects()) == 1

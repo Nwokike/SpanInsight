@@ -317,29 +317,29 @@ class TestSuggestSalvage:
     """Malformed gateway JSON must not destroy all suggestions (live issue)."""
 
     def test_salvage_complete_objects_from_broken_array(self):
-        from services.ai.analysis import _salvage_json_objects
+        from services.ai.analysis import salvage_json_objects
 
         broken = (
             '[{"label": "LOS Prediction", "icon": "🏥", "prompt": "Load the dataset '
             'and model length of stay"}, {"label": "Second", "icon": "📊", "prompt": "broken '
             "unclosed string"  # truncation mid-string
         )
-        items = _salvage_json_objects(broken)
+        items = salvage_json_objects(broken)
         assert len(items) == 1
         assert items[0]["label"] == "LOS Prediction"
 
     def test_salvage_skips_invalid_objects_keeps_valid(self):
-        from services.ai.analysis import _salvage_json_objects
+        from services.ai.analysis import salvage_json_objects
 
         text = '[{"label": "A"}, {not json}, {"label": "B"}]'
-        items = _salvage_json_objects(text)
+        items = salvage_json_objects(text)
         assert [i["label"] for i in items] == ["A", "B"]
 
     def test_salvage_handles_escaped_quotes(self):
-        from services.ai.analysis import _salvage_json_objects
+        from services.ai.analysis import salvage_json_objects
 
         text = '[{"label": "He said \\"hi\\"", "prompt": "x"}]'
-        items = _salvage_json_objects(text)
+        items = salvage_json_objects(text)
         assert items and items[0]["label"] == 'He said "hi"'
 
     @pytest.mark.asyncio
@@ -351,7 +351,7 @@ class TestSuggestSalvage:
             '[{"label": "Ok One", "icon": "✨", "prompt": "do it"}, {"label": "Trunc'
         )
         with patch(
-            "services.ai.analysis.call_gateway",
+            "services.ai.analysis.suggestions.call_gateway",
             new_callable=AsyncMock,
         ) as mock_gateway:
             mock_gateway.return_value = {

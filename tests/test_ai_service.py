@@ -22,7 +22,7 @@ async def test_ai_generate_code():
         ]
     }
     with patch(
-        "services.ai.analysis.call_gateway", new_callable=AsyncMock
+        "services.ai.analysis.code_gen.call_gateway", new_callable=AsyncMock
     ) as mock_gateway:
         mock_gateway.return_value = mock_response
         code = await ai_service.generate_code("Calculate mean salary", schema)
@@ -36,7 +36,7 @@ async def test_ai_error_correction():
         "choices": [{"message": {"content": "```python\ndf['A'].fillna(0)\n```"}}]
     }
     with patch(
-        "services.ai.analysis.call_gateway", new_callable=AsyncMock
+        "services.ai.analysis.code_gen.call_gateway", new_callable=AsyncMock
     ) as mock_gateway:
         mock_gateway.return_value = mock_response
         corrected = await ai_service.generate_corrected_code(
