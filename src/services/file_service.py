@@ -141,7 +141,18 @@ def suggest_load_code(file_name: str) -> str:
         )
 
     if ext in (".xlsx", ".xls"):
-        return f'import pandas as pd\ndf = pd.read_excel("{path}")\n' + loaded_tail
+        return (
+            "import os\n"
+            "import pandas as pd\n"
+            f'_p = "{path}" if os.path.exists("{path}") else "{file_name}"\n'
+            "try:\n"
+            "    df = pd.read_excel(_p)\n"
+            "except Exception:\n"
+            "    try:\n"
+            "        df = pd.read_excel(_p, engine='openpyxl')\n"
+            "    except Exception:\n"
+            "        df = pd.read_excel(_p, engine='xlrd')\n" + loaded_tail
+        )
 
     if ext in (".json", ".jsonl"):
         return f'import pandas as pd\ndf = pd.read_json("{path}")\n' + loaded_tail

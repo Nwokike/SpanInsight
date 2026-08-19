@@ -28,7 +28,7 @@ def session_expired(msg: str) -> bool:
 
 async def ensure_active_dataset_in_kernel(colab, session_name: str) -> bool:
     """Ensure the active project's dataset is present on Colab and loaded into df."""
-    if not session_name or not state.active_project_id:
+    if not session_name:
         return False
     from services.dataset_cache import get_cached_path
     from services.file_service import suggest_load_code

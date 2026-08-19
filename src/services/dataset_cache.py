@@ -28,55 +28,68 @@ def _ensure_dir() -> None:
 
 
 def cache_file(project_id: str, source_path: str) -> Path | None:
-    """Copy the original imported file into local project cache.
+    """Copy the original imported file into local project cache preserving original filename.
 
     Returns the cache destination path, or None on failure.
     """
-    if not project_id or not source_path:
+    if not source_path:
         return None
+    key = project_id or "_default"
     try:
         _ensure_dir()
-        delete_cache(project_id)
+        delete_cache(key)
 
-        ext = Path(source_path).suffix.lower() or ".csv"
-        dest = _DATASETS_DIR / f"{project_id}{ext}"
+        proj_dir = _DATASETS_DIR / key
+        proj_dir.mkdir(parents=True, exist_ok=True)
+
+        filename = Path(source_path).name
+        dest = proj_dir / filename
         shutil.copy(source_path, dest)
-        logger.info("Cached dataset for project %s → %s", project_id, dest.name)
+        logger.info("Cached dataset for project %s → %s", key, dest.name)
         return dest
     except Exception as e:
-        logger.warning("Failed to cache dataset for project %s: %s", project_id, e)
+        logger.warning("Failed to cache dataset for project %s: %s", key, e)
         return None
 
 
 def get_cached_path(project_id: str) -> Path | None:
     """Return the cached file path for a project, or None if not cached."""
-    if not project_id:
-        return None
+    key = project_id or "_default"
     try:
         if not _DATASETS_DIR.exists():
             return None
+        proj_dir = _DATASETS_DIR / key
+        if proj_dir.exists() and proj_dir.is_dir():
+            for f in proj_dir.iterdir():
+                if f.is_file():
+                    f.touch()
+                    return f
+        # Backward-compatible fallback for flat cache files
         for f in _DATASETS_DIR.iterdir():
-            if f.stem == project_id and f.is_file():
+            if f.stem == key and f.is_file():
                 f.touch()
                 return f
     except Exception as e:
-        logger.warning("Error checking cache for project %s: %s", project_id, e)
+        logger.warning("Error checking cache for project %s: %s", key, e)
     return None
 
 
 def delete_cache(project_id: str) -> None:
-    """Delete the cached dataset file for a project (any extension)."""
-    if not project_id:
-        return
+    """Delete the cached dataset file for a project."""
+    key = project_id or "_default"
     try:
         if not _DATASETS_DIR.exists():
             return
+        proj_dir = _DATASETS_DIR / key
+        if proj_dir.exists() and proj_dir.is_dir():
+            shutil.rmtree(proj_dir, ignore_errors=True)
+            logger.info("Deleted cached dataset directory: %s", proj_dir.name)
         for f in _DATASETS_DIR.iterdir():
-            if f.stem == project_id and f.is_file():
+            if f.stem == key and f.is_file():
                 f.unlink(missing_ok=True)
-                logger.info("Deleted cached dataset: %s", f.name)
+                logger.info("Deleted legacy cached dataset: %s", f.name)
     except Exception as e:
-        logger.warning("Failed to delete cache for project %s: %s", project_id, e)
+        logger.warning("Failed to delete cache for project %s: %s", key, e)
 
 
 def cleanup_stale() -> None:
