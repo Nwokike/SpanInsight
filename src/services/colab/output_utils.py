@@ -8,7 +8,7 @@ LIST of jupyter-nbformat-style output dicts:
      {"output_type": "display_data", "data": {...}},
      {"output_type": "error", "ename": "...", "evalue": "...", "traceback": [...]}]
 
-Historically some call sites assumed a ``{"outputs": [...]}`` dict envelope —
+Historically some call sites assumed a ``{"outputs": [...]}`` dict envelope -
 that shape never comes back from the runtime. Every helper here normalizes
 both shapes so no call site ever guesses again.
 """
@@ -96,7 +96,7 @@ def extract_marker_payload(raw_text: str, marker: str) -> str | None:
 def parse_marker_json(outputs, marker: str) -> tuple[dict | None, str | None]:
     """Parse a JSON payload fenced by the given marker from execution outputs.
 
-    Returns ``(payload_dict, error_message)`` — exactly one is non-None on
+    Returns ``(payload_dict, error_message)`` - exactly one is non-None on
     success/failure; both None when the marker was never printed.
     """
     raw_text = extract_text(outputs)

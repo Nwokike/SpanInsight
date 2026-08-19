@@ -1,4 +1,4 @@
-"""Form schema editor — editable field list with add/remove/reorder."""
+"""Form schema editor - editable field list with add/remove/reorder."""
 
 from __future__ import annotations
 

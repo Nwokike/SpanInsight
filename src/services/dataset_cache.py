@@ -1,4 +1,4 @@
-"""Local dataset file cache — one cached file per project.
+"""Local dataset file cache - one cached file per project.
 
 Copies the user's imported file to app-local storage so the dataset
 can be reloaded silently on app restart or kernel reconnection without
@@ -22,7 +22,7 @@ _storage_env = os.getenv("FLET_APP_STORAGE_DATA")
 if _storage_env:
     _DATASETS_DIR = Path(_storage_env) / "datasets"
 else:
-    # Dev fallback — mirrors what Flet sets as FLET_APP_STORAGE_DATA at runtime
+    # Dev fallback - mirrors what Flet sets as FLET_APP_STORAGE_DATA at runtime
     _DATASETS_DIR = Path(".flet") / "storage" / "data" / "datasets"
 
 

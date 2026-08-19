@@ -71,7 +71,7 @@ class CreditService:
         return tx_id
 
     async def commit(self, tx_id: str) -> int:
-        """Finalize a reservation — deduct from actual balance."""
+        """Finalize a reservation - deduct from actual balance."""
         task = self._rollback_tasks.pop(tx_id, None)
         if task:
             task.cancel()

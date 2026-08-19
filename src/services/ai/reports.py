@@ -148,7 +148,7 @@ async def edit_report_with_ai(
         "- Generate a beautiful, concise report-level description as an executive summary of the findings.\n"
         "- You MUST NOT modify, edit, or touch any block-level descriptions unless the user's edit instruction explicitly requests it. "
         "Otherwise, return all block-level descriptions exactly identical to how you received them.\n"
-        "- You MUST NOT delete any blocks — return the same count.\n"
+        "- You MUST NOT delete any blocks - return the same count.\n"
         "- Reformat block titles to be highly professional, concise section headers.\n\n"
         "CRITICAL: Return ONLY valid raw JSON starting with '{' and ending with '}'. "
         "Do NOT write any explanations, reasoning, thoughts, or preamble. Any conversational text will cause a system crash!\n\n"

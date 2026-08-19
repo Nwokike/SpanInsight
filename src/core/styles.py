@@ -1,4 +1,4 @@
-"""Design system — reusable widget factories and style presets.
+"""Design system - reusable widget factories and style presets.
 
 Use these instead of building raw containers with hardcoded values.
 Mirrors the Fletbot styles.py pattern.
@@ -20,7 +20,7 @@ def glass_card(
     border_radius: int = tokens.RADIUS_XL,
     blur_sigma: int = 0,  # kept for signature compat, unused
 ) -> ft.Container:
-    """Return a clean card container — no blur for mobile performance."""
+    """Return a clean card container - no blur for mobile performance."""
     return ft.Container(
         content=content,
         width=width,
@@ -46,7 +46,7 @@ def solid_card(
     border_radius: int = tokens.RADIUS_XL,
     page: ft.Page | None = None,
 ) -> ft.Container:
-    """Adaptive card — glass in dark mode, solid white in light."""
+    """Adaptive card - glass in dark mode, solid white in light."""
     is_dark = page and page.theme_mode == ft.ThemeMode.DARK
     if is_dark:
         return glass_card(

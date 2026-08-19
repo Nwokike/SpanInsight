@@ -222,7 +222,7 @@ def build_report_editor(
                         height=tokens.DIVIDER_THICKNESS,
                         color=theme.GLASS_BORDER_COLOR,
                     ),
-                    # Row 1 — Primary actions
+                    # Row 1 - Primary actions
                     ft.Row(
                         [
                             ft.FilledButton(
@@ -262,7 +262,7 @@ def build_report_editor(
                         ],
                         spacing=tokens.SPACE_SM,
                     ),
-                    # Row 2 — Secondary actions
+                    # Row 2 - Secondary actions
                     ft.Row(
                         [
                             ft.OutlinedButton(

@@ -1,4 +1,4 @@
-"""File item — reusable list item for the file browser."""
+"""File item - reusable list item for the file browser."""
 
 import flet as ft
 

@@ -131,7 +131,7 @@ def open_raw_data_dialog(page: ft.Page | None, schema_json: dict):
         cells = [
             ft.DataCell(
                 ft.Text(
-                    str(r.get(c, "—")),
+                    str(r.get(c, "-")),
                     size=tokens.FONT_XS,
                     font_family="RobotoMono",
                 )

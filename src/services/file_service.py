@@ -1,4 +1,4 @@
-"""File service v2 — file validation and Colab upload helpers.
+"""File service v2 - file validation and Colab upload helpers.
 
 All heavy data loading (pandas, numpy) now happens on Colab.
 This service handles local file picking, validation, and upload coordination.
@@ -97,7 +97,7 @@ def get_file_info(file_path: str) -> dict:
 def suggest_load_code(file_name: str) -> str:
     """Suggest Python code to load a file on Colab based on its extension.
 
-    Every tabular branch MUST leave a ``df`` DataFrame in the kernel — the
+    Every tabular branch MUST leave a ``df`` DataFrame in the kernel - the
     schema extractor looks for it. Non-tabular branches leave ``data`` or
     print honest info instead of pretending to be a DataFrame.
     """
@@ -247,7 +247,7 @@ def suggest_load_code(file_name: str) -> str:
             "print(f\"Cells: {len(nb.get('cells', []))}\")"
         )
 
-    # Generic fallback — honest info dump, never pretends to be a dataset
+    # Generic fallback - honest info dump, never pretends to be a dataset
     return (
         "import os\n"
         f'print(f"File: {path}")\n'

@@ -51,12 +51,12 @@ def build_slide_1() -> ft.Column:
             feature_row(
                 ft.Icons.AUTO_AWESOME_ROUNDED,
                 "Smart Analysis",
-                "Upload data, describe what you need — charts and insights appear automatically",
+                "Upload data, describe what you need - charts and insights appear automatically",
             ),
             feature_row(
                 ft.Icons.MEMORY_ROUNDED,
                 "Cloud-Powered",
-                "Runs on cloud compute — free CPU, GPU, TPU and unlimited packages",
+                "Runs on cloud compute - free CPU, GPU, TPU and unlimited packages",
             ),
             feature_row(
                 ft.Icons.DYNAMIC_FORM_ROUNDED,

@@ -1,1 +1,1 @@
-# Spaninsight — Privacy-First Data Intelligence
+# Spaninsight - Privacy-First Data Intelligence

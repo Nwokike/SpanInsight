@@ -1,4 +1,4 @@
-"""Forms API client — CRUD operations against the D1-backed gateway.
+"""Forms API client - CRUD operations against the D1-backed gateway.
 
 Handles form creation, listing, response fetching, CSV download,
 renewal, and deletion under project scopes.

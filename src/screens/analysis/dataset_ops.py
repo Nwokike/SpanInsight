@@ -5,7 +5,7 @@ Used by three entry points so they behave identically:
 - Project auto-reload from the local dataset cache
 - Files screen "Load in Analysis"
 
-Every step reports failures to the caller instead of swallowing them — the
+Every step reports failures to the caller instead of swallowing them - the
 UI decides how to surface them (dialog with Retry, snackbar, etc.).
 """
 
@@ -52,7 +52,7 @@ async def load_and_extract_schema(
         cell = add_cell_fn("code", load_code)
         if cell_prompt:
             cell["prompt"] = cell_prompt
-        # The schema pipeline narrates via enrich_schema_with_ai — skip the
+        # The schema pipeline narrates via enrich_schema_with_ai - skip the
         # generic per-cell post-exec AI for load cells.
         cell["skip_narration"] = True
         cell["is_initial_load"] = True
@@ -89,7 +89,7 @@ async def enrich_schema_with_ai(
 
     Mirrors v1 behaviour: the description is ALWAYS set (real text or honest
     fallback) and suggestions fall back to the built-in chips when the
-    gateway is unreachable — the screen never renders empty.
+    gateway is unreachable - the screen never renders empty.
     """
     from services.ai import analysis as ai_service
 
@@ -171,7 +171,7 @@ async def run_dataset_import_dialog(
                 show_snack(page, f"Dataset load failed: {err_msg}", error=True)
             return False
 
-        # Enrich schema with AI description + suggestions (was missing — this is
+        # Enrich schema with AI description + suggestions (was missing - this is
         # what caused the empty description after upload).
         if page:
             show_snack(page, "🤖 Compiling AI intelligence…", duration=4000)

@@ -1,4 +1,4 @@
-"""ReportsScreen — Modular Report generation, editor, and sharing dashboard."""
+"""ReportsScreen - Modular Report generation, editor, and sharing dashboard."""
 
 from __future__ import annotations
 

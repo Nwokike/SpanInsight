@@ -147,7 +147,7 @@ class TestOutputParsing:
         code = build_result_serialization_code()
         assert "__SPANINSIGHT_RESULT_START__" in code
         assert "__SPANINSIGHT_RESULT_END__" in code
-        # The kernel-wide backend must never be switched — user cells rely on inline
+        # The kernel-wide backend must never be switched - user cells rely on inline
         assert "matplotlib.use" not in code
 
 
@@ -395,7 +395,7 @@ class TestControlValidation:
     """Run Flet's own validator over constructed controls.
 
     Catches invalid configurations (e.g. Shimmer requiring gradient or both
-    base/highlight colors) at TEST time — such bugs only explode when Flet
+    base/highlight colors) at TEST time - such bugs only explode when Flet
     patches updates at runtime.
     """
 

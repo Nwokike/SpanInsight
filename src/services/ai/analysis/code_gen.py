@@ -36,7 +36,7 @@ EXEC_RULES = (
     "- Assign key results to a variable named `result`.\n"
     "- For simple visual summaries (bar/line/pie), PREFER assigning a chart spec to `result` "
     'as a dict: {"chart": {"type": "bar" or "line" or "pie", "title": str, '
-    '"x": [labels], "series": [{"name": str, "y": [numbers]}]}} — '
+    '"x": [labels], "series": [{"name": str, "y": [numbers]}]}} - '
     "the app renders it as a NATIVE interactive chart.\n"
     "- For complex visuals, use matplotlib figures; the app displays the rendered image.\n"
     "- Do NOT print human-readable text summaries. Only output raw tables, statistics, or plots.\n"

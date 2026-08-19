@@ -1,4 +1,4 @@
-"""SettingsScreen — Modular Cloud account, hardware defaults, debug terminal, and preferences."""
+"""SettingsScreen - Modular Cloud account, hardware defaults, debug terminal, and preferences."""
 
 from __future__ import annotations
 
@@ -199,7 +199,7 @@ def SettingsScreen() -> ft.Control:
 
                 show_snack(
                     page,
-                    "Not authenticated — sign in from onboarding",
+                    "Not authenticated - sign in from onboarding",
                     duration=tokens.SNACK_DURATION_NORMAL_MS,
                 )
 

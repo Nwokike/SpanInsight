@@ -1,4 +1,4 @@
-"""Shared HTTP client — connection-pooled, retry-enabled.
+"""Shared HTTP client - connection-pooled, retry-enabled.
 
 Eliminates per-request ``httpx.AsyncClient()`` instantiation across
 the codebase (ai_service, forms_service, uuid_service, etc.).
@@ -6,7 +6,7 @@ the codebase (ai_service, forms_service, uuid_service, etc.).
 Benefits:
 - TCP + TLS connection reuse → ~200-400ms saved per request
 - Automatic retry with exponential backoff for mobile networks
-- Single lifecycle — no socket leak risk
+- Single lifecycle - no socket leak risk
 """
 
 from __future__ import annotations
@@ -20,13 +20,13 @@ from core.constants import APP_CLIENT_ID, USER_AGENT
 
 logger = logging.getLogger(__name__)
 
-# Shared headers for every request (NO Content-Type — httpx sets it per request)
+# Shared headers for every request (NO Content-Type - httpx sets it per request)
 COMMON_HEADERS = {
     "X-App-Secret": APP_CLIENT_ID,
     "User-Agent": USER_AGENT,
 }
 
-# Module-level shared client — initialized lazily
+# Module-level shared client - initialized lazily
 _client: httpx.AsyncClient | None = None
 _is_shutting_down: bool = False
 
@@ -42,9 +42,13 @@ def get_client() -> httpx.AsyncClient:
     except RuntimeError:
         current_loop = None
 
-    if _client is None or _client.is_closed or (
-        getattr(_client, "_active_loop", None) is not None
-        and _client._active_loop is not current_loop
+    if (
+        _client is None
+        or _client.is_closed
+        or (
+            getattr(_client, "_active_loop", None) is not None
+            and _client._active_loop is not current_loop
+        )
     ):
         _client = httpx.AsyncClient(
             headers=COMMON_HEADERS,

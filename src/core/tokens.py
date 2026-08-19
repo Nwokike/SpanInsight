@@ -1,4 +1,4 @@
-"""Design system — spacing, radius, typography, layout dimensions, opacities, and animation tokens.
+"""Design system - spacing, radius, typography, layout dimensions, opacities, and animation tokens.
 
 Every numerical constant and sizing token used in SpanInsight lives here.
 Centralized, modular, and easy to maintain.

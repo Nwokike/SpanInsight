@@ -1,4 +1,4 @@
-"""App state context — component-facing adapter over the observable state."""
+"""App state context - component-facing adapter over the observable state."""
 
 import flet as ft
 

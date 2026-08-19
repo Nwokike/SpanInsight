@@ -1,4 +1,4 @@
-"""FilesScreen — Modular Colab filesystem explorer and transfer manager."""
+"""FilesScreen - Modular Colab filesystem explorer and transfer manager."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ logger = logging.getLogger("FilesScreen")
 
 @ft.component
 def FilesScreen() -> Control:
-    """Colab file manager — upload, download, delete, browse, load in analysis."""
+    """Colab file manager - upload, download, delete, browse, load in analysis."""
     services = ft.use_context(ServiceCtx)
     page = ft.context.page
 

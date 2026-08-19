@@ -29,7 +29,7 @@ async def transcribe_audio(audio_bytes: bytes, mime_type: str) -> str:
 
         if resp.status_code != 200:
             logger.error("Whisper HTTP %d: %s", resp.status_code, resp.text[:200])
-            return "[Transcription failed — server error]"
+            return "[Transcription failed - server error]"
 
         data = resp.json()
         transcript = data.get("text", "")

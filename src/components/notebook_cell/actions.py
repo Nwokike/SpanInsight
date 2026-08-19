@@ -68,7 +68,7 @@ def make_actions_row(
 async def fix_with_ai(page: ft.Page, cell: dict, on_change=None):
     """Generate an AI correction for a failed hand-written cell (Expert mode).
 
-    Writes the corrected code into the editor WITHOUT running it — experts
+    Writes the corrected code into the editor WITHOUT running it - experts
     stay in control and can review before executing.
     """
     from core.state import state
@@ -104,7 +104,7 @@ async def fix_with_ai(page: ft.Page, cell: dict, on_change=None):
 
             show_snack(
                 page,
-                "AI couldn't improve this code — try rephrasing it.",
+                "AI couldn't improve this code - try rephrasing it.",
                 duration=tokens.SNACK_DURATION_NORMAL_MS,
             )
         return
@@ -118,7 +118,7 @@ async def fix_with_ai(page: ft.Page, cell: dict, on_change=None):
 
         show_snack(
             page,
-            "🩹 Code corrected — review & run",
+            "🩹 Code corrected - review & run",
             duration=tokens.SNACK_DURATION_NORMAL_MS,
             success=True,
         )

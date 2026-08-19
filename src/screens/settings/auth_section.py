@@ -18,7 +18,7 @@ def build_auth_section(
         setting_tile(
             icon=ft.Icons.ACCOUNT_CIRCLE_ROUNDED,
             title=state.auth_email or "Not signed in",
-            subtitle="Colab OAuth2 — tap to verify"
+            subtitle="Colab OAuth2 - tap to verify"
             if state.is_authenticated
             else "Sign in from onboarding",
             on_click=on_check_auth,

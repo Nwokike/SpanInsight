@@ -1,4 +1,4 @@
-"""AgentProgressPill — compact 32px live AI agent progress indicator with timeline drawer."""
+"""AgentProgressPill - compact 32px live AI agent progress indicator with timeline drawer."""
 
 from __future__ import annotations
 

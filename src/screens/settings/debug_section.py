@@ -1,4 +1,4 @@
-"""Debug / Live Activity Terminal section — ktvplayer style."""
+"""Debug / Live Activity Terminal section - ktvplayer style."""
 
 from __future__ import annotations
 

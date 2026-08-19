@@ -1,4 +1,4 @@
-"""Report management — local-first storage with R2 sharing."""
+"""Report management - local-first storage with R2 sharing."""
 
 from __future__ import annotations
 

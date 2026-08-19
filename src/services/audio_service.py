@@ -1,4 +1,4 @@
-"""Audio recording service — voice input via flet-audio-recorder."""
+"""Audio recording service - voice input via flet-audio-recorder."""
 
 from __future__ import annotations
 
@@ -121,7 +121,7 @@ class AudioService:
                         if asyncio.iscoroutine(callback_result):
                             await callback_result
         except asyncio.CancelledError:
-            pass  # Manually stopped before timeout — expected
+            pass  # Manually stopped before timeout - expected
 
     async def stop_recording(self) -> tuple[bytes, str] | None:
         """Stop recording and return ``(wav_bytes, 'audio/wav')`` or None."""

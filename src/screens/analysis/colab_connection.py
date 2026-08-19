@@ -84,7 +84,7 @@ async def connect_colab_async(colab, page: ft.Page | None, set_is_connecting):
         if page:
             show_snack(
                 page,
-                f"Connected — {state.session_hardware} session ready",
+                f"Connected - {state.session_hardware} session ready",
                 success=True,
             )
     except Exception as e:

@@ -86,7 +86,7 @@ def build_summary_table_section(summary_stats: dict) -> ft.Control | None:
                 if val != "" and val is not None:
                     if isinstance(val, float):
                         if math.isnan(val) or math.isinf(val):
-                            val_str = "—"
+                            val_str = "-"
                         elif val == int(val):
                             val_str = f"{int(val):,}"
                             has_any_val = True
@@ -101,7 +101,7 @@ def build_summary_table_section(summary_stats: dict) -> ft.Control | None:
                         val_str = s[:16] + "…" if len(s) > 16 else s
                         has_any_val = True
                 else:
-                    val_str = "—"
+                    val_str = "-"
 
                 cells.append(
                     ft.DataCell(

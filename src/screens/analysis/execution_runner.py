@@ -197,7 +197,7 @@ async def run_cell_async(
                     {
                         "output_type": "stream",
                         "name": "stdout",
-                        "text": "🔄 Colab session reset — re-attaching workspace & dataset…",
+                        "text": "🔄 Colab session reset - re-attaching workspace & dataset…",
                     }
                 ]
                 flush_output_to_ui(refs, cell, page)

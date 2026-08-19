@@ -1,4 +1,4 @@
-"""AppShell — top-level shell branching onboarding vs dashboard.
+"""AppShell - top-level shell branching onboarding vs dashboard.
 
 Uses @ft.component with hooks to conditionally render the active screen
 based on tab selection and authentication state.
@@ -219,7 +219,7 @@ def AppShell() -> Control:
                 bgcolor=ft.Colors.with_opacity(
                     tokens.OPACITY_CONTAINER, ft.Colors.PRIMARY
                 ),
-                tooltip=f"Colab Connected: {state.active_session_name} ({state.session_hardware}) — Tap for status",
+                tooltip=f"Colab Connected: {state.active_session_name} ({state.session_hardware}) - Tap for status",
                 margin=ft.Margin(
                     tokens.SPACE_NONE,
                     tokens.SPACE_NONE,
@@ -261,7 +261,7 @@ def AppShell() -> Control:
                     tokens.DIVIDER_THICKNESS,
                     ft.Colors.with_opacity(tokens.OPACITY_BORDER, ft.Colors.ON_SURFACE),
                 ),
-                tooltip="Colab Disconnected — Click to connect",
+                tooltip="Colab Disconnected - Click to connect",
                 margin=ft.Margin(
                     tokens.SPACE_NONE,
                     tokens.SPACE_NONE,
@@ -292,7 +292,7 @@ def AppShell() -> Control:
             alignment=ft.Alignment.CENTER_LEFT,
         )
 
-        # Global busy chip — generation/autopilot can take 1-2+ minutes at the
+        # Global busy chip - generation/autopilot can take 1-2+ minutes at the
         # gateway; users navigating other tabs must still SEE that it's running.
         ai_busy = state.is_analyzing or state.autopilot_running
         ai_busy_chip = ft.Container(
@@ -321,7 +321,7 @@ def AppShell() -> Control:
             ),
             border_radius=tokens.RADIUS_SM,
             bgcolor=ft.Colors.with_opacity(tokens.OPACITY_CONTAINER, ft.Colors.PRIMARY),
-            tooltip="An AI task is running — results appear on the Analysis tab",
+            tooltip="An AI task is running - results appear on the Analysis tab",
             margin=ft.Margin(
                 tokens.SPACE_NONE,
                 tokens.SPACE_NONE,

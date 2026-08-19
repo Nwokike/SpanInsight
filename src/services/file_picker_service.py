@@ -28,7 +28,7 @@ class FilePickerService:
         self._on_result = on_result
 
         # Flet 0.86: FilePicker is registered via page.services in main.py.
-        # This instance is only used internally for picking — not for page-level save_file.
+        # This instance is only used internally for picking - not for page-level save_file.
         self._picker = ft.FilePicker()
 
     def pick_data_file(self):
@@ -44,7 +44,7 @@ class FilePickerService:
         allowed_extensions: list[str] | None = None,
         file_type: ft.FilePickerFileType = ft.FilePickerFileType.ANY,
     ) -> list | None:
-        """Direct async call — returns file list or None."""
+        """Direct async call - returns file list or None."""
         try:
             result = await self._picker.pick_files(
                 allow_multiple=False,

@@ -86,7 +86,7 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
                 if isinstance(cell, float):
                     val_str = f"{cell:.4f}"
                 else:
-                    val_str = str(cell if cell is not None else "—")
+                    val_str = str(cell if cell is not None else "-")
                 cells.append(
                     ft.DataCell(
                         ft.Text(
@@ -163,7 +163,7 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
                 if isinstance(v, float):
                     val_str = f"{v:.4f}"
                 else:
-                    val_str = str(v if v is not None else "—")
+                    val_str = str(v if v is not None else "-")
 
                 label_text = str(k).replace("_", " ").title()
                 metric_cards.append(

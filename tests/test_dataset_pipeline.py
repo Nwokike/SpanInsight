@@ -2,8 +2,8 @@
 
 These pin the REAL colab_cli 0.6.0 output contract: ``exec_code`` returns a
 LIST of jupyter-style output dicts (not a ``{"outputs": [...]}`` envelope).
-The old code failed silently against this contract — no description, no
-suggestions, no overview card — so every shape here is asserted explicitly.
+The old code failed silently against this contract - no description, no
+suggestions, no overview card - so every shape here is asserted explicitly.
 """
 
 from __future__ import annotations
@@ -215,7 +215,7 @@ async def test_load_and_extract_schema_with_list_outputs():
     """Regression for the missing-description bug: real list contract must parse.
 
     The previous implementation checked `isinstance(res, dict)` and never
-    extracted a schema — this exact input produced no description.
+    extracted a schema - this exact input produced no description.
     """
     from screens.analysis.dataset_ops import load_and_extract_schema
 
@@ -299,7 +299,7 @@ def test_sqlite_load_code_loads_table_into_df():
 def test_npy_load_code_uses_data_variable():
     code = suggest_load_code("weights.npy")
     assert "data = np.load" in code
-    assert "df = " not in code  # arrays are NOT DataFrames — don't pretend
+    assert "df = " not in code  # arrays are NOT DataFrames - don't pretend
 
 
 def test_generic_fallback_does_not_pretend_csv():

@@ -1,4 +1,4 @@
-"""DatasetOverviewCard — SpanInsight's rich initial dataset overview component."""
+"""DatasetOverviewCard - SpanInsight's rich initial dataset overview component."""
 
 from __future__ import annotations
 

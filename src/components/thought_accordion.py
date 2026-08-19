@@ -1,4 +1,4 @@
-"""ThoughtAccordion — displays collapsible chain-of-thought reasoning for modern AI models."""
+"""ThoughtAccordion - displays collapsible chain-of-thought reasoning for modern AI models."""
 
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ def build_thought_accordion(block: dict, on_change=None) -> ft.Control | None:
             if icon_ref.current:
                 icon_ref.current.update()
         except Exception:
-            # Control not mounted yet (or session shutting down) — fall back
+            # Control not mounted yet (or session shutting down) - fall back
             # to a full parent rebuild.
             logger.debug("In-place accordion update failed; falling back")
             if on_change:

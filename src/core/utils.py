@@ -1,4 +1,4 @@
-"""Shared utilities — snackbar, version comparison, image helpers."""
+"""Shared utilities - snackbar, version comparison, image helpers."""
 
 from __future__ import annotations
 
@@ -185,7 +185,7 @@ def get_temp_dir() -> Path:
     if temp_env:
         path = Path(temp_env)
     else:
-        # Dev fallback — matches the .flet folder structure Flet creates locally
+        # Dev fallback - matches the .flet folder structure Flet creates locally
         path = Path(".flet") / "storage" / "temp"
 
     try:

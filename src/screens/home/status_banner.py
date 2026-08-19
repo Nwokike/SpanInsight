@@ -19,7 +19,7 @@ def build_colab_status_bar(state) -> ft.Container:
                         color=theme.SUCCESS,
                     ),
                     ft.Text(
-                        f"Colab connected — {state.session_hardware}",
+                        f"Colab connected - {state.session_hardware}",
                         size=tokens.FONT_XS,
                         color=theme.SUCCESS,
                         weight=ft.FontWeight.W_600,

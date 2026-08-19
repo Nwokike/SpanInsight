@@ -1,4 +1,4 @@
-"""FormsScreen — Modular survey builder, publisher, and responses dashboard."""
+"""FormsScreen - Modular survey builder, publisher, and responses dashboard."""
 
 from __future__ import annotations
 

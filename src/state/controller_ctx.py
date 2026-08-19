@@ -1,4 +1,4 @@
-"""Controller context — exposes AppController callbacks to the component tree.
+"""Controller context - exposes AppController callbacks to the component tree.
 
 Components read controller methods via ``ft.use_context(ControllerMethodsCtx)``
 to trigger navigation, analysis, theme toggles, etc.

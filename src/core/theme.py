@@ -1,4 +1,4 @@
-"""Design system — colour palette, gradients, and Material 3 theme.
+"""Design system - colour palette, gradients, and Material 3 theme.
 
 Every colour used anywhere in Spaninsight lives here.
 Palette derived from brand logo: Teal (primary) + Orange (accent/CTA).
@@ -9,11 +9,11 @@ from __future__ import annotations
 import flet as ft
 
 # ── Brand Palette ───────────────────────────────────────────────────
-PRIMARY = "#00897B"  # Teal 600 — brand primary
-PRIMARY_DARK = "#00796B"  # Teal 700 — pressed state
-PRIMARY_LIGHT = "#4DB6AC"  # Teal 300 — hover / light variant
-ACCENT = "#F4831F"  # Warm Orange — CTA / secondary
-ACCENT_DIM = "#E07316"  # Deep Orange — subdued accent
+PRIMARY = "#00897B"  # Teal 600 - brand primary
+PRIMARY_DARK = "#00796B"  # Teal 700 - pressed state
+PRIMARY_LIGHT = "#4DB6AC"  # Teal 300 - hover / light variant
+ACCENT = "#F4831F"  # Warm Orange - CTA / secondary
+ACCENT_DIM = "#E07316"  # Deep Orange - subdued accent
 
 SUCCESS = "#2E7D32"  # Green 800
 WARNING = "#F9A825"  # Amber 800
@@ -22,8 +22,8 @@ ERROR = "#D32F2F"  # Red 700
 # ── Dark Mode Surfaces (M3 Surface Container hierarchy) ────────────
 DARK_BG_1 = "#0F1114"  # Background
 DARK_BG_2 = "#121518"  # Surface
-DARK_SURFACE = "#1A1D22"  # Surface Container Low — cards
-DARK_SURFACE_2 = "#252A30"  # Surface Container High — dialogs
+DARK_SURFACE = "#1A1D22"  # Surface Container Low - cards
+DARK_SURFACE_2 = "#252A30"  # Surface Container High - dialogs
 DARK_BORDER = "#2E3339"  # Outline / dividers
 DARK_TEXT = "#ECEFF1"  # On Surface
 DARK_TEXT_DIM = "#90A4AE"  # On Surface Variant
@@ -49,7 +49,7 @@ SHADOW_PRIMARY = ft.Colors.with_opacity(0.20, PRIMARY)
 SHADOW_DARK = ft.Colors.with_opacity(0.12, "#000000")
 
 # ── Semantic additions ──────────────────────────────────────────────
-INFO = "#42A5F5"  # Blue — info badges, Colab status
+INFO = "#42A5F5"  # Blue - info badges, Colab status
 
 # ── Terminal & Output ───────────────────────────────────────────────
 TERMINAL_BG = "#0D0D1A"
@@ -96,19 +96,19 @@ ANSI_COLORS = {
 BADGE_CPU = "#78909C"  # Blue-gray for CPU
 BADGE_GPU = "#E58514"  # Orange for GPU
 BADGE_TPU = "#42A5F5"  # Blue for TPU
-BADGE_FREE = "#4CAF50"  # Green — free tier
-BADGE_PAID = "#AB47BC"  # Purple — paid tier
+BADGE_FREE = "#4CAF50"  # Green - free tier
+BADGE_PAID = "#AB47BC"  # Purple - paid tier
 HARDWARE_CPU = BADGE_CPU
 HARDWARE_GPU = BADGE_GPU
 HARDWARE_TPU = BADGE_TPU
-CREDIT_HIGH = PRIMARY  # > 20 credits — teal (brand)
+CREDIT_HIGH = PRIMARY  # > 20 credits - teal (brand)
 CREDIT_MEDIUM = WARNING  # 5–20 credits
 CREDIT_LOW = ERROR  # < 5 credits
 
 
 # ── Gradient Builders ───────────────────────────────────────────────
 def dark_gradient() -> ft.LinearGradient:
-    """Subtle dark gradient — nearly flat for performance."""
+    """Subtle dark gradient - nearly flat for performance."""
     return ft.LinearGradient(
         begin=ft.Alignment.TOP_CENTER,
         end=ft.Alignment.BOTTOM_CENTER,
@@ -149,7 +149,7 @@ def adaptive_glass_border(page: ft.Page | None = None):
 
 
 class AppTheme:
-    """Build Material 3 themes for Spaninsight — teal/orange."""
+    """Build Material 3 themes for Spaninsight - teal/orange."""
 
     @staticmethod
     def get_dark_theme() -> ft.Theme:

@@ -1,4 +1,4 @@
-"""Application-wide constants — API config, limits, Colab settings.
+"""Application-wide constants - API config, limits, Colab settings.
 
 Every magic string and hard limit lives here. Import from
 ``core.constants`` instead of hard-coding values.

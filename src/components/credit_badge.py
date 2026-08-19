@@ -1,4 +1,4 @@
-"""Credit badge component — color-coded chip for the AppBar and active Credits popup dialog."""
+"""Credit badge component - color-coded chip for the AppBar and active Credits popup dialog."""
 
 from __future__ import annotations
 

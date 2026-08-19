@@ -56,7 +56,7 @@ def salvage_json_objects(text: str) -> list:
                     break
             j += 1
         if end == -1:
-            break  # truncated object — nothing after it can be complete either
+            break  # truncated object - nothing after it can be complete either
         try:
             obj = json.loads(text[start : end + 1])
             if isinstance(obj, dict):
@@ -93,7 +93,7 @@ async def suggest(
     initial_description: str = "",
     analysis_context: str = "",
 ) -> list[dict]:
-    """Fast context-aware suggestions — lean prompt matching describe_result speed."""
+    """Fast context-aware suggestions - lean prompt matching describe_result speed."""
     system_prompt = (
         "You are an expert data intelligence consultant. Suggest exactly 3 distinct, "
         "deeply insightful analysis tracks. Do NOT repeat previous steps.\n\n"
@@ -135,7 +135,7 @@ async def suggest(
         try:
             suggestions = json.loads(cleaned, strict=False)
         except Exception:
-            # Reasoning models sometimes emit a broken string mid-array —
+            # Reasoning models sometimes emit a broken string mid-array -
             # salvage the complete objects instead of losing every suggestion.
             salvaged = salvage_json_objects(cleaned)
             salvaged = [s for s in salvaged if isinstance(s, dict) and s.get("label")]

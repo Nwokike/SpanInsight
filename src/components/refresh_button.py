@@ -1,6 +1,6 @@
 """Reusable refresh button component.
 
-Mirrors the style used in the Forms dashboard — a TextButton with
+Mirrors the style used in the Forms dashboard - a TextButton with
 a refresh icon and label.  Drop this anywhere a "Refresh" action is
 needed so the look-and-feel stays consistent across the app.
 """

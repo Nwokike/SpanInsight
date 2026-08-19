@@ -1,7 +1,7 @@
 """Native interactive charts built on flet_charts 0.86.5.
 
 Renders chart-spec results produced by AI analyses (``result = {"chart": ...}``)
-as real, touch-friendly Flet charts — animated, with hover tooltips — instead
+as real, touch-friendly Flet charts - animated, with hover tooltips - instead
 of static PNGs. All constructors verified against the installed package.
 """
 

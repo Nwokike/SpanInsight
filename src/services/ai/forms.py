@@ -64,12 +64,12 @@ async def generate_form_schema(prompt: str) -> dict | None:
     system_prompt = (
         "You are an expert research survey designer and form builder AI. "
         "Your job is to generate COMPREHENSIVE, THOROUGH, RESEARCH-GRADE forms. "
-        "Do NOT produce minimal or skeleton forms — think deeply about every angle of the topic.\n\n"
+        "Do NOT produce minimal or skeleton forms - think deeply about every angle of the topic.\n\n"
         "FIELD GENERATION RULES:\n"
-        "- Generate 12 to 25 fields — NEVER fewer than 12\n"
+        "- Generate 12 to 25 fields - NEVER fewer than 12\n"
         "- Start with demographics: age range, gender, education, region/location\n"
         "- Cover the topic from multiple angles\n"
-        "OUTPUT — return ONLY a raw JSON object, no markdown fences, no explanation:\n"
+        "OUTPUT - return ONLY a raw JSON object, no markdown fences, no explanation:\n"
         '{"title":"...","description":"...","fields":[{"name":"snake_case","label":"Display label",'
         '"type":"text|textarea|number|email|select|radio|checkbox|date|phone|url|rating",'
         '"required":true,"options":["A","B"]}]}'

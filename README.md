@@ -36,13 +36,13 @@
 
 | Capability | Description |
 | :--- | :--- |
-| **Google Colab Cloud Execution** | Heavy computations, machine learning models, and complex datasets execute on Google Colab GPUs/TPUs with zero battery drain on your phone. |
-| **Autonomous Autopilot 2.0** | Multi-pass self-directed analytical engine that formulates hypotheses, executes code, generates plots, and compiles full analytical reports with expandable thought accordions. |
-| **Self-Healing Code Execution** | Real-time Python traceback inspection — if code errors during execution, AI automatically analyzes the error, heals the code, and retries seamlessly. |
+| **Google Colab Cloud Execution** | Heavy computations, machine learning models, and complex datasets execute on Google Colab GPUs and TPUs with zero battery drain on your phone. |
+| **Autonomous Autopilot** | Multi-pass self-directed analytical engine that formulates hypotheses, executes code, generates plots, and compiles full analytical reports with expandable thought accordions. |
+| **Self-Healing Code Execution** | Real-time Python traceback inspection: if code encounters an error during execution, AI automatically analyzes the traceback, repairs the code, and retries seamlessly. |
 | **Jupyter (.ipynb) Session Export** | Export your entire notebook session with all code cells, narrative explanations, and execution outputs directly to standard `.ipynb` files for VS Code or Google Colab. |
 | **Expert Code Mode** | Expandable VS Code-style terminal for direct Python execution. Write and run custom code with full kernel control at zero credit cost. |
 | **Interactive Colab File Explorer** | Complete cloud file manager with breadcrumb navigation, folder zip downloads, upload pipelines, and 1-tap dataset loading into Analysis. |
-| **Smart Voice Surveys** | Natural language survey generation (Voice / Text) with instant mobile preview, cloud responses tracking, and CSV export protected by Cloudflare Turnstile anti-bot verification. |
+| **Smart Voice Surveys** | Natural language survey generation (Voice or Text) with instant mobile preview, cloud responses tracking, and CSV export protected by Cloudflare Turnstile anti-bot verification. |
 | **Rich Report Editor & Live Web Sharing** | Reorderable narrative blocks, interactive metrics, chart visualizers, and AI executive summary polishing with live public web sharing on `reports.spaninsight.com`. |
 
 ---
@@ -56,8 +56,8 @@
     <td width="50%"><img src="screenshots/autopilot_desktop_dark.png" width="100%" alt="AI Autopilot Engine" /></td>
   </tr>
   <tr>
-    <td align="center"><em>Workspace Home Screen — seamlessly collaborate and organize project files</em></td>
-    <td align="center"><em>Autonomous AI Autopilot — multi-pass local analysis orchestration for report generation</em></td>
+    <td align="center"><em>Workspace Home Screen: seamlessly collaborate and organize project files</em></td>
+    <td align="center"><em>Autonomous AI Autopilot: multi-pass local analysis orchestration for report generation</em></td>
   </tr>
 </table>
 
@@ -68,8 +68,8 @@
     <td width="50%"><img src="screenshots/watch_ads_to_add_more_credit_light.png" width="100%" alt="AdMob & Credits" /></td>
   </tr>
   <tr>
-    <td align="center"><em>Home Dashboard — dark theme optimized for local secure workspace sync</em></td>
-    <td align="center"><em>AdMob & Rewards — watch buffered interstitial ads to top-up daily free credits</em></td>
+    <td align="center"><em>Home Dashboard: dark theme optimized for local secure workspace sync</em></td>
+    <td align="center"><em>AdMob & Rewards: watch buffered interstitial ads to top-up daily free credits</em></td>
   </tr>
 </table>
 
@@ -81,9 +81,9 @@
     <td width="33%"><img src="screenshots/expanded_form_showing_5_live_responses_mobile_dark.png" width="100%" alt="Responses Dashboard" /></td>
   </tr>
   <tr>
-    <td align="center"><em>Smart Survey Builder — generate forms from voice or text prompts</em></td>
-    <td align="center"><em>Public Web Survey — responsive client interface for fast data collection</em></td>
-    <td align="center"><em>Live Responses — track user feedback in real time with quick-actions</em></td>
+    <td align="center"><em>Smart Survey Builder: generate forms from voice or text prompts</em></td>
+    <td align="center"><em>Public Web Survey: responsive client interface for fast data collection</em></td>
+    <td align="center"><em>Live Responses: track user feedback in real time with quick-actions</em></td>
   </tr>
 </table>
 
@@ -94,8 +94,8 @@
     <td width="50%"><img src="screenshots/live_report_mobile(report.spaninsight.com).png" width="100%" alt="Interactive Shared Reports" /></td>
   </tr>
   <tr>
-    <td align="center"><em>Local Data Analysis — visual charts, tables, and sandboxed execution blocks</em></td>
-    <td align="center"><em>Interactive Shared Reports — public-facing web insights hosted on reports.spaninsight.com</em></td>
+    <td align="center"><em>Local Data Analysis: visual charts, tables, and sandboxed execution blocks</em></td>
+    <td align="center"><em>Interactive Shared Reports: public-facing web insights hosted on reports.spaninsight.com</em></td>
   </tr>
 </table>
 
@@ -106,8 +106,8 @@
     <td width="50%"><img src="screenshots/shared_ppt_report_mobile.png" width="100%" alt="PowerPoint Export" /></td>
   </tr>
   <tr>
-    <td align="center"><em>Export to PDF — native layout engine with print preview controls</em></td>
-    <td align="center"><em>PowerPoint Slide Generator — export report structures into PPT format</em></td>
+    <td align="center"><em>Export to PDF: native layout engine with print preview controls</em></td>
+    <td align="center"><em>PowerPoint Slide Generator: export report structures into PPT format</em></td>
   </tr>
 </table>
 
@@ -115,15 +115,15 @@
 
 ## Features
 
-- **Google Colab Cloud Integration** — Provision and execute Python workloads on remote Google Colab VMs (CPU, T4 GPU, TPU v5e/v6e) with real-time ANSI terminal output streaming.
-- **Transparent Autopilot Reasoning** — Inspect step-by-step thinking in expandable thought accordions before code execution runs.
-- **Autonomous Self-Healing** — Automatically catches runtime Python exceptions, extracts error context, prompts the AI repair pipeline, and heals code seamlessly.
-- **Jupyter (.ipynb) Interoperability** — Export notebooks directly to `.ipynb` format for instant sharing across VS Code, JupyterLab, or Colab.
-- **Expert Code Mode** — Write, inspect, modify, and execute Python code manually with zero credit consumption.
-- **Smart Surveys & Turnstile Bot Shield** — Voice-driven survey creation with Cloudflare Turnstile anti-bot verification and 1-tap DataFrame import.
-- **Live Web Report Publishing** — Publish interactive visual reports to `reports.spaninsight.com` with responsive cards, metrics, and print-ready PDF export.
-- **Flet 0.86 Reactive Architecture** — Smooth UI animations, adaptive light/dark theming, and responsive layouts across mobile, tablet, and desktop screens.
-- **100% Tested Codebase** — Full test coverage with strict linting and formatting compliance (`pytest` + `ruff`).
+- **Google Colab Cloud Integration**: Provision and execute Python workloads on remote Google Colab VMs (CPU, T4 GPU, TPU v5e/v6e) with real-time ANSI terminal output streaming.
+- **Transparent Autopilot Reasoning**: Inspect step-by-step thinking in expandable thought accordions before code execution runs.
+- **Autonomous Self-Healing**: Automatically catches runtime Python exceptions, extracts error context, prompts the AI repair pipeline, and heals code seamlessly.
+- **Jupyter (.ipynb) Interoperability**: Export notebooks directly to `.ipynb` format for instant sharing across VS Code, JupyterLab, or Colab.
+- **Expert Code Mode**: Write, inspect, modify, and execute Python code manually with zero credit consumption.
+- **Smart Surveys & Turnstile Bot Shield**: Voice-driven survey creation with Cloudflare Turnstile anti-bot verification and 1-tap DataFrame import.
+- **Live Web Report Publishing**: Publish interactive visual reports to `reports.spaninsight.com` with responsive cards, metrics, and print-ready PDF export.
+- **Flet 0.86 Reactive Architecture**: Smooth UI animations, adaptive light/dark theming, and responsive layouts across mobile, tablet, and desktop screens.
+- **100% Tested Codebase**: Full test coverage with strict linting and formatting compliance (`pytest` + `ruff`).
 
 ---
 

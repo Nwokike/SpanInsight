@@ -1,4 +1,4 @@
-"""ProjectsScreen — full-screen projects management with live search, deletion, and centered header."""
+"""ProjectsScreen - full-screen projects management with live search, deletion, and centered header."""
 
 from __future__ import annotations
 

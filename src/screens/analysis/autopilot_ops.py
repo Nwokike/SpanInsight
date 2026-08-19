@@ -245,7 +245,7 @@ async def run_autopilot_async(
             plan = await ai_service.plan_next_step(schema_json, initial_desc, history)
             if plan.get("is_complete"):
                 state.autopilot_progress = (
-                    f"Done — {plan.get('reason', 'Analysis complete')}"
+                    f"Done - {plan.get('reason', 'Analysis complete')}"
                 )
                 break
 
@@ -267,7 +267,7 @@ async def run_autopilot_async(
             cell["thought"] = meta.get("thought", "")
             cell["thought_duration"] = meta.get("duration", 0.0)
             cell["model"] = meta.get("model", "")
-            # Autopilot narrates each step itself — skip per-cell post-exec AI
+            # Autopilot narrates each step itself - skip per-cell post-exec AI
             cell["skip_narration"] = True
             await run_cell_fn(cell["id"])
 

@@ -99,7 +99,7 @@ def parse_outputs_to_controls(outputs: list) -> list[ft.Control]:
                             )
                         )
             elif _PLOTLY_MIME in data:
-                # Interactive Plotly figures can't render in-app — be honest,
+                # Interactive Plotly figures can't render in-app - be honest,
                 # and still show the textual repr instead of dropping everything.
                 note = ft.Container(
                     content=ft.Row(
@@ -110,7 +110,7 @@ def parse_outputs_to_controls(outputs: list) -> list[ft.Control]:
                                 color=theme.WARNING,
                             ),
                             ft.Text(
-                                "Interactive Plotly figure — shown as summary below.",
+                                "Interactive Plotly figure - shown as summary below.",
                                 size=tokens.FONT_XS,
                                 color=ft.Colors.ON_SURFACE_VARIANT,
                             ),

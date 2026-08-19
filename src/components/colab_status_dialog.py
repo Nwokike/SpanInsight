@@ -1,4 +1,4 @@
-"""Colab VM Status Dialog — Modern compact GUI system status inspection."""
+"""Colab VM Status Dialog - Modern compact GUI system status inspection."""
 
 from __future__ import annotations
 

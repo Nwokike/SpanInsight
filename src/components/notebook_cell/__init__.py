@@ -1,4 +1,4 @@
-"""Notebook cell component — compact, modern design for SpanInsight v2.
+"""Notebook cell component - compact, modern design for SpanInsight v2.
 
 Each cell is either Code or Markdown. Code cells have:
 - Monospace editor with minimal chrome

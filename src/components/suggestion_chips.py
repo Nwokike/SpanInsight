@@ -1,4 +1,4 @@
-"""Suggestion chips — compact AI analysis action pills.
+"""Suggestion chips - compact AI analysis action pills.
 
 Renders as tiny, tappable pills in a wrapping row. NOT large cards.
 The AI generates these dynamically after analyzing the dataset schema.

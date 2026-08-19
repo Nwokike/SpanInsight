@@ -1,4 +1,4 @@
-"""Service context — exposes backend services to the component tree.
+"""Service context - exposes backend services to the component tree.
 
 Components read services via ``ft.use_context(ServiceCtx)`` instead of
 receiving them as constructor parameters.

@@ -1,4 +1,4 @@
-"""Spaninsight v2 — Cloud-Powered Data Intelligence.
+"""Spaninsight v2 - Cloud-Powered Data Intelligence.
 
 Main entry point: AppController bootstraps services and mounts the
 React-like component tree via page.render().
@@ -282,7 +282,7 @@ class AppController:
         except Exception as e:
             logger.warning("Settings restore failed: %s", e)
 
-        # Check connectivity — never force re-onboarding when offline
+        # Check connectivity - never force re-onboarding when offline
         try:
             conn_types = await self.page.connectivity.get_connectivity()
             state.is_online = ft.ConnectivityType.NONE not in conn_types
@@ -293,13 +293,13 @@ class AppController:
             # Offline on launch: honour saved onboarding/auth, skip auth check
             onboarding_done = await self.storage.get(STORAGE_ONBOARDING_DONE)
             state.onboarding_done = onboarding_done == "true"
-            # If they've onboarded before, let them in — just no Colab features
+            # If they've onboarded before, let them in - just no Colab features
             if state.onboarding_done:
                 state.is_authenticated = True  # trust stored auth offline
             state.app_ready = True
             return  # AppShell will show offline banner via connectivity monitor
 
-        # Online — check if token is still valid
+        # Online - check if token is still valid
         try:
             auth_info = await self.colab_service.check_auth()
             state.is_authenticated = auth_info.get("authenticated", False)
@@ -375,7 +375,7 @@ class AppController:
 
         state.gateway_online = await ai_service.check_health()
         if not state.gateway_online:
-            logger.warning("Gateway offline — AI features will use fallbacks")
+            logger.warning("Gateway offline - AI features will use fallbacks")
 
         try:
             from core.constants import (

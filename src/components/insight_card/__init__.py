@@ -1,4 +1,4 @@
-"""Insight Card component — presents analytical takeaways, visualizations, and raw telemetry."""
+"""Insight Card component - presents analytical takeaways, visualizations, and raw telemetry."""
 
 from __future__ import annotations
 

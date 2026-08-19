@@ -21,7 +21,7 @@ _GENERIC_BLOCK_RE = re.compile(r"```\s*(.*?)\s*```", re.DOTALL)
 
 # Timeouts per task type, calibrated against real gateway latencies:
 # reasoning models routinely take 30-90s on `suggest` and up to ~140s on
-# `code` (observed live) — 60s timeouts caused double-spends via retries.
+# `code` (observed live) - 60s timeouts caused double-spends via retries.
 TIMEOUTS = {
     "suggest": 90.0,
     "code": 150.0,

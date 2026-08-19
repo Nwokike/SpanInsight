@@ -1,4 +1,4 @@
-"""Silent kernel introspection — schema extraction code executed on Colab.
+"""Silent kernel introspection - schema extraction code executed on Colab.
 
 The code generated here runs INSIDE the Colab kernel and must be defensive by
 design: it never assumes a variable named ``df`` exists (zip/sqlite/image
@@ -87,11 +87,11 @@ def parse_schema_from_outputs(outputs) -> tuple[dict | None, str | None]:
         kernel_error = extract_error_text(outputs)
         if kernel_error:
             return None, f"Schema execution failed on Colab: {kernel_error}"
-        # The hardened schema code always prints its markers — no markers and
+        # The hardened schema code always prints its markers - no markers and
         # no error means the execution itself died (timeout / kernel crash).
         return (
             None,
-            "Schema extraction produced no result — the Colab kernel may have timed out or crashed.",
+            "Schema extraction produced no result - the Colab kernel may have timed out or crashed.",
         )
 
     remote_error = schema.get("error")
@@ -125,7 +125,7 @@ try:
         _spec = _r["chart"]
         _png = None
         try:
-            # NOTE: never switch the kernel-wide backend — user cells rely on
+            # NOTE: never switch the kernel-wide backend - user cells rely on
             # the inline backend. savefig() to a buffer works under any backend.
             import matplotlib.pyplot as _plt
             import base64 as _b64

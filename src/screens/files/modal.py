@@ -1,4 +1,4 @@
-"""Manage Files Modal Dialog — standalone Colab file browser dialog with live actions."""
+"""Manage Files Modal Dialog - standalone Colab file browser dialog with live actions."""
 
 from __future__ import annotations
 

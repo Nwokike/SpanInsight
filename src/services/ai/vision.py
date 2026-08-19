@@ -52,7 +52,7 @@ async def analyze_image(image_bytes: bytes, mime_type: str) -> str:
                 len(content),
             )
             return content
-        return "[Image analysis failed — no description returned]"
+        return "[Image analysis failed - no description returned]"
     except Exception as e:
         logger.error("Spaninsight Eye failed: %s", e)
         return f"[Image analysis failed: {e}]"

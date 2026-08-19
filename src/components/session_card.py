@@ -1,4 +1,4 @@
-"""Session card — reusable card showing session name, hardware, status.
+"""Session card - reusable card showing session name, hardware, status.
 
 Ported from CollabShell with SpanInsight theming.
 """
@@ -9,7 +9,7 @@ from core import theme, tokens
 
 
 def hardware_badge(accelerator: str, variant: str = "") -> ft.Container:
-    """Colored hardware chip — CPU=gray, GPU=amber, TPU=blue."""
+    """Colored hardware chip - CPU=gray, GPU=amber, TPU=blue."""
     label = "CPU" if accelerator == "NONE" else accelerator
     if variant == "TPU" or accelerator.upper() in ("V5E1", "V6E1"):
         color = theme.HARDWARE_TPU
@@ -47,7 +47,7 @@ def status_dot(is_running: bool = False) -> ft.Container:
 
 
 def build_session_card(session: dict, on_click=None) -> ft.Container:
-    """Session card — name, hardware badge, status, last execution."""
+    """Session card - name, hardware badge, status, last execution."""
     name = session.get("name", "?")
     accel_str = session.get("accelerator_label") or session.get("accelerator", "NONE")
     variant = session.get("variant", "DEFAULT")

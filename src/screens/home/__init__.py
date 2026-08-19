@@ -1,4 +1,4 @@
-"""HomeScreen — Modular dashboard with Colab session status, quick actions, and features."""
+"""HomeScreen - Modular dashboard with Colab session status, quick actions, and features."""
 
 from __future__ import annotations
 
@@ -208,7 +208,7 @@ def HomeScreen() -> ft.Control:
                         ),
                         ft.Text(
                             "Your data runs on Google Colab's GPU/TPU VMs. "
-                            "No local limits — use pandas, scikit-learn, "
+                            "No local limits - use pandas, scikit-learn, "
                             "TensorFlow, and more.",
                             size=tokens.FONT_XS,
                             color=ft.Colors.ON_SURFACE_VARIANT,
@@ -249,7 +249,7 @@ def HomeScreen() -> ft.Control:
                     ft.Icons.AUTO_AWESOME_ROUNDED,
                     "AI-Powered Analysis",
                     "Upload any dataset. AI writes Python code and runs it on "
-                    "Colab — generating charts, ML models, and statistical insights.",
+                    "Colab - generating charts, ML models, and statistical insights.",
                     theme.PRIMARY,
                 ),
                 feature_card(
@@ -270,7 +270,7 @@ def HomeScreen() -> ft.Control:
                     ft.Icons.CODE_ROUNDED,
                     "Expert Code Mode",
                     "Toggle to code mode and write Python directly. "
-                    "Full Colab runtime at your fingertips — install any package.",
+                    "Full Colab runtime at your fingertips - install any package.",
                     theme.SUCCESS,
                 ),
             ],

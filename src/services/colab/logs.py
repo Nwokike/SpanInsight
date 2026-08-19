@@ -8,7 +8,7 @@ def _resolve_log_dir() -> str:
     if storage_env:
         base_dir = storage_env
     else:
-        # Dev fallback — mirrors .flet/storage/data/ that Flet creates locally
+        # Dev fallback - mirrors .flet/storage/data/ that Flet creates locally
         base_dir = os.path.join(".flet", "storage", "data")
     log_dir = os.path.join(base_dir, "history")
     os.makedirs(log_dir, exist_ok=True)

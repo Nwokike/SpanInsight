@@ -1,8 +1,8 @@
-"""Global connectivity monitor — shows 'No Internet' banner.
+"""Global connectivity monitor - shows 'No Internet' banner.
 
 Uses the real ft.Connectivity service (on_change for instant updates)
 plus a polling fallback every 15 s. Never forces re-onboarding when
-offline — just shows a non-intrusive banner.
+offline - just shows a non-intrusive banner.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ async def _http_online() -> bool:
 
 
 def build_offline_banner() -> ft.Container:
-    """Dismissible 'No Internet' banner — hidden by default."""
+    """Dismissible 'No Internet' banner - hidden by default."""
     return ft.Container(
         content=ft.Row(
             controls=[
@@ -103,7 +103,7 @@ async def start_connectivity_monitor(page: ft.Page, banner: ft.Container):
 
         connectivity.on_change = _on_change
 
-    # Polling loop — covers platforms where on_change may not fire
+    # Polling loop - covers platforms where on_change may not fire
     while True:
         try:
             online = await _http_online()

@@ -1,4 +1,4 @@
-"""Observable application state — single source of truth.
+"""Observable application state - single source of truth.
 
 Uses ``@ft.observable`` so Flet can auto-react
 to property changes without manual page.update() calls.

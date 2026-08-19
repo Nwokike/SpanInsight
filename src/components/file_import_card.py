@@ -1,4 +1,4 @@
-"""File import card — Modern dashed upload area with FilePicker integration."""
+"""File import card - Modern dashed upload area with FilePicker integration."""
 
 from __future__ import annotations
 

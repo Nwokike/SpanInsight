@@ -1,4 +1,4 @@
-"""AnalysisScreen — Modular Colab notebook autopilot & AI Data Intelligence engine."""
+"""AnalysisScreen - Modular Colab notebook autopilot & AI Data Intelligence engine."""
 
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ logger = logging.getLogger("AnalysisScreen")
 
 @ft.component
 def AnalysisScreen() -> Control:
-    """Analysis engine — AI prompt, dataset intelligence, notebook cells, autopilot."""
+    """Analysis engine - AI prompt, dataset intelligence, notebook cells, autopilot."""
     services = ft.use_context(ServiceCtx)
     app_state = ft.use_context(AppStateCtx)
     page = ft.context.page
@@ -383,7 +383,7 @@ def AnalysisScreen() -> Control:
             if page:
                 show_snack(
                     page,
-                    "⏳ Analysis already in progress — please wait",
+                    "⏳ Analysis already in progress - please wait",
                     duration=tokens.SNACK_DURATION_NORMAL_MS,
                 )
             return
@@ -417,7 +417,7 @@ def AnalysisScreen() -> Control:
             if page:
                 show_snack(
                     page,
-                    "⏳ Analysis already in progress — please wait",
+                    "⏳ Analysis already in progress - please wait",
                     duration=tokens.SNACK_DURATION_NORMAL_MS,
                 )
             return

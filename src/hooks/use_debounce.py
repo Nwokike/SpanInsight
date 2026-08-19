@@ -1,4 +1,4 @@
-"""use_debounce — debounce a value across renders.
+"""use_debounce - debounce a value across renders.
 
 Ported from ktv-player's proven implementation.
 """

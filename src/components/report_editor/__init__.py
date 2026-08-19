@@ -1,4 +1,4 @@
-"""Report block editor — reorderable block cards with AI editing."""
+"""Report block editor - reorderable block cards with AI editing."""
 
 from __future__ import annotations
 

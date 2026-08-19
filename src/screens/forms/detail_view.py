@@ -470,7 +470,7 @@ def build_form_detail_view(
                                                     cells=[
                                                         ft.DataCell(
                                                             ft.Text(
-                                                                str(row.get(c, "—")),
+                                                                str(row.get(c, "-")),
                                                                 size=tokens.FONT_SM,
                                                             )
                                                         )

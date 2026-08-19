@@ -58,10 +58,10 @@ class StorageService:
         self._is_web = bool(getattr(page, "session_id", None)) if page else False
 
         if self._is_web:
-            logger.info("StorageService: running on web — using client_storage")
+            logger.info("StorageService: running on web - using client_storage")
             self._load_web()
         else:
-            logger.info("StorageService: running on native — using split local files")
+            logger.info("StorageService: running on native - using split local files")
             self._load()
 
     def _is_history_key(self, key: str) -> bool:
@@ -115,7 +115,7 @@ class StorageService:
                 return {}
             return json.loads(raw)
         except Exception as e:
-            logger.warning("Storage %s corrupted (%s) — resetting", label, e)
+            logger.warning("Storage %s corrupted (%s) - resetting", label, e)
             try:
                 backup = path.with_suffix(f".{label}.corrupted")
                 path.rename(backup)

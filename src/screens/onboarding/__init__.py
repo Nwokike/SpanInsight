@@ -1,4 +1,4 @@
-"""Onboarding screen — first-launch swipe-through + Google Sign-In."""
+"""Onboarding screen - first-launch swipe-through + Google Sign-In."""
 
 from __future__ import annotations
 

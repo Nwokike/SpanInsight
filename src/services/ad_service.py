@@ -1,4 +1,4 @@
-"""AdMob service — banner and interstitial ads.
+"""AdMob service - banner and interstitial ads.
 
 Direct port of KTV Player's production AdService pattern.
 Uses test Ad IDs until Play Store launch.
@@ -16,7 +16,7 @@ from core.constants import ADMOB_BANNER_ID, ADMOB_INTERSTITIAL_ID
 
 logger = logging.getLogger(__name__)
 
-# Try importing flet_ads — only available on mobile
+# Try importing flet_ads - only available on mobile
 try:
     import flet_ads as fta
 
@@ -28,7 +28,7 @@ except ImportError:
 class AdService:
     """Manages AdMob banner and interstitial ads."""
 
-    # Set to False before Play Store submission — then replace with real IDs
+    # Set to False before Play Store submission - then replace with real IDs
     USE_TEST_IDS = False
 
     # Test IDs (Google's official test units)

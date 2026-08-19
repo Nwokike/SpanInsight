@@ -1,4 +1,4 @@
-"""Project management service — local project entity persistence and .ipynb synchronization.
+"""Project management service - local project entity persistence and .ipynb synchronization.
 
 A Project encapsulates:
 - id, name, created_at, updated_at

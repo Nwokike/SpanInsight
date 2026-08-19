@@ -1,1 +1,1 @@
-# Core infrastructure — theme, state, constants
+# Core infrastructure - theme, state, constants
