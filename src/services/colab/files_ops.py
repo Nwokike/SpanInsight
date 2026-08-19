@@ -5,6 +5,22 @@ from collections.abc import Callable
 logger = logging.getLogger("colab_files_ops")
 
 
+def _normalize_remote_path(path: str) -> str:
+    """Normalize remote path relative to Colab's Jupyter /content root."""
+    import posixpath
+
+    norm = posixpath.normpath(path) if path else ""
+    if norm.startswith("/content"):
+        norm = norm[len("/content") :].lstrip("/")
+    elif norm.startswith("content/"):
+        norm = norm[len("content/") :].lstrip("/")
+    elif norm.startswith("/"):
+        norm = norm.lstrip("/")
+    if norm in (".", "/"):
+        norm = ""
+    return norm
+
+
 async def ls_impl(
     service,
     session_name: str,
@@ -15,15 +31,11 @@ async def ls_impl(
     await service._ensure_online()
 
     def _ls():
-        import posixpath
-
         from colab_cli.auth import AuthProvider
         from colab_cli.common import State
         from colab_cli.contents import ContentsClient
 
-        norm_path = posixpath.normpath(path) if path else ""
-        if norm_path == "." or norm_path == "/":
-            norm_path = ""
+        norm_path = _normalize_remote_path(path)
 
         provider = AuthProvider.ADC if auth_method == "adc" else AuthProvider.OAUTH2
         st = State()
@@ -67,18 +79,21 @@ async def upload_impl(
     local_path: str,
     remote_path: str,
     auth_method: str = "oauth2",
+    on_progress: Callable[[int, int], None] | None = None,
 ) -> bool:
-    """Upload a local file to the remote session."""
+    """Upload a local file to the remote session with progress tracking."""
     await service._ensure_online()
 
     def _upload():
-        import posixpath
+        import base64
+        import math
+        import os
 
         from colab_cli.auth import AuthProvider
         from colab_cli.common import State
         from colab_cli.contents import ContentsClient
 
-        norm_remote = posixpath.normpath(remote_path)
+        norm_remote = _normalize_remote_path(remote_path)
 
         provider = AuthProvider.ADC if auth_method == "adc" else AuthProvider.OAUTH2
         st = State()
@@ -89,7 +104,48 @@ async def upload_impl(
             raise ValueError(f"Session '{name}' not found")
 
         client = ContentsClient(s)
-        client.upload(local_path, norm_remote)
+        file_size = os.path.getsize(local_path)
+        filename = (
+            norm_remote.split("/")[-1] if norm_remote else os.path.basename(local_path)
+        )
+
+        chunk_size = 1024 * 1024  # 1 MB chunks
+        if file_size <= chunk_size:
+            with open(local_path, "rb") as f:
+                content = f.read()
+            b64_content = base64.b64encode(content).decode("ascii")
+            payload = {
+                "name": filename,
+                "path": norm_remote,
+                "type": "file",
+                "format": "base64",
+                "content": b64_content,
+                "chunk": 1,
+            }
+            client._request("PUT", norm_remote, json_data=payload)
+            if on_progress:
+                on_progress(file_size, file_size)
+        else:
+            total_chunks = math.ceil(file_size / chunk_size)
+            bytes_sent = 0
+            with open(local_path, "rb") as f:
+                for idx in range(1, total_chunks + 1):
+                    chunk_data = f.read(chunk_size)
+                    b64_chunk = base64.b64encode(chunk_data).decode("ascii")
+                    chunk_num = -1 if idx == total_chunks else idx
+                    payload = {
+                        "name": filename,
+                        "path": norm_remote,
+                        "type": "file",
+                        "format": "base64",
+                        "content": b64_chunk,
+                        "chunk": chunk_num,
+                    }
+                    client._request("PUT", norm_remote, json_data=payload)
+                    bytes_sent += len(chunk_data)
+                    if on_progress:
+                        on_progress(bytes_sent, file_size)
+
         st.history.log_event(
             name,
             "file_operation",
@@ -97,6 +153,7 @@ async def upload_impl(
                 "op": "upload",
                 "local": local_path,
                 "remote": norm_remote,
+                "size": file_size,
             },
         )
         return True
@@ -115,13 +172,11 @@ async def download_impl(
     await service._ensure_online()
 
     def _download():
-        import posixpath
-
         from colab_cli.auth import AuthProvider
         from colab_cli.common import State
         from colab_cli.contents import ContentsClient
 
-        norm_remote = posixpath.normpath(remote_path)
+        norm_remote = _normalize_remote_path(remote_path)
 
         provider = AuthProvider.ADC if auth_method == "adc" else AuthProvider.OAUTH2
         st = State()

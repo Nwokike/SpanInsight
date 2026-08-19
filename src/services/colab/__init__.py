@@ -158,12 +158,18 @@ class ColabService:
         remote_path: str,
         session_name: str | None = None,
         auth_method: str = "oauth2",
+        on_progress: Callable[[int, int], None] | None = None,
     ) -> bool:
         await self._ensure_online()
         from services.colab.files_ops import upload_impl
 
         return await upload_impl(
-            self, session_name, local_path, remote_path, auth_method
+            self,
+            session_name,
+            local_path,
+            remote_path,
+            auth_method,
+            on_progress=on_progress,
         )
 
     async def download(
