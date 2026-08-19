@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/assets/logo.png" alt="Spaninsight" width="320" />
+  <img src="src/assets/logo.png" alt="SpanInsight" width="320" />
 </p>
 
 <p align="center">
@@ -7,15 +7,138 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android" />
-  <img src="https://img.shields.io/badge/Built%20with-Flet%200.86-00B0FF?style=for-the-badge&logo=flutter&logoColor=white" alt="Built with Flet" />
+  <a href="https://play.google.com/store/apps/details?id=com.spaninsight.app"><img src="https://img.shields.io/badge/Google_Play-Android-3DDC84?style=for-the-badge&logo=google-play&logoColor=white" alt="Google Play Store" /></a>
+  <a href="https://github.com/Nwokike/spaninsight/releases/latest"><img src="https://img.shields.io/badge/Download_APK-Android-0078D6?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" /></a>
+  <img src="https://img.shields.io/badge/Built_with-Flet_0.86-00B0FF?style=for-the-badge&logo=flutter&logoColor=white" alt="Built with Flet" />
   <img src="https://img.shields.io/badge/Python-3.14-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
-  <img src="https://img.shields.io/badge/Compute-Google%20Colab-F9AB00?style=for-the-badge&logo=googlecolab&logoColor=white" alt="Google Colab" />
+  <img src="https://img.shields.io/badge/Compute-Google_Colab-F9AB00?style=for-the-badge&logo=googlecolab&logoColor=white" alt="Google Colab" />
 </p>
 
 ---
 
-## Architecture Flow
+## Download
+
+| Platform | Download | Notes |
+| :---: | :---: | :--- |
+| 🤖 **Android (Google Play)** | [![Play Store](https://img.shields.io/badge/Google_Play-414141?style=flat-square&logo=google-play&logoColor=white)](https://play.google.com/store/apps/details?id=com.spaninsight.app) | Recommended for Android phone and tablet users |
+
+### Android Architecture Build Splits (Direct APK)
+
+| Variant | Download | Notes |
+| :--- | :---: | :--- |
+| 📱 **ARM64** (most phones) | [**spaninsight-arm64-v8a.apk**](https://github.com/Nwokike/spaninsight/releases/latest/download/spaninsight-arm64-v8a.apk) | Modern 64-bit Android devices |
+| 📱 **ARMv7** (older phones) | [**spaninsight-armeabi-v7a.apk**](https://github.com/Nwokike/spaninsight/releases/latest/download/spaninsight-armeabi-v7a.apk) | Legacy 32-bit Android devices |
+| 💻 **x86_64** (emulators) | [**spaninsight-x86_64.apk**](https://github.com/Nwokike/spaninsight/releases/latest/download/spaninsight-x86_64.apk) | Chromebooks & Android emulators |
+
+---
+
+## Core Capabilities
+
+| Capability | Description |
+| :--- | :--- |
+| **Google Colab Cloud Execution** | Heavy computations, machine learning models, and complex datasets execute on Google Colab GPUs/TPUs with zero battery drain on your phone. |
+| **Autonomous Autopilot 2.0** | Multi-pass self-directed analytical engine that formulates hypotheses, executes code, generates plots, and compiles full analytical reports with expandable thought accordions. |
+| **Self-Healing Code Execution** | Real-time Python traceback inspection — if code errors during execution, AI automatically analyzes the error, heals the code, and retries seamlessly. |
+| **Jupyter (.ipynb) Session Export** | Export your entire notebook session with all code cells, narrative explanations, and execution outputs directly to standard `.ipynb` files for VS Code or Google Colab. |
+| **Expert Code Mode** | Expandable VS Code-style terminal for direct Python execution. Write and run custom code with full kernel control at zero credit cost. |
+| **Interactive Colab File Explorer** | Complete cloud file manager with breadcrumb navigation, folder zip downloads, upload pipelines, and 1-tap dataset loading into Analysis. |
+| **Smart Voice Surveys** | Natural language survey generation (Voice / Text) with instant mobile preview, cloud responses tracking, and CSV export protected by Cloudflare Turnstile anti-bot verification. |
+| **Rich Report Editor & Live Web Sharing** | Reorderable narrative blocks, interactive metrics, chart visualizers, and AI executive summary polishing with live public web sharing on `reports.spaninsight.com`. |
+
+---
+
+## Screenshots
+
+### Widescreen & Tablet Experience
+<table>
+  <tr>
+    <td width="50%"><img src="screenshots/home_desktop_light.png" width="100%" alt="Workspace Home Screen" /></td>
+    <td width="50%"><img src="screenshots/autopilot_desktop_dark.png" width="100%" alt="AI Autopilot Engine" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Workspace Home Screen — seamlessly collaborate and organize project files</em></td>
+    <td align="center"><em>Autonomous AI Autopilot — multi-pass local analysis orchestration for report generation</em></td>
+  </tr>
+</table>
+
+### Mobile Experience & AdMob Rewards
+<table>
+  <tr>
+    <td width="50%"><img src="screenshots/home_dark.png" width="100%" alt="Home Dashboard" /></td>
+    <td width="50%"><img src="screenshots/watch_ads_to_add_more_credit_light.png" width="100%" alt="AdMob & Credits" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Home Dashboard — dark theme optimized for local secure workspace sync</em></td>
+    <td align="center"><em>AdMob & Rewards — watch buffered interstitial ads to top-up daily free credits</em></td>
+  </tr>
+</table>
+
+### Smart Survey Builder & Bot-Protected Forms
+<table>
+  <tr>
+    <td width="33%"><img src="screenshots/form_tab_mobile_light_with_form_prompt.png" width="100%" alt="Smart Survey Builder" /></td>
+    <td width="33%"><img src="screenshots/live_form(f.spaninsight.com)_mobile.png" width="100%" alt="Public Mobile Survey View" /></td>
+    <td width="33%"><img src="screenshots/expanded_form_showing_5_live_responses_mobile_dark.png" width="100%" alt="Responses Dashboard" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Smart Survey Builder — generate forms from voice or text prompts</em></td>
+    <td align="center"><em>Public Web Survey — responsive client interface for fast data collection</em></td>
+    <td align="center"><em>Live Responses — track user feedback in real time with quick-actions</em></td>
+  </tr>
+</table>
+
+### Interactive Visual Analysis & Live Reports
+<table>
+  <tr>
+    <td width="50%"><img src="screenshots/analyses_mobile_light_showing_block_with_chart_table_description.png" width="100%" alt="Interactive Data Analysis" /></td>
+    <td width="50%"><img src="screenshots/live_report_mobile(report.spaninsight.com).png" width="100%" alt="Interactive Shared Reports" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Local Data Analysis — visual charts, tables, and sandboxed execution blocks</em></td>
+    <td align="center"><em>Interactive Shared Reports — public-facing web insights hosted on reports.spaninsight.com</em></td>
+  </tr>
+</table>
+
+### Document & Presentation Export
+<table>
+  <tr>
+    <td width="50%"><img src="screenshots/save_to_pdf_preview_mobile.png" width="100%" alt="PDF Print Preview" /></td>
+    <td width="50%"><img src="screenshots/shared_ppt_report_mobile.png" width="100%" alt="PowerPoint Export" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Export to PDF — native layout engine with print preview controls</em></td>
+    <td align="center"><em>PowerPoint Slide Generator — export report structures into PPT format</em></td>
+  </tr>
+</table>
+
+---
+
+## Features
+
+- **Google Colab Cloud Integration** — Provision and execute Python workloads on remote Google Colab VMs (CPU, T4 GPU, TPU v5e/v6e) with real-time ANSI terminal output streaming.
+- **Transparent Autopilot Reasoning** — Inspect step-by-step thinking in expandable thought accordions before code execution runs.
+- **Autonomous Self-Healing** — Automatically catches runtime Python exceptions, extracts error context, prompts the AI repair pipeline, and heals code seamlessly.
+- **Jupyter (.ipynb) Interoperability** — Export notebooks directly to `.ipynb` format for instant sharing across VS Code, JupyterLab, or Colab.
+- **Expert Code Mode** — Write, inspect, modify, and execute Python code manually with zero credit consumption.
+- **Smart Surveys & Turnstile Bot Shield** — Voice-driven survey creation with Cloudflare Turnstile anti-bot verification and 1-tap DataFrame import.
+- **Live Web Report Publishing** — Publish interactive visual reports to `reports.spaninsight.com` with responsive cards, metrics, and print-ready PDF export.
+- **Flet 0.86 Reactive Architecture** — Smooth UI animations, adaptive light/dark theming, and responsive layouts across mobile, tablet, and desktop screens.
+- **100% Tested Codebase** — Full test coverage with strict linting and formatting compliance (`pytest` + `ruff`).
+
+---
+
+## Architecture
+
+| Layer | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Frontend UI** | Flet (Python on Flutter) | Cross-platform reactive client with dark/light theming, thought accordions, and chart rendering |
+| **Cloud Runtime** | Google Colab VM (`/content`) | Remote high-performance Python data science kernel (pandas, numpy, scikit-learn, PyTorch, TF) |
+| **AI Edge Gateway** | Cloudflare Worker (`api.spaninsight.com`) | Multi-model AI orchestration, prompt compression, and code generation routing |
+| **Survey Database** | Cloudflare D1 | Secure, encrypted relational storage for public survey definitions and response capturing |
+| **Report Hosting** | Cloudflare R2 (`reports.spaninsight.com`) | Ephemeral public web report hosting with responsive HTML/CSS/JS rendering |
+| **Local Storage** | Platform SharedPreferences / Local JSON | Client-side OAuth tokens, project state persistence, and hardware preferences |
+
+### Visual Flow
 
 ```mermaid
 flowchart TD
@@ -30,7 +153,7 @@ flowchart TD
     end
 
     subgraph COLAB ["☁️ Google Colab Cloud Runtime (V2)"]
-        VM["🖥️ VM (CPU / T4 GPU / TPU v2)"]
+        VM["🖥️ VM (CPU / T4 GPU / TPU)"]
         Env["📦 Full Python Data Science Stack\n(pandas, scikit-learn, TensorFlow, PyTorch)"]
         POSIX["🗂️ /content/ Workspace & Datasets"]
         VM --- Env
@@ -43,7 +166,7 @@ flowchart TD
         R2["🌐 Ephemeral Report Sharing (7-day lifecycle)"]
     end
 
-    Analysis <==>|Jupyter Protocol / gRPC| VM
+    Analysis <==>|Jupyter Protocol / WebSocket| VM
     Files <==>|Direct POSIX File Transfer| POSIX
     Analysis <-->|Prompts & Error Auto-Healing| AI
     Forms <-->|Publish & Submissions| D1
@@ -53,36 +176,21 @@ flowchart TD
 
 ---
 
-## Core Capabilities (Version 2)
+## Credit System
 
-| Capability | Description |
-|:---|:---|
-| **Colab Cloud Runtime** | Heavy compute runs on Google Colab VMs. No local memory/CPU bottlenecks — scale to millions of rows with free GPU/TPU acceleration. |
-| **Autonomous Autopilot** | Multi-pass self-directed analytical engine that formulates hypotheses, executes code, generates plots, and compiles full analytical reports. |
-| **Self-Healing Code Execution** | Real-time Python traceback inspection — if code errors, AI automatically heals the code and retries execution. |
-| **Interactive File Explorer** | Complete cloud file manager with breadcrumb navigation, folder zip downloads, upload pipelines, and 1-tap "Load in Analysis". |
-| **Smart Surveys** | Natural language survey generation (Voice / Text) with instant mobile preview, cloud responses tracking, and CSV export. |
-| **Rich Report Editor** | Reorderable narrative blocks, interactive metrics, chart visualizers, and AI executive summary polishing with live public web sharing. |
-| **Jupyter (.ipynb) Export** | Export your active analysis sessions directly to standard Jupyter Notebook (`.ipynb`) files. |
-
----
-
-## Screen Directory Structure
-
-The codebase is organized into modular packages under `src/screens/`:
-
-- [`src/screens/home/`](src/screens/home/) — Landing dashboard, Colab cloud connection banner, credit status, and quick starts.
-- [`src/screens/analysis/`](src/screens/analysis/) — Interactive notebook editor, streaming terminal outputs, voice prompts, and Autopilot engine.
-- [`src/screens/files/`](src/screens/files/) — Colab POSIX filesystem explorer, file/folder download fallbacks, and quick dataset loader.
-- [`src/screens/forms/`](src/screens/forms/) — AI survey questionnaire creator, cloud publication, and live submissions viewer.
-- [`src/screens/reports/`](src/screens/reports/) — Report compiler, block visualizers, AI arranger, and ephemeral web share generator.
-- [`src/screens/settings/`](src/screens/settings/) — Google OAuth2 authentication, GPU/TPU hardware preferences, and diagnostics log terminal.
+| Action | Credits | Notes |
+| :--- | :---: | :--- |
+| **AI Suggestion** | 1 | Quick analytical queries and column summaries |
+| **Custom Prompt / Voice** | 3 | Natural language prompt code generation |
+| **Autopilot (Full Report)** | 15 | Multi-step end-to-end hypothesis and report generation |
+| **Daily Allowance** | **50 FREE** | Automatically resets every 24 hours |
+| **Manual Python Code Mode** | **FREE** | Unlimited code writing and execution via Expert Terminal |
 
 ---
 
 ## Testing & Quality Assurance
 
-SpanInsight V2 features a 100% passing test suite across all services, core modules, and screen workflows:
+SpanInsight features a 100% passing test suite across all services, core modules, and screen workflows:
 
 ```bash
 # Run unit and integration tests
@@ -95,12 +203,25 @@ uv run ruff format
 
 ---
 
-## Credit System
+## Privacy & Security
 
-| Action | Credits |
-|:---|:---|
-| AI Suggestion | 1 |
-| Custom Prompt / Voice | 3 |
-| Autopilot (Full Multi-Step Report) | 15 |
-| **Daily Allowance** | **50 FREE** (resets midnight UTC) |
-| Manual Python Code Mode | **FREE** (unlimited) |
+SpanInsight is built with a strict **Privacy-First** architecture:
+
+1. **Direct Cloud VM Routing**: When connected to Google Colab, code execution and data processing run directly in your private Colab sandbox. No third-party servers intermediate your raw dataset files.
+2. **Encrypted Gateway Transit**: All AI prompts sent to the gateway are encrypted via TLS 1.3 with cryptographic client challenge headers.
+3. **Turnstile Bot Shield**: Public survey forms on `forms.spaninsight.com` require non-intrusive Cloudflare Turnstile human verification.
+4. **Data Sovereignty**: Exported notebooks (`.ipynb`), CSV responses, and PDF reports reside 100% on your local device.
+
+---
+
+## Legal Disclaimer
+
+SpanInsight is an independent application and is not affiliated with, authorized, maintained, sponsored, or endorsed by Google LLC, Google Colaboratory, or any of their affiliates. 
+
+Users are responsible for complying with Google Colab's Terms of Use, resource usage guidelines, and applicable data privacy regulations.
+
+---
+
+<p align="center">
+  &copy; 2025–2026 <a href="https://kiri.ng"><strong>Kiri Research Labs</strong></a>
+</p>
