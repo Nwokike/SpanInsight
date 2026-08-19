@@ -24,7 +24,7 @@ dev = [
 [tool.flet]
 org = "com.spaninsight"
 product = "Spaninsight"
-build_number = 6
+build_number = 7
 desktop_flavor = "full"
 
 
@@ -52,6 +52,14 @@ usesCleartextTraffic = "false"
 [tool.flet.android.feature]
 "android.software.leanback" = false
 "android.hardware.touchscreen" = true
+
+[tool.flet.android.signing]
+key_store = "../../../../spaninsight_keystore.jks"
+key_alias = "upload"
+
+[tool.flet.deep_linking]
+scheme = "spaninsight"
+host = "app"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

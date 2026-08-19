@@ -39,6 +39,13 @@ desktop.ini
 # Antigravity
 .antigravityignore
 
+# Keystore & Signing
+*.jks
+*.keystore
+
+# Wheels
+wheels/
+
 # Temp
 scratch/
 *.log
