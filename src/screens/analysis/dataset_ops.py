@@ -136,7 +136,7 @@ async def run_dataset_import_dialog(
     upload_local_path: str | None = None,
     remote_path: str | None = None,
 ) -> bool:
-    """Run the dataset import pipeline: upload with live progress, dismiss modal immediately, then extract schema.
+    """Run dataset upload with live progress, dismiss modal, then load and extract schema.
 
     - ``upload_local_path``: local file to upload first (Analysis import flow)
     - ``remote_path``: already-on-Colab path (Files "Load in Analysis" flow);
@@ -151,29 +151,24 @@ async def run_dataset_import_dialog(
     from services.file_service import suggest_load_code
 
     remote = remote_path or f"/content/{file_name}"
-    file_size = 0
+    total_size = 0
     if upload_local_path and os.path.exists(upload_local_path):
         try:
-            file_size = os.path.getsize(upload_local_path)
+            total_size = os.path.getsize(upload_local_path)
         except Exception:
-            file_size = 0
+            total_size = 0
 
-    tot_mb = file_size / (1024 * 1024) if file_size else 0
-    size_str = (
-        f" ({tot_mb:.1f} MB)"
-        if tot_mb >= 1.0
-        else f" ({file_size / 1024:.1f} KB)"
-        if file_size
-        else ""
-    )
+    tot_mb = total_size / (1024 * 1024) if total_size > 0 else 0.0
 
     prog_bar = ft.ProgressBar(
-        value=0.0 if file_size > 0 else None,
+        value=0.0 if total_size > 0 else None,
         color=ft.Colors.PRIMARY,
         bgcolor=ft.Colors.with_opacity(tokens.OPACITY_CONTAINER, ft.Colors.PRIMARY),
     )
     status_text = ft.Text(
-        f"Uploading to Colab VM…{size_str}",
+        f"Uploading {file_name}… (0.0 / {tot_mb:.1f} MB)"
+        if total_size > 0
+        else f"Uploading {file_name}…",
         size=tokens.FONT_XS,
         color=ft.Colors.ON_SURFACE_VARIANT,
     )
@@ -203,17 +198,17 @@ async def run_dataset_import_dialog(
 
     def _on_upload_progress(sent_bytes: int, total_bytes: int):
         if total_bytes > 0:
-            ratio = min(1.0, sent_bytes / total_bytes)
-            prog_bar.value = ratio
+            pct = int((sent_bytes / total_bytes) * 100)
+            prog_bar.value = sent_bytes / total_bytes
             s_mb = sent_bytes / (1024 * 1024)
             t_mb = total_bytes / (1024 * 1024)
-            pct = int(ratio * 100)
-            if t_mb < 1.0:
-                status_text.value = f"Uploading... {sent_bytes / 1024:.1f} KB / {total_bytes / 1024:.1f} KB ({pct}%)"
-            else:
-                status_text.value = (
-                    f"Uploading... {s_mb:.1f} MB / {t_mb:.1f} MB ({pct}%)"
-                )
+            status_text.value = (
+                f"Uploading {file_name}… {s_mb:.1f} MB / {t_mb:.1f} MB ({pct}%)"
+            )
+        else:
+            prog_bar.value = None
+            status_text.value = f"Uploading {file_name}…"
+        if page:
             try:
                 page.update()
             except Exception:
@@ -223,21 +218,22 @@ async def run_dataset_import_dialog(
         if upload_local_path:
             if page:
                 page.show_dialog(upload_dialog)
-            await colab.upload(
-                upload_local_path,
-                remote,
-                session_name,
-                on_progress=_on_upload_progress,
-            )
-            # Dismiss modal immediately once physical file transfer completes
-            if page:
-                try:
-                    page.pop_dialog()
-                except Exception:
-                    pass
-        elif page:
-            show_snack(page, f"Importing {file_name}…", duration=2500)
+            try:
+                await colab.upload(
+                    upload_local_path,
+                    remote,
+                    session_name,
+                    progress_callback=_on_upload_progress,
+                )
+            finally:
+                # Modal ONLY lives during upload - dismiss immediately when upload completes
+                if page:
+                    try:
+                        page.pop_dialog()
+                    except Exception:
+                        pass
 
+        # Load & extract schema transparently in notebook view
         schema, error = await load_and_extract_schema(
             colab,
             session_name,
@@ -253,8 +249,8 @@ async def run_dataset_import_dialog(
                 show_snack(page, f"Dataset load failed: {err_msg}", error=True)
             return False
 
+        # AI Enrichment (overview description + starter chips)
         schema = await enrich_schema_with_ai(schema)
-
         state.suggestions = schema.get("suggestions", [])
         set_schema_json(schema)
 
@@ -264,10 +260,6 @@ async def run_dataset_import_dialog(
     except Exception as e:
         logger.error("Dataset import failed: %s", e)
         if page:
-            try:
-                page.pop_dialog()
-            except Exception:
-                pass
             show_snack(page, f"Import failed: {e}", error=True)
         return False
     finally:
@@ -277,4 +269,7 @@ async def run_dataset_import_dialog(
             except Exception:
                 pass
         if set_is_generating:
-            set_is_generating(False)
+            try:
+                set_is_generating(False)
+            except Exception:
+                pass

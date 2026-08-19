@@ -33,10 +33,37 @@ async def handle_upload_async(
     picked = result[0]
     remote_path = posixpath.join(current_path, picked.name)
 
-    prog = ft.ProgressBar(width=280)
-    status_text = ft.Text(f"Uploading {picked.name}…", size=tokens.FONT_SM)
+    import os
+
+    total_size = 0
+    try:
+        total_size = os.path.getsize(picked.path)
+    except Exception:
+        total_size = 0
+    tot_mb = total_size / (1024 * 1024) if total_size > 0 else 0.0
+
+    prog = ft.ProgressBar(
+        value=0.0 if total_size > 0 else None,
+        width=280,
+        color=ft.Colors.PRIMARY,
+    )
+    status_text = ft.Text(
+        f"Uploading {picked.name}… (0.0 / {tot_mb:.1f} MB)"
+        if total_size > 0
+        else f"Uploading {picked.name}…",
+        size=tokens.FONT_SM,
+    )
     dlg = ft.AlertDialog(
-        title=ft.Text("Uploading File", size=tokens.FONT_MD),
+        modal=True,
+        title=ft.Row(
+            [
+                ft.Icon(ft.Icons.CLOUD_UPLOAD_ROUNDED, color=ft.Colors.PRIMARY),
+                ft.Text(
+                    "Uploading File", size=tokens.FONT_MD, weight=ft.FontWeight.W_600
+                ),
+            ],
+            spacing=tokens.SPACE_SM,
+        ),
         content=ft.Column(
             controls=[prog, status_text],
             spacing=tokens.SPACE_SM,
@@ -45,8 +72,31 @@ async def handle_upload_async(
     )
     page.show_dialog(dlg)
 
+    def _on_upload_progress(sent_bytes: int, total_bytes: int):
+        if total_bytes > 0:
+            pct = int((sent_bytes / total_bytes) * 100)
+            prog.value = sent_bytes / total_bytes
+            s_mb = sent_bytes / (1024 * 1024)
+            t_mb = total_bytes / (1024 * 1024)
+            status_text.value = (
+                f"Uploading {picked.name}… {s_mb:.1f} MB / {t_mb:.1f} MB ({pct}%)"
+            )
+        else:
+            prog.value = None
+            status_text.value = f"Uploading {picked.name}…"
+        if page:
+            try:
+                page.update()
+            except Exception:
+                pass
+
     try:
-        await colab.upload(picked.path, remote_path, active_session)
+        await colab.upload(
+            picked.path,
+            remote_path,
+            active_session,
+            progress_callback=_on_upload_progress,
+        )
         if page:
             show_snack(page, f"✅ Uploaded {picked.name}", success=True)
     except Exception as ex:

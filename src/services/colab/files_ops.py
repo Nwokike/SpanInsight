@@ -5,22 +5,6 @@ from collections.abc import Callable
 logger = logging.getLogger("colab_files_ops")
 
 
-def _normalize_remote_path(path: str) -> str:
-    """Normalize remote path relative to Colab's Jupyter /content root."""
-    import posixpath
-
-    norm = posixpath.normpath(path) if path else ""
-    if norm.startswith("/content"):
-        norm = norm[len("/content") :].lstrip("/")
-    elif norm.startswith("content/"):
-        norm = norm[len("content/") :].lstrip("/")
-    elif norm.startswith("/"):
-        norm = norm.lstrip("/")
-    if norm in (".", "/"):
-        norm = ""
-    return norm
-
-
 async def ls_impl(
     service,
     session_name: str,
@@ -31,11 +15,15 @@ async def ls_impl(
     await service._ensure_online()
 
     def _ls():
+        import posixpath
+
         from colab_cli.auth import AuthProvider
         from colab_cli.common import State
         from colab_cli.contents import ContentsClient
 
-        norm_path = _normalize_remote_path(path)
+        norm_path = posixpath.normpath(path) if path else ""
+        if norm_path == "." or norm_path == "/":
+            norm_path = ""
 
         provider = AuthProvider.ADC if auth_method == "adc" else AuthProvider.OAUTH2
         st = State()
@@ -73,27 +61,63 @@ async def ls_impl(
     return await asyncio.to_thread(_ls)
 
 
+class ProgressReader:
+    """File-like reader that tracks byte read progress via callback."""
+
+    def __init__(
+        self,
+        data: bytes,
+        callback: Callable[[int, int], None] | None = None,
+    ):
+        self._data = data
+        self.total = len(data)
+        self._offset = 0
+        self.callback = callback
+
+    def read(self, size: int = -1) -> bytes:
+        if self._offset >= self.total:
+            return b""
+        if size < 0:
+            chunk = self._data[self._offset :]
+            self._offset = self.total
+        else:
+            chunk = self._data[self._offset : self._offset + size]
+            self._offset += len(chunk)
+        if self.callback:
+            try:
+                self.callback(self._offset, self.total)
+            except Exception:
+                pass
+        return chunk
+
+    def __len__(self) -> int:
+        return self.total
+
+
 async def upload_impl(
     service,
     session_name: str,
     local_path: str,
     remote_path: str,
     auth_method: str = "oauth2",
-    on_progress: Callable[[int, int], None] | None = None,
+    progress_callback: Callable[[int, int], None] | None = None,
 ) -> bool:
-    """Upload a local file to the remote session with progress tracking."""
+    """Upload a local file to the remote session with optional progress tracking."""
     await service._ensure_online()
 
     def _upload():
         import base64
-        import math
+        import json
         import os
+        import posixpath
+        from urllib.parse import quote
 
+        import requests
         from colab_cli.auth import AuthProvider
         from colab_cli.common import State
         from colab_cli.contents import ContentsClient
 
-        norm_remote = _normalize_remote_path(remote_path)
+        norm_remote = posixpath.normpath(remote_path)
 
         provider = AuthProvider.ADC if auth_method == "adc" else AuthProvider.OAUTH2
         st = State()
@@ -103,17 +127,20 @@ async def upload_impl(
         if not s:
             raise ValueError(f"Session '{name}' not found")
 
-        client = ContentsClient(s)
-        file_size = os.path.getsize(local_path)
-        filename = (
-            norm_remote.split("/")[-1] if norm_remote else os.path.basename(local_path)
-        )
+        total_file_bytes = os.path.getsize(local_path)
+        if progress_callback:
+            progress_callback(0, total_file_bytes)
 
-        chunk_size = 1024 * 1024  # 1 MB chunks
-        if file_size <= chunk_size:
+        if not progress_callback:
+            client = ContentsClient(s)
+            client.upload(local_path, norm_remote)
+        else:
             with open(local_path, "rb") as f:
                 content = f.read()
+
             b64_content = base64.b64encode(content).decode("ascii")
+            filename = norm_remote.split("/")[-1]
+
             payload = {
                 "name": filename,
                 "path": norm_remote,
@@ -122,29 +149,33 @@ async def upload_impl(
                 "content": b64_content,
                 "chunk": 1,
             }
-            client._request("PUT", norm_remote, json_data=payload)
-            if on_progress:
-                on_progress(file_size, file_size)
-        else:
-            total_chunks = math.ceil(file_size / chunk_size)
-            bytes_sent = 0
-            with open(local_path, "rb") as f:
-                for idx in range(1, total_chunks + 1):
-                    chunk_data = f.read(chunk_size)
-                    b64_chunk = base64.b64encode(chunk_data).decode("ascii")
-                    chunk_num = -1 if idx == total_chunks else idx
-                    payload = {
-                        "name": filename,
-                        "path": norm_remote,
-                        "type": "file",
-                        "format": "base64",
-                        "content": b64_chunk,
-                        "chunk": chunk_num,
-                    }
-                    client._request("PUT", norm_remote, json_data=payload)
-                    bytes_sent += len(chunk_data)
-                    if on_progress:
-                        on_progress(bytes_sent, file_size)
+
+            payload_bytes = json.dumps(payload).encode("utf-8")
+
+            def _on_chunk(sent_bytes: int, total_bytes: int):
+                file_sent = (
+                    int((sent_bytes / total_bytes) * total_file_bytes)
+                    if total_bytes > 0
+                    else sent_bytes
+                )
+                progress_callback(min(file_sent, total_file_bytes), total_file_bytes)
+
+            reader = ProgressReader(payload_bytes, callback=_on_chunk)
+            quoted_path = quote(norm_remote.strip("/"), safe="/")
+            base_url = s.url.rstrip("/")
+            url = f"{base_url}/api/contents/{quoted_path}"
+            req_params = {"authuser": "0", "colab-runtime-proxy-token": s.token}
+            headers = {"Content-Type": "application/json"}
+
+            resp = requests.put(
+                url,
+                params=req_params,
+                data=reader,
+                headers=headers,
+                timeout=180.0,
+            )
+            resp.raise_for_status()
+            progress_callback(total_file_bytes, total_file_bytes)
 
         st.history.log_event(
             name,
@@ -153,7 +184,6 @@ async def upload_impl(
                 "op": "upload",
                 "local": local_path,
                 "remote": norm_remote,
-                "size": file_size,
             },
         )
         return True
@@ -172,11 +202,13 @@ async def download_impl(
     await service._ensure_online()
 
     def _download():
+        import posixpath
+
         from colab_cli.auth import AuthProvider
         from colab_cli.common import State
         from colab_cli.contents import ContentsClient
 
-        norm_remote = _normalize_remote_path(remote_path)
+        norm_remote = posixpath.normpath(remote_path)
 
         provider = AuthProvider.ADC if auth_method == "adc" else AuthProvider.OAUTH2
         st = State()
