@@ -364,6 +364,50 @@ def build_analysis_feed(
     if cell_controls:
         feed_controls.extend(cell_controls)
 
+    if (
+        has_dataset
+        and page
+        and page.platform in (ft.PagePlatform.ANDROID, ft.PagePlatform.IOS)
+    ):
+        from core.utils import get_banner_ad
+
+        feed_controls.append(
+            ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Text(
+                            "SPONSORED",
+                            size=tokens.FONT_XXS,
+                            weight=ft.FontWeight.W_700,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                            style=ft.TextStyle(letter_spacing=1),
+                        ),
+                        get_banner_ad(),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=tokens.SPACE_TINY,
+                ),
+                alignment=ft.Alignment.CENTER,
+                padding=tokens.SPACE_SM,
+                border_radius=tokens.RADIUS_SM,
+                bgcolor=ft.Colors.with_opacity(
+                    tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE
+                ),
+                border=ft.Border.all(
+                    tokens.DIVIDER_THICKNESS,
+                    ft.Colors.with_opacity(
+                        tokens.OPACITY_CONTAINER, ft.Colors.ON_SURFACE
+                    ),
+                ),
+                margin=ft.Margin(
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_XS,
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_SM,
+                ),
+            )
+        )
+
     if is_expert_mode:
         feed_controls.append(
             build_add_cell_row(

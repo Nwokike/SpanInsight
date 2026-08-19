@@ -74,6 +74,16 @@ async def connect_colab_async(colab, page: ft.Page | None, set_is_connecting):
         )
         state.colab_connected = True
 
+        # ── Interstitial Ad on Session Creation (Mobile) ─────────────
+        if page and page.platform in (ft.PagePlatform.ANDROID, ft.PagePlatform.IOS):
+            try:
+                from services.ad_service import AdService
+
+                ad_service = AdService(page)
+                page.run_task(ad_service.show_interstitial)
+            except Exception as ad_err:
+                logger.warning("Session creation Interstitial failed: %s", ad_err)
+
         is_dark = (
             state.theme_mode == ft.ThemeMode.DARK
             if hasattr(state, "theme_mode")

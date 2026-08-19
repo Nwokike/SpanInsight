@@ -50,6 +50,16 @@ async def export_ipynb_async(page: ft.Page | None):
                 success=True,
                 duration=4000,
             )
+
+        # ── Interstitial Ad on Export (Mobile) ─────────────
+        if page and page.platform in (ft.PagePlatform.ANDROID, ft.PagePlatform.IOS):
+            try:
+                from services.ad_service import AdService
+
+                ad_service = AdService(page)
+                await ad_service.show_interstitial()
+            except Exception as ad_err:
+                logger.warning("Export Interstitial failed: %s", ad_err)
     except Exception as e:
         logger.error("Export failed: %s", e)
         if page:

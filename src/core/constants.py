@@ -13,7 +13,7 @@ API_CHAT_ENDPOINT = f"{API_BASE_URL}/chat"
 
 # ── Monetization & Ads ──────────────────────────────────────────────
 ADMOB_BANNER_ID = "ca-app-pub-5679949845754640/5628404223"
-ADMOB_INTERSTITIAL_ID = "ca-app-pub-5679949845754640/2361280962"
+ADMOB_INTERSTITIAL_ID = "ca-app-pub-5679949845754640/6965536622"
 
 # ── External & Public Web URLs ──────────────────────────────────────
 FORMS_PUBLIC_BASE_URL = "https://f.spaninsight.com"

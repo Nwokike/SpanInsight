@@ -377,6 +377,20 @@ async def run_autopilot_async(
         except Exception as rep_err:
             logger.warning("Autopilot report compilation error: %s", rep_err)
 
+    # ── Interstitial Ad on Autopilot Completion (Mobile) ─────────────
+    if page and page.platform in (ft.PagePlatform.ANDROID, ft.PagePlatform.IOS):
+        try:
+            from services.ad_service import AdService
+
+            ad_service = AdService(page)
+            await ad_service.show_interstitial()
+        except Exception as ad_err:
+            logger.warning("Autopilot completion Interstitial failed: %s", ad_err)
+
     state.autopilot_running = False
     state.autopilot_progress = ""
-    state.autopilot_progress = ""
+    if page:
+        try:
+            page.update()
+        except Exception:
+            pass

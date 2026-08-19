@@ -154,8 +154,39 @@ def build_agent_progress_pill(
             )
         )
 
+    drawer_controls = [ft.Column(step_rows, spacing=tokens.SPACE_XXS)]
+    if is_autopilot:
+        from core.utils import get_banner_ad
+
+        drawer_controls.append(
+            ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Text(
+                            "SPONSORED",
+                            size=tokens.FONT_XXS,
+                            weight=ft.FontWeight.W_700,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                            style=ft.TextStyle(letter_spacing=1),
+                        ),
+                        get_banner_ad(),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=tokens.SPACE_TINY,
+                ),
+                alignment=ft.Alignment.CENTER,
+                padding=tokens.SPACE_XS,
+                margin=ft.Margin(
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_XS,
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_NONE,
+                ),
+            )
+        )
+
     timeline_drawer = ft.Container(
-        content=ft.Column(step_rows, spacing=tokens.SPACE_XXS),
+        content=ft.Column(drawer_controls, spacing=tokens.SPACE_XS),
         padding=tokens.SPACE_SM,
         bgcolor=ft.Colors.with_opacity(tokens.OPACITY_CONTAINER, ft.Colors.BLACK),
         border_radius=tokens.RADIUS_SM,
