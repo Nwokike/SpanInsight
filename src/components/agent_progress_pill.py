@@ -1,24 +1,25 @@
-"""AgentProgressPill - compact 32px live AI agent progress indicator with timeline drawer."""
+"""AgentProgressPill - unified expandable AI agent progress indicator & Autopilot controller."""
 
 from __future__ import annotations
+
+from collections.abc import Callable
 
 import flet as ft
 
 from core import theme, tokens
 
 
-@ft.component
-def AgentProgressPill(
+def build_agent_progress_pill(
     is_active: bool,
+    is_autopilot: bool = False,
     stage_text: str = "",
     duration: float = 0.0,
     steps: list[dict] | None = None,
-) -> ft.Control:
-    """Renders a compact, non-intrusive 32px live AI agent progress pill with expandable timeline."""
+    on_stop: Callable | None = None,
+) -> ft.Container:
+    """Unified AI Agent Progress Pill with live timeline drawer and Autopilot control."""
     if not is_active:
         return ft.Container(visible=False)
-
-    is_expanded, set_is_expanded = ft.use_state(False)
 
     from core.state import state
 
@@ -26,6 +27,7 @@ def AgentProgressPill(
     display_stage = (
         state.analysis_stage_text
         or stage_text
+        or (state.autopilot_progress if is_autopilot else "")
         or (
             "Inspecting dataset schema & context…"
             if current_stage == 1
@@ -44,63 +46,73 @@ def AgentProgressPill(
     )
     duration_str = f" ({duration:.1f}s)" if duration > 0 else ""
 
-    if not steps:
-        s1 = (
-            "done"
-            if current_stage >= 2
-            else "running"
-            if current_stage == 1
-            else "pending"
-        )
-        s2 = (
-            "done"
-            if current_stage >= 3
-            else "running"
-            if current_stage == 2
-            else "pending"
-        )
-        s3 = (
-            "done"
-            if current_stage >= 4
-            else "running"
-            if current_stage == 3
-            else "pending"
-        )
-        s4 = (
-            "done"
-            if current_stage >= 5
-            else "running"
-            if current_stage in (4, 6)
-            else "pending"
-        )
-        s5 = (
-            "done"
-            if current_stage == 0
-            else "running"
-            if current_stage == 5
-            else "pending"
-        )
-
-        steps = [
-            {"text": "Inspect dataset schema & context", "status": s1},
-            {"text": "Deep AI reasoning & query formulation", "status": s2},
-            {"text": "Synthesize specialized Python analysis", "status": s3},
-            {
-                "text": "Execute in Colab kernel & render visuals",
-                "status": "running" if current_stage == 6 else s4,
-            },
-            {"text": "Executive takeaways & insights", "status": s5},
-        ]
-        if current_stage == 6:
-            steps.insert(
-                4,
-                {"text": "🩹 AI self-healing execution error", "status": "running"},
+    # Build steps if not explicitly provided
+    resolved_steps = steps or getattr(state, "autopilot_steps", None)
+    if not resolved_steps:
+        if is_autopilot:
+            resolved_steps = [
+                {"text": "Dataset distribution & overview", "status": "done"},
+                {"text": "Correlation & driver analysis", "status": "running"},
+                {"text": "Anomaly & pattern detection", "status": "pending"},
+                {"text": "Statistical synthesis & summary", "status": "pending"},
+            ]
+        else:
+            s1 = (
+                "done"
+                if current_stage >= 2
+                else "running"
+                if current_stage == 1
+                else "pending"
+            )
+            s2 = (
+                "done"
+                if current_stage >= 3
+                else "running"
+                if current_stage == 2
+                else "pending"
+            )
+            s3 = (
+                "done"
+                if current_stage >= 4
+                else "running"
+                if current_stage == 3
+                else "pending"
+            )
+            s4 = (
+                "done"
+                if current_stage >= 5
+                else "running"
+                if current_stage in (4, 6)
+                else "pending"
+            )
+            s5 = (
+                "done"
+                if current_stage == 0
+                else "running"
+                if current_stage == 5
+                else "pending"
             )
 
-    # Render timeline steps
+            resolved_steps = [
+                {"text": "Inspect dataset schema & context", "status": s1},
+                {"text": "Deep AI reasoning & query formulation", "status": s2},
+                {"text": "Synthesize specialized Python analysis", "status": s3},
+                {
+                    "text": "Execute in Colab kernel & render visuals",
+                    "status": "running" if current_stage == 6 else s4,
+                },
+                {"text": "Executive takeaways & insights", "status": s5},
+            ]
+            if current_stage == 6:
+                resolved_steps.insert(
+                    4,
+                    {"text": "🩹 AI self-healing execution error", "status": "running"},
+                )
+
+    # Render timeline step rows
     step_rows = []
-    for s in steps:
-        stype = s.get("status", "done")
+    for s in resolved_steps:
+        stype = s.get("status", "pending")
         icon = (
             ft.Icons.CHECK_CIRCLE_ROUNDED
             if stype == "done"
@@ -126,6 +138,9 @@ def AgentProgressPill(
                         color=ft.Colors.ON_SURFACE
                         if stype != "pending"
                         else ft.Colors.ON_SURFACE_VARIANT,
+                        weight=ft.FontWeight.W_500
+                        if stype == "running"
+                        else ft.FontWeight.NORMAL,
                         expand=True,
                     ),
                     ft.Text(
@@ -142,47 +157,130 @@ def AgentProgressPill(
     timeline_drawer = ft.Container(
         content=ft.Column(step_rows, spacing=tokens.SPACE_XXS),
         padding=tokens.SPACE_SM,
-        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, ft.Colors.BLACK),
+        bgcolor=ft.Colors.with_opacity(tokens.OPACITY_CONTAINER, ft.Colors.BLACK),
         border_radius=tokens.RADIUS_SM,
         border=ft.Border.all(
             tokens.DIVIDER_THICKNESS,
-            ft.Colors.with_opacity(tokens.OPACITY_LIGHT, ft.Colors.ON_SURFACE),
+            ft.Colors.with_opacity(tokens.OPACITY_BORDER, theme.PRIMARY),
         ),
-        visible=is_expanded,
+        visible=False,
     )
 
+    chevron_ref = ft.Ref[ft.IconButton]()
+
     def _toggle(_):
-        set_is_expanded(not is_expanded)
+        timeline_drawer.visible = not timeline_drawer.visible
+        if chevron_ref.current:
+            chevron_ref.current.icon = (
+                ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
+                if timeline_drawer.visible
+                else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED
+            )
+            try:
+                chevron_ref.current.update()
+            except Exception:
+                pass
+        try:
+            timeline_drawer.update()
+        except Exception:
+            pass
+
+    # Left controls: Spinner + Badge + Text
+    left_controls = [
+        ft.ProgressRing(
+            width=tokens.PROGRESS_RING_XS,
+            height=tokens.PROGRESS_RING_XS,
+            stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
+            color=theme.PRIMARY,
+        ),
+    ]
+
+    if is_autopilot:
+        left_controls.append(
+            ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Icon(
+                            ft.Icons.AUTO_AWESOME_ROUNDED,
+                            size=tokens.ICON_MICRO,
+                            color=theme.PRIMARY,
+                        ),
+                        ft.Text(
+                            "Autopilot",
+                            size=tokens.FONT_XXS,
+                            weight=ft.FontWeight.BOLD,
+                            color=theme.PRIMARY,
+                        ),
+                    ],
+                    spacing=tokens.SPACE_TINY,
+                    tight=True,
+                ),
+                padding=ft.Padding(
+                    tokens.SPACE_XS,
+                    tokens.SPACE_TINY,
+                    tokens.SPACE_XS,
+                    tokens.SPACE_TINY,
+                ),
+                border_radius=tokens.RADIUS_XS,
+                bgcolor=ft.Colors.with_opacity(tokens.OPACITY_MUTED, theme.PRIMARY),
+            )
+        )
+
+    left_controls.append(
+        ft.Text(
+            f"{display_stage}{duration_str}",
+            size=tokens.FONT_XS,
+            weight=ft.FontWeight.W_500,
+            color=ft.Colors.ON_SURFACE,
+            no_wrap=True,
+            overflow=ft.TextOverflow.ELLIPSIS,
+            expand=True,
+        )
+    )
+
+    # Right controls: Stop button (if Autopilot) + Expand toggle
+    right_controls = []
+    if is_autopilot and on_stop:
+        right_controls.append(
+            ft.TextButton(
+                "Stop",
+                on_click=on_stop,
+                style=ft.ButtonStyle(
+                    color=theme.ERROR,
+                    padding=ft.Padding(
+                        tokens.SPACE_SM,
+                        tokens.SPACE_TINY,
+                        tokens.SPACE_SM,
+                        tokens.SPACE_TINY,
+                    ),
+                ),
+            )
+        )
+
+    right_controls.append(
+        ft.IconButton(
+            ref=chevron_ref,
+            icon=ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED,
+            icon_size=tokens.ICON_SM,
+            icon_color=ft.Colors.ON_SURFACE_VARIANT,
+            style=ft.ButtonStyle(padding=tokens.SPACE_NONE),
+            tooltip="Toggle timeline drawer",
+            on_click=_toggle,
+        )
+    )
 
     header_content = ft.Row(
         controls=[
             ft.Row(
-                [
-                    ft.ProgressRing(
-                        width=tokens.PROGRESS_RING_XS,
-                        height=tokens.PROGRESS_RING_XS,
-                        stroke_width=tokens.PROGRESS_RING_STROKE_THIN,
-                        color=theme.PRIMARY,
-                    ),
-                    ft.Text(
-                        f"{display_stage}{duration_str}",
-                        size=tokens.FONT_XS,
-                        weight=ft.FontWeight.W_500,
-                        color=ft.Colors.ON_SURFACE,
-                    ),
-                ],
-                spacing=tokens.SPACE_XS,
+                left_controls,
+                spacing=tokens.SPACE_SM,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                expand=True,
             ),
-            ft.IconButton(
-                icon=ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
-                if is_expanded
-                else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED,
-                icon_size=tokens.ICON_SM,
-                icon_color=ft.Colors.ON_SURFACE_VARIANT,
-                style=ft.ButtonStyle(padding=tokens.SPACE_NONE),
-                tooltip="Toggle timeline",
-                on_click=_toggle,
+            ft.Row(
+                right_controls,
+                spacing=tokens.SPACE_XXS,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
         ],
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -191,7 +289,7 @@ def AgentProgressPill(
 
     pill_container = ft.Container(
         content=header_content,
-        height=tokens.SPACE_XXXL,
+        height=tokens.BUTTON_HEIGHT_SM,
         padding=ft.Padding(
             tokens.SPACE_SM, tokens.SPACE_NONE, tokens.SPACE_XS, tokens.SPACE_NONE
         ),
@@ -218,17 +316,5 @@ def AgentProgressPill(
     )
 
 
-def build_agent_progress_pill(
-    is_active: bool,
-    stage_text: str = "",
-    duration: float = 0.0,
-    steps: list[dict] | None = None,
-    is_expanded: bool = False,
-    on_toggle_expand=None,
-) -> ft.Control:
-    return AgentProgressPill(
-        is_active=is_active,
-        stage_text=stage_text,
-        duration=duration,
-        steps=steps,
-    )
+# Backward-compatible alias
+AgentProgressPill = build_agent_progress_pill

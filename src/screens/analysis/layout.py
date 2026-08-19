@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import flet as ft
 
+from components.agent_progress_pill import build_agent_progress_pill
 from components.dataset_overview_card import build_dataset_overview_card
 from components.file_import_card import build_file_import_card
 from components.project_switcher import build_project_switcher
 from core import theme, tokens
 from core.state import state
-from screens.analysis.autopilot_bar import build_autopilot_bar
 from screens.analysis.cell_list import build_add_cell_row, build_cells_container
 from screens.analysis.session_banner import build_session_chip
 
@@ -253,9 +253,14 @@ def build_analysis_top_bar(
 
     mode_switch_bar = build_mode_switch_bar(is_expert_mode, set_is_expert_mode)
     session_chip = build_session_chip(session_name, state.session_hardware)
-    autopilot_bar = build_autopilot_bar(
-        is_running=state.autopilot_running,
-        progress_text=state.autopilot_progress,
+    is_active_progress = bool(state.autopilot_running or state.is_analyzing)
+    progress_pill = build_agent_progress_pill(
+        is_active=is_active_progress,
+        is_autopilot=bool(state.autopilot_running),
+        stage_text=state.autopilot_progress
+        if state.autopilot_running
+        else (state.analysis_stage_text or ""),
+        steps=state.autopilot_steps if state.autopilot_running else None,
         on_stop=lambda _: setattr(state, "autopilot_cancelled", True),
     )
 
@@ -282,7 +287,16 @@ def build_analysis_top_bar(
                     tokens.SPACE_XXS,
                 ),
             ),
-            autopilot_bar,
+            ft.Container(
+                content=progress_pill,
+                padding=ft.Padding(
+                    tokens.SPACE_MD,
+                    tokens.SPACE_NONE,
+                    tokens.SPACE_MD,
+                    tokens.SPACE_XS,
+                ),
+                visible=is_active_progress,
+            ),
         ],
         spacing=tokens.SPACE_NONE,
     )

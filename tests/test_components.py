@@ -148,3 +148,43 @@ class TestInsightCard:
         )
         assert card is not None
         assert len(card.content.controls) > 0
+
+
+class TestAgentProgressPill:
+    def test_agent_progress_pill_inactive(self):
+        from components.agent_progress_pill import build_agent_progress_pill
+
+        pill = build_agent_progress_pill(is_active=False)
+        assert pill is not None
+        assert pill.visible is False
+
+    def test_agent_progress_pill_active_prompt(self):
+        from components.agent_progress_pill import build_agent_progress_pill
+
+        pill = build_agent_progress_pill(
+            is_active=True,
+            is_autopilot=False,
+            stage_text="Synthesizing Python analysis…",
+            duration=3.2,
+        )
+        assert pill is not None
+        assert pill.content is not None
+
+    def test_agent_progress_pill_active_autopilot(self):
+        from components.agent_progress_pill import build_agent_progress_pill
+
+        stopped = []
+        pill = build_agent_progress_pill(
+            is_active=True,
+            is_autopilot=True,
+            stage_text="Step 2/8: Correlation Matrix",
+            duration=4.5,
+            steps=[
+                {"text": "Dataset distribution", "status": "done", "time": "1.2s"},
+                {"text": "Correlation matrix", "status": "running", "time": ""},
+                {"text": "Anomaly detection", "status": "pending", "time": ""},
+            ],
+            on_stop=lambda _: stopped.append(True),
+        )
+        assert pill is not None
+        assert pill.content is not None

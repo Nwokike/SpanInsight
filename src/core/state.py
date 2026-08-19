@@ -72,6 +72,7 @@ class AppState:
     autopilot_cancelled: bool = False
     autopilot_running: bool = False
     autopilot_progress: str = ""
+    autopilot_steps: list[dict] = None
 
     # ── Dataset ─────────────────────────────────────────────────────
     current_df: Any = None  # pandas DataFrame
@@ -108,6 +109,7 @@ class AppState:
         self.analysis_blocks = []
         self.current_df_columns = []
         self.file_listing = []
+        self.autopilot_steps = []
 
     def clear_notebook(self):
         """Reset notebook state for a new session."""
