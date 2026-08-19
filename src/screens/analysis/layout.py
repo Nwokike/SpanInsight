@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import flet as ft
 
 from components.agent_progress_pill import build_agent_progress_pill
@@ -180,6 +182,8 @@ def build_analysis_top_bar(
     is_expert_mode: bool,
     set_is_expert_mode,
     session_name: str,
+    is_progress_expanded: bool = False,
+    on_toggle_progress: Callable | None = None,
 ) -> ft.Column:
     """Construct top header containing project switcher, dataset badge, mode toggle, and session chip."""
     project_chip = build_project_switcher(
@@ -262,6 +266,8 @@ def build_analysis_top_bar(
         else (state.analysis_stage_text or ""),
         steps=state.autopilot_steps if state.autopilot_running else None,
         on_stop=lambda _: setattr(state, "autopilot_cancelled", True),
+        is_expanded=is_progress_expanded,
+        on_toggle_expand=on_toggle_progress,
     )
 
     return ft.Column(

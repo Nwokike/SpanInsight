@@ -16,6 +16,8 @@ def build_agent_progress_pill(
     duration: float = 0.0,
     steps: list[dict] | None = None,
     on_stop: Callable | None = None,
+    is_expanded: bool = False,
+    on_toggle_expand: Callable | None = None,
 ) -> ft.Container:
     """Unified AI Agent Progress Pill with live timeline drawer and Autopilot control."""
     if not is_active:
@@ -194,27 +196,12 @@ def build_agent_progress_pill(
             tokens.DIVIDER_THICKNESS,
             ft.Colors.with_opacity(tokens.OPACITY_BORDER, theme.PRIMARY),
         ),
-        visible=False,
+        visible=is_expanded,
     )
 
-    chevron_ref = ft.Ref[ft.IconButton]()
-
-    def _toggle(_):
-        timeline_drawer.visible = not timeline_drawer.visible
-        if chevron_ref.current:
-            chevron_ref.current.icon = (
-                ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
-                if timeline_drawer.visible
-                else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED
-            )
-            try:
-                chevron_ref.current.update()
-            except Exception:
-                pass
-        try:
-            timeline_drawer.update()
-        except Exception:
-            pass
+    def _handle_click(e):
+        if on_toggle_expand:
+            on_toggle_expand()
 
     # Left controls: Spinner + Badge + Text
     left_controls = [
@@ -290,13 +277,14 @@ def build_agent_progress_pill(
 
     right_controls.append(
         ft.IconButton(
-            ref=chevron_ref,
-            icon=ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED,
+            icon=ft.Icons.KEYBOARD_ARROW_UP_ROUNDED
+            if is_expanded
+            else ft.Icons.KEYBOARD_ARROW_DOWN_ROUNDED,
             icon_size=tokens.ICON_SM,
             icon_color=ft.Colors.ON_SURFACE_VARIANT,
             style=ft.ButtonStyle(padding=tokens.SPACE_NONE),
             tooltip="Toggle timeline drawer",
-            on_click=_toggle,
+            on_click=_handle_click,
         )
     )
 
@@ -333,7 +321,7 @@ def build_agent_progress_pill(
         margin=ft.Margin(
             tokens.SPACE_NONE, tokens.SPACE_XXS, tokens.SPACE_NONE, tokens.SPACE_XXS
         ),
-        on_click=_toggle,
+        on_click=_handle_click,
     )
 
     return ft.Container(
