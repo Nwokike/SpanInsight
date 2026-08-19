@@ -378,3 +378,30 @@ class TestAnalysisContextBuilder:
         from core.utils import build_analysis_context
 
         assert build_analysis_context([]) == ""
+
+
+class TestSessionExpiredSafety:
+    def test_cell_timeout_does_not_expire_session(self):
+        from screens.analysis.colab_connection import session_expired
+
+        # Execution timeouts, syntax errors, missing files, and NameErrors must NEVER reset the Colab VM
+        assert session_expired("TimeoutError: Timeout waiting for output") is False
+        assert session_expired("NameError: name 'df' is not defined") is False
+        assert session_expired("FileNotFoundError: No such file or directory") is False
+        assert session_expired("ValueError: Invalid parameter") is False
+
+    def test_real_server_session_loss_detected(self):
+        from screens.analysis.colab_connection import session_expired
+
+        assert session_expired("RuntimeError: Session has expired on server") is True
+        assert session_expired("Kernel not found") is True
+        assert session_expired("404 Not Found") is True
+        assert session_expired("Connection was lost") is True
+
+
+class TestExcelLoadCodeEngines:
+    def test_suggest_load_code_xlsx(self):
+        code = suggest_load_code("Vehicle_Sales_Dataset.xlsx")
+        assert "calamine" in code
+        assert "openpyxl" in code
+        assert "xlrd" in code

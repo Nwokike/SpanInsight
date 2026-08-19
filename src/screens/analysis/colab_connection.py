@@ -14,15 +14,14 @@ logger = logging.getLogger("ColabConnection")
 
 
 def session_expired(msg: str) -> bool:
-    """Check whether an execution error indicates a dead/expired Colab VM."""
+    """Check whether an execution error indicates a truly dead/expired Colab VM."""
     lowered = msg.lower()
     return (
         "session has expired" in lowered
         or "session lost" in lowered
         or "kernel not found" in lowered
-        or "timeout waiting for output" in lowered
         or "404" in lowered
-        or "nameerror: name 'df' is not defined" in lowered
+        or "connection was lost" in lowered
     )
 
 

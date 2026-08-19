@@ -116,6 +116,8 @@ async def run_cell_async(
         output_buffer.clear()
         src = cell.get("source", "").strip()
         timeout = state.default_timeout or COLAB_DEFAULT_TIMEOUT
+        if cell.get("is_initial_load"):
+            timeout = max(float(timeout), 300.0)
         outputs = await colab.exec_code(
             code=src,
             session_name=sess,

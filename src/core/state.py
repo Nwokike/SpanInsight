@@ -33,7 +33,7 @@ class AppState:
     auth_method: str = "oauth2"
     default_gpu: str = ""
     default_tpu: str = ""
-    default_timeout: int = 30
+    default_timeout: int = 120
     keep_alive_enabled: bool = True
 
     # ── Notebook ────────────────────────────────────────────────────
