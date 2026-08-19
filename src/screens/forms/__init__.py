@@ -65,6 +65,9 @@ def FormsScreen() -> ft.Control:
 
     audio_svc = ft.use_ref(lambda: AudioService(page))
 
+    rec_state_ref = ft.use_ref({"is_recording": False, "seconds": 0})
+    editor_rec_state_ref = ft.use_ref({"is_recording": False, "seconds": 0})
+
     def _show_error(msg: str):
         if page:
             from core.utils import show_snack
@@ -89,13 +92,16 @@ def FormsScreen() -> ft.Control:
 
     # ── Voice helpers ────────────────────────────────────────────
     async def _update_timer():
-        while is_recording:
+        while rec_state_ref.current["is_recording"]:
             await asyncio.sleep(1)
-            if is_recording:
-                set_recording_time(recording_time + 1)
+            if rec_state_ref.current["is_recording"]:
+                rec_state_ref.current["seconds"] += 1
+                set_recording_time(rec_state_ref.current["seconds"])
 
     async def _handle_auto_stop(result):
+        rec_state_ref.current["is_recording"] = False
         set_is_recording(False)
+        set_recording_time(0)
         if result:
             audio_bytes, mime_type = result
             transcript = await ai_service.transcribe_audio(audio_bytes, mime_type)
@@ -103,9 +109,11 @@ def FormsScreen() -> ft.Control:
                 set_prompt_text(transcript)
 
     async def on_voice_toggle(e=None):
-        if is_recording:
+        if rec_state_ref.current["is_recording"]:
+            rec_state_ref.current["is_recording"] = False
             result = await audio_svc.current.stop_recording()
             set_is_recording(False)
+            set_recording_time(0)
             set_is_transcribing(True)
             if result:
                 audio_bytes, mime_type = result
@@ -129,19 +137,24 @@ def FormsScreen() -> ft.Control:
                 )
             )
             if started:
+                rec_state_ref.current["is_recording"] = True
+                rec_state_ref.current["seconds"] = 0
                 set_is_recording(True)
                 set_recording_time(0)
                 if page:
                     page.run_task(_update_timer)
 
     async def _update_editor_timer():
-        while editor_recording:
+        while editor_rec_state_ref.current["is_recording"]:
             await asyncio.sleep(1)
-            if editor_recording:
-                set_editor_recording_time(editor_recording_time + 1)
+            if editor_rec_state_ref.current["is_recording"]:
+                editor_rec_state_ref.current["seconds"] += 1
+                set_editor_recording_time(editor_rec_state_ref.current["seconds"])
 
     async def _handle_editor_auto_stop(result):
+        editor_rec_state_ref.current["is_recording"] = False
         set_editor_recording(False)
+        set_editor_recording_time(0)
         if result:
             audio_bytes, mime_type = result
             transcript = await ai_service.transcribe_audio(audio_bytes, mime_type)
@@ -149,9 +162,11 @@ def FormsScreen() -> ft.Control:
                 set_ai_edit_text(transcript)
 
     async def on_editor_voice_toggle(e=None):
-        if editor_recording:
+        if editor_rec_state_ref.current["is_recording"]:
+            editor_rec_state_ref.current["is_recording"] = False
             result = await audio_svc.current.stop_recording()
             set_editor_recording(False)
+            set_editor_recording_time(0)
             set_editor_transcribing(True)
             if result:
                 audio_bytes, mime_type = result
@@ -175,6 +190,8 @@ def FormsScreen() -> ft.Control:
                 )
             )
             if started:
+                editor_rec_state_ref.current["is_recording"] = True
+                editor_rec_state_ref.current["seconds"] = 0
                 set_editor_recording(True)
                 set_editor_recording_time(0)
                 if page:

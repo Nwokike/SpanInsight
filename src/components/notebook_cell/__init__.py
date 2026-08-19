@@ -91,24 +91,15 @@ def build_notebook_cell(
         def _edit(e=None):
             if not cell.get("is_editing"):
                 cell["is_editing"] = True
-                edit_container.visible = True
-                render_container.visible = False
                 if on_change:
                     on_change()
-                page.update()
 
         def _render(e=None):
             if editor_ref.current:
                 cell["source"] = editor_ref.current.value
-            new_source = cell.get("source", "")
-            if markdown_ref.current:
-                markdown_ref.current.value = new_source
             cell["is_editing"] = False
-            edit_container.visible = False
-            render_container.visible = True
             if on_change:
                 on_change()
-            page.update()
 
         edit_container.content = ft.Column(
             controls=[

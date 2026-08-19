@@ -407,12 +407,15 @@ def AppShell() -> Control:
     layout_controls = [offline_banner]
     if top_bar is not None:
         layout_controls.append(top_bar)
-    layout_controls.append(ft.SafeArea(content=screen, expand=True))
+    layout_controls.append(ft.Container(content=screen, expand=True))
     if bottom_bar is not None:
         layout_controls.append(bottom_bar)
 
-    return ft.Column(
-        controls=layout_controls,
+    return ft.SafeArea(
+        content=ft.Column(
+            controls=layout_controls,
+            expand=True,
+            spacing=tokens.SPACE_NONE,
+        ),
         expand=True,
-        spacing=tokens.SPACE_NONE,
     )

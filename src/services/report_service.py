@@ -123,10 +123,17 @@ class ReportService:
     async def share_report(self, report: dict, user_uuid: str) -> str | None:
         items = []
         for block in report.get("blocks", []):
+            ser_res = block.get("serialized_result") or block.get("structured_result")
+            chart_obj = None
+            if isinstance(ser_res, dict):
+                chart_obj = ser_res.get("chart") or (
+                    ser_res if ser_res.get("type") == "chart" else None
+                )
             item = {
                 "prompt": block.get("prompt", ""),
                 "description": block.get("description", ""),
-                "serialized_result": block.get("serialized_result"),
+                "serialized_result": ser_res,
+                "chart": chart_obj,
                 "stdout": block.get("stdout"),
             }
             if block.get("figure_png_b64"):

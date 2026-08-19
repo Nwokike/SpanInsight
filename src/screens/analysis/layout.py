@@ -191,21 +191,16 @@ def build_analysis_top_bar(
         on_project_selected=on_project_selected,
     )
 
-    new_project_btn = ft.FilledButton(
-        "New Project",
+    new_project_btn = ft.IconButton(
         icon=ft.Icons.ADD_ROUNDED,
+        icon_color=theme.PRIMARY,
+        tooltip="New Project",
         style=ft.ButtonStyle(
             bgcolor=ft.Colors.with_opacity(tokens.OPACITY_CONTAINER, theme.PRIMARY),
-            color=theme.PRIMARY,
             shape=ft.RoundedRectangleBorder(radius=tokens.RADIUS_SM),
-            padding=ft.Padding(
-                tokens.SPACE_MD_SM,
-                tokens.SPACE_XS,
-                tokens.SPACE_MD_SM,
-                tokens.SPACE_XS,
-            ),
+            padding=tokens.SPACE_XS,
         ),
-        height=tokens.BUTTON_HEIGHT_SM,
+        icon_size=tokens.ICON_SM,
         on_click=lambda _: on_new_project(),
     )
 

@@ -20,6 +20,7 @@ def session_expired(msg: str) -> bool:
         "session has expired" in lowered
         or "session lost" in lowered
         or "kernel not found" in lowered
+        or "not found" in lowered
         or "404" in lowered
         or "connection was lost" in lowered
     )
