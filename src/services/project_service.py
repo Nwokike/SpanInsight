@@ -12,11 +12,11 @@ A Project encapsulates:
 
 from __future__ import annotations
 
-import json
 import logging
 import time
 import uuid
 
+from core.json_compat import fast_dumps, fast_loads
 from services.ipynb_converter import cells_to_ipynb, ipynb_to_cells
 
 logger = logging.getLogger("ProjectService")
@@ -34,7 +34,7 @@ class ProjectService:
         if not raw:
             return []
         try:
-            projects = json.loads(raw)
+            projects = fast_loads(raw)
             if isinstance(projects, list):
                 # Filter out empty ghost projects (0 cells and no dataset)
                 valid_projects = [
@@ -59,7 +59,7 @@ class ProjectService:
         if not raw:
             return 0
         try:
-            projects = json.loads(raw)
+            projects = fast_loads(raw)
             if not isinstance(projects, list):
                 return 0
             cleaned = []
@@ -91,7 +91,7 @@ class ProjectService:
                         await self._storage.delete(f"notebook_{pid}")
             if purged > 0:
                 await self._storage.set(
-                    STORAGE_PROJECTS_INDEX, json.dumps(cleaned, default=str)
+                    STORAGE_PROJECTS_INDEX, fast_dumps(cleaned, default=str)
                 )
                 logger.info("Purged %d empty ghost projects from storage index", purged)
             return purged
@@ -105,13 +105,13 @@ class ProjectService:
         if not raw:
             return None
         try:
-            project = json.loads(raw)
+            project = fast_loads(raw)
             # Only reconstruct from notebook.ipynb if project record has no notebook_cells
             if not project.get("notebook_cells"):
                 nb_raw = await self._storage.get(f"notebook_{project_id}")
                 if nb_raw:
                     try:
-                        nb_dict = json.loads(nb_raw)
+                        nb_dict = fast_loads(nb_raw)
                         project["notebook_cells"] = ipynb_to_cells(nb_dict)
                     except Exception:
                         pass
@@ -158,14 +158,14 @@ class ProjectService:
         cells = project.get("notebook_cells", [])
         ipynb_doc = cells_to_ipynb(cells)
         await self._storage.set(
-            f"notebook_{project_id}", json.dumps(ipynb_doc, indent=2)
+            f"notebook_{project_id}", fast_dumps(ipynb_doc, indent=True)
         )
 
         # Save full project json (excluding massive duplicated cells to save memory)
         project_meta = dict(project)
         project_meta["notebook_cells"] = cells  # Kept in project record for fast load
         await self._storage.set(
-            f"project_{project_id}", json.dumps(project_meta, default=str)
+            f"project_{project_id}", fast_dumps(project_meta, default=str)
         )
 
         # Only register in projects index if project has real content
@@ -207,7 +207,7 @@ class ProjectService:
                 },
             )
         await self._storage.set(
-            STORAGE_PROJECTS_INDEX, json.dumps(updated_index, default=str)
+            STORAGE_PROJECTS_INDEX, fast_dumps(updated_index, default=str)
         )
 
     async def delete_project(self, project_id: str) -> None:
@@ -225,7 +225,7 @@ class ProjectService:
         projects = await self.list_projects()
         projects = [p for p in projects if p["id"] != project_id]
         await self._storage.set(
-            STORAGE_PROJECTS_INDEX, json.dumps(projects, default=str)
+            STORAGE_PROJECTS_INDEX, fast_dumps(projects, default=str)
         )
 
     async def add_file_version(

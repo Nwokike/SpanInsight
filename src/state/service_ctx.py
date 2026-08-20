@@ -19,6 +19,7 @@ class Services:
     credits: object = None
     storage: object = None
     projects: object = None
+    reports: object = None  # shared ReportService instance
     page: object = None  # ft.Page ref for services that need it
 
 

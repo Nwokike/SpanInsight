@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import random
@@ -9,9 +10,52 @@ import string
 import time
 
 from core.constants import API_BASE_URL
+from core.json_compat import fast_dumps, fast_loads
 from services.api_client import request_with_retry
 
 logger = logging.getLogger(__name__)
+
+
+def build_report_block_from_cell(cell: dict) -> dict:
+    """Transform an analysis notebook cell into a canonical report block.
+
+    Both the manual pin (Analysis screen) and the Autopilot auto-compile must turn a
+    cell's ``outputs`` / ``narration`` / ``figure_png`` into the block shape the
+    report renderer and sharer consume::
+
+        source_block_id, prompt, description, thought, figure_png_b64,
+        block_type, serialized_result, stdout
+
+    The figure is recovered from ``figure_png`` (bytes) or the first ``image/png``
+    entry in the Jupyter ``outputs``; stdout is rebuilt from stream/text outputs.
+    """
+    png_b64 = cell.get("figure_png_b64", "")
+    if not png_b64 and cell.get("figure_png"):
+        png_b64 = base64.b64encode(cell["figure_png"]).decode("utf-8")
+    if not png_b64:
+        for out in cell.get("outputs", []):
+            if isinstance(out, dict) and "image/png" in out.get("data", {}):
+                png_b64 = str(out["data"]["image/png"])
+                break
+
+    stdout_text = ""
+    for out in cell.get("outputs", []):
+        if isinstance(out, dict):
+            if out.get("output_type") == "stream":
+                stdout_text += str(out.get("text", "")) + "\n"
+            elif "text/plain" in out.get("data", {}):
+                stdout_text += str(out["data"]["text/plain"]) + "\n"
+
+    return {
+        "source_block_id": cell.get("id"),
+        "prompt": cell.get("prompt") or "Data Analysis",
+        "description": cell.get("narration") or cell.get("description", ""),
+        "thought": cell.get("thought", ""),
+        "figure_png_b64": png_b64,
+        "block_type": "chart" if png_b64 else "text",
+        "serialized_result": cell.get("structured_result"),
+        "stdout": stdout_text.strip(),
+    }
 
 
 class ReportService:
@@ -27,7 +71,7 @@ class ReportService:
             raw = await self._storage.get("spaninsight_reports")
             if raw:
                 try:
-                    state.user_reports = json.loads(raw)
+                    state.user_reports = fast_loads(raw)
                 except json.JSONDecodeError, ValueError:
                     state.user_reports = []
         return state.user_reports
@@ -38,7 +82,7 @@ class ReportService:
         try:
             state.user_reports = reports
             await self._storage.set(
-                "spaninsight_reports", json.dumps(reports, default=str)
+                "spaninsight_reports", fast_dumps(reports, default=str)
             )
         except Exception as e:
             logger.error("Failed to save reports: %s", e)
@@ -103,6 +147,20 @@ class ReportService:
                 await self.delete_public_report(target["share_id"])
             except Exception as ex:
                 logger.warning("Cloud report cleanup on delete failed: %s", ex)
+        if target:
+            # Unpin analysis cells that were pinned to this report, so the
+            # cards stop showing a stale "Pinned" state after deletion.
+            from core.state import state
+
+            source_ids = {
+                b.get("source_block_id")
+                for b in target.get("blocks", [])
+                if b.get("source_block_id")
+            }
+            if source_ids:
+                for cell in state.notebook_cells:
+                    if cell.get("id") in source_ids:
+                        cell["pinned"] = False
         original_len = len(reports)
         reports = [r for r in reports if r["id"] != report_id]
         if len(reports) < original_len:

@@ -25,6 +25,7 @@ class ControllerMethods:
     """Callbacks from AppController exposed to the component tree."""
 
     start_analysis: Callable[..., None] = _noop_sync
+    new_project: Callable[[], None] = _noop_sync
     navigate_tab: Callable[[int], None] = _noop_sync
     toggle_theme: Callable[[], None] = _noop_sync
     check_update: Callable[[], Awaitable[None]] = _noop_async

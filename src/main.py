@@ -121,15 +121,10 @@ class AppController:
         page.run_task(self._initial_route)
 
         # ── Connectivity monitor (updates state.is_online) ─────────
-        from components.connectivity_monitor import (
-            build_offline_banner,
-            start_connectivity_monitor,
-        )
+        from components.connectivity_monitor import start_connectivity_monitor
 
-        _stub_banner = (
-            build_offline_banner()
-        )  # monitor updates state.is_online; AppShell owns the real banner
-        page.run_task(start_connectivity_monitor, page, _stub_banner)
+        # AppShell owns the real banner (state-driven, with Retry action)
+        page.run_task(start_connectivity_monitor, page)
 
         # ── Build controller methods ────────────────────────────
         from state.controller_ctx import ControllerMethods, ControllerMethodsCtx
@@ -140,11 +135,13 @@ class AppController:
             credits=self.credit_service,
             storage=self.storage,
             projects=self.project_service,
+            reports=self.report_service,
             page=page,
         )
 
         methods = ControllerMethods(
             start_analysis=self._start_analysis,
+            new_project=self._new_project,
             navigate_tab=self.navigate_tab,
             toggle_theme=self._toggle_theme,
             check_update=self._startup_checks,
@@ -181,6 +178,20 @@ class AppController:
         """Navigate to a specific tab index."""
         state.active_subview = ""
         state.current_tab = idx
+
+    def _new_project(self):
+        """Global header '+': start a fresh analysis draft from any screen.
+
+        The Analysis screen consumes the token (it owns the local setters and
+        the pending-save cancellation) and runs the existing
+        ``create_new_project`` flow, so behavior is identical to the old
+        in-screen button.
+        """
+        import uuid
+
+        state.pending_new_project_token = uuid.uuid4().hex
+        state.active_subview = ""
+        state.current_tab = 1
 
     def show_snack(self, message: str, is_error: bool = False):
         """Show a snackbar message."""

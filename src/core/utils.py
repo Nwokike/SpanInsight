@@ -194,10 +194,22 @@ def get_banner_ad(
 ) -> ft.Control:
     """Instantiate flet_ads.BannerAd safely.
 
-    If flet_ads fails to load (e.g. unsupported on Web/PC or dynamic linking issues),
-    gracefully returns an empty ft.Container() instead of crashing the view.
+    BannerAd raises FletUnsupportedPlatformException in before_update() on any
+    non-mobile platform, so we must never return a real instance off-mobile.
+    We resolve the current page from the render context and return an empty
+    Container unless we are on Android/iOS. If flet_ads fails to load, we also
+    fall back to an empty Container instead of crashing the view.
     """
     from core.constants import ADMOB_BANNER_ID
+
+    # Only render a real ad on mobile; BannerAd throws on desktop/web at render.
+    try:
+        page = ft.context.page
+        if page is None or page.web or not page.platform.is_mobile():
+            return ft.Container()
+    except Exception:
+        # No render context (e.g. called outside a component) - stay safe.
+        return ft.Container()
 
     effective_unit_id = unit_id or ADMOB_BANNER_ID
     try:

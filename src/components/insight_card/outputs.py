@@ -197,6 +197,7 @@ def render_raw_output_drawer(
                     ),
                 ],
                 spacing=tokens.SPACE_XXS,
+                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
             padding=tokens.SPACE_SM,
             bgcolor=theme.TERMINAL_BG,
@@ -204,7 +205,11 @@ def render_raw_output_drawer(
         )
         drawer_controls.append(raw_output_box)
 
-    return ft.Column(drawer_controls, spacing=tokens.SPACE_XXS)
+    return ft.Column(
+        drawer_controls,
+        spacing=tokens.SPACE_XXS,
+        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+    )
 
 
 def render_code_drawer(
@@ -304,6 +309,7 @@ def render_code_drawer(
                     ),
                 ],
                 spacing=tokens.SPACE_XXS,
+                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
             ),
             padding=tokens.SPACE_SM,
             bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, ft.Colors.BLACK),
@@ -315,4 +321,8 @@ def render_code_drawer(
         )
         code_drawer_controls.append(code_terminal)
 
-    return ft.Column(code_drawer_controls, spacing=tokens.SPACE_XXS)
+    return ft.Column(
+        code_drawer_controls,
+        spacing=tokens.SPACE_XXS,
+        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+    )

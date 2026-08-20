@@ -36,7 +36,7 @@ def build_about_section(
                         ),
                     ),
                     ft.Text(
-                        "Ready Autonomous Data Intelligence for Everyone",
+                        "Autonomous Data Intelligence for Everyone",
                         size=tokens.FONT_SM,
                         color=ft.Colors.ON_SURFACE_VARIANT,
                         text_align=ft.TextAlign.CENTER,

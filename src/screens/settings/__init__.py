@@ -313,6 +313,7 @@ def SettingsScreen() -> ft.Control:
             current_theme, lambda mode: page.run_task(on_theme_changed, mode)
         )
     )
+    controls.append(_ad())
     controls.extend(
         build_auth_section(
             state,
@@ -328,7 +329,6 @@ def SettingsScreen() -> ft.Control:
             lambda e: page.run_task(_on_keep_alive_change, e),
         )
     )
-    controls.append(_ad())
     controls.append(section_header("AI Credits"))
     controls.append(
         setting_tile(

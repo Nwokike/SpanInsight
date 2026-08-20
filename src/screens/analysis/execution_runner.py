@@ -57,6 +57,78 @@ def flush_output_to_ui(refs_dict: dict, c: dict, page: ft.Page):
         logger.debug("Cell output flush skipped", exc_info=True)
 
 
+async def heal_cell_once(
+    cell: dict, page: ft.Page, on_cell_change, attempt: int = 0
+) -> bool:
+    """Ask the AI to correct the failing code (unconditional self-heal).
+
+    Works for cells without an explicit prompt too: the failing source is
+    used as the description. Returns True when the cell source changed.
+    """
+    state.analysis_stage = 6
+    state.analysis_stage_text = (
+        f"🩹 AI self-healing code execution (attempt {attempt + 1}/2)…"
+    )
+    state.autopilot_progress = f"🩹 Self-healing code (attempt {attempt + 1}/2)…"
+    if page:
+        show_snack(
+            page,
+            f"🩹 AI self-healing code execution (attempt {attempt + 1})…",
+            duration=2500,
+        )
+
+    error_text = extract_error_text(cell.get("outputs", [])) or "Unknown error"
+    prompt_desc = cell.get("prompt") or cell.get("source", "")
+    try:
+        corrected = await ai_service.generate_corrected_code(
+            prompt_desc,
+            cell.get("source", ""),
+            error_text,
+            state.active_schema_json or {},
+        )
+    except Exception as ex:
+        logger.warning("Self-healing code generation failed: %s", ex)
+        return False
+    if not corrected or corrected.strip() == cell.get("source", "").strip():
+        return False
+    cell["source"] = corrected
+    cell["outputs"] = []
+    cell["heal_count"] = int(cell.get("heal_count", 0)) + 1
+    on_cell_change()
+    return True
+
+
+async def retry_with_ai_heal(
+    cell_id: str,
+    session_name: str,
+    colab,
+    page: ft.Page,
+    cell_refs_map,
+    set_is_executing,
+    on_cell_change,
+):
+    """Manual self-healing retry: let the AI fix the failing code, then re-run.
+
+    Mirrors the legacy app, where a failed card offered "Retry with AI" and
+    the AI rewrote the code instead of blindly re-executing it.
+    """
+    cell = next((c for c in state.notebook_cells if c["id"] == cell_id), None)
+    if not cell or not cell.get("source", "").strip():
+        return
+    cell["failed"] = False
+    on_cell_change()
+    await heal_cell_once(cell, page, on_cell_change)
+    await run_cell_async(
+        cell_id,
+        session_name,
+        colab,
+        page,
+        cell_refs_map,
+        set_is_executing,
+        on_cell_change,
+    )
+
+
 async def run_cell_async(
     cell_id: str,
     session_name: str,
@@ -146,43 +218,7 @@ async def run_cell_async(
         except Exception as ser_ex:
             logger.warning("Structured result serialization failed: %s", ser_ex)
 
-    async def _heal(attempt: int) -> bool:
-        """Ask the AI to correct the failing code."""
-        state.analysis_stage = 6
-        state.analysis_stage_text = (
-            f"🩹 AI self-healing code execution (attempt {attempt + 1}/2)…"
-        )
-        state.autopilot_progress = f"🩹 Self-healing code (attempt {attempt + 1}/2)…"
-        if page:
-            show_snack(
-                page,
-                f"🩹 AI self-healing code execution (attempt {attempt + 1})…",
-                duration=2500,
-            )
-
-        error_text = extract_error_text(cell.get("outputs", [])) or "Unknown error"
-        prompt_desc = cell.get("prompt") or cell.get("source", "")
-        try:
-            corrected = await ai_service.generate_corrected_code(
-                prompt_desc,
-                cell.get("source", ""),
-                error_text,
-                state.active_schema_json or {},
-            )
-        except Exception as ex:
-            logger.warning("Self-healing code generation failed: %s", ex)
-            return False
-        if not corrected or corrected.strip() == cell.get("source", "").strip():
-            return False
-        cell["source"] = corrected
-        cell["outputs"] = []
-        output_buffer.clear()
-        cell["heal_count"] = attempt + 1
-        on_cell_change()
-        return True
-
     MAX_HEAL_ATTEMPTS = 2
-    can_heal = bool(cell.get("prompt"))
     session_used = active_sess
 
     try:
@@ -214,10 +250,10 @@ async def run_cell_async(
                 await _serialize_result(session_used)
                 cell["failed"] = False
                 break
-            if not can_heal or heal_attempt >= MAX_HEAL_ATTEMPTS:
+            if heal_attempt >= MAX_HEAL_ATTEMPTS:
                 cell["failed"] = True
                 break
-            if not await _heal(heal_attempt):
+            if not await heal_cell_once(cell, page, on_cell_change, heal_attempt):
                 cell["failed"] = True
                 break
             heal_attempt += 1

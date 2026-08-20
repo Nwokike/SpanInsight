@@ -89,6 +89,7 @@ class AppState:
     app_ready: bool = False  # False until _initial_route completes
     gateway_online: bool = True
     trigger_file_picker: bool = False
+    pending_new_project_token: str = ""  # set by global "+", consumed by AnalysisScreen
     onboarding_done: bool = False
     theme_mode: Any = None  # ft.ThemeMode value
 
@@ -99,6 +100,7 @@ class AppState:
     def __init__(self):
         self.notebook_cells = []
         self.pending_dataset_load = None
+        self.pending_forms_import = None
         self.active_sessions = []
         self.forms = []
         self.projects_list = []

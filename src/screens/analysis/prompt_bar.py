@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import flet as ft
 
 from core import theme, tokens
@@ -143,8 +145,18 @@ def build_gen_indicator(
     is_generating: bool,
     stage_text: str = "",
     duration: float = 0.0,
+    is_autopilot: bool = False,
+    steps: list[dict] | None = None,
+    on_stop: Callable | None = None,
+    is_expanded: bool = False,
+    on_toggle: Callable | None = None,
 ) -> ft.Control:
-    """Live AI agent progress pill shown while reasoning, generating, and executing."""
+    """Live AI agent progress pill shown while reasoning, generating, and executing.
+
+    This is the single unified pill (parked above the prompt bar). In Autopilot it
+    renders the full variant — Autopilot badge, Stop button, live step timeline, and
+    the sponsor slot — so both analysis modes share one identical pill in one place.
+    """
     from components.agent_progress_pill import build_agent_progress_pill
 
     if not is_generating:
@@ -152,8 +164,13 @@ def build_gen_indicator(
 
     pill = build_agent_progress_pill(
         is_active=is_generating,
+        is_autopilot=is_autopilot,
         stage_text=stage_text or "Reasoning & analyzing data…",
         duration=duration,
+        steps=steps,
+        on_stop=on_stop,
+        is_expanded=is_expanded,
+        on_toggle=on_toggle,
     )
     if not pill:
         return ft.Container(visible=False)

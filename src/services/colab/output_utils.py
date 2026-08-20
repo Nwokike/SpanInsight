@@ -15,8 +15,9 @@ both shapes so no call site ever guesses again.
 
 from __future__ import annotations
 
-import json
 import logging
+
+from core.json_compat import fast_loads
 
 logger = logging.getLogger("ColabOutputUtils")
 
@@ -104,7 +105,7 @@ def parse_marker_json(outputs, marker: str) -> tuple[dict | None, str | None]:
     if payload is None:
         return None, None
     try:
-        parsed = json.loads(payload)
+        parsed = fast_loads(payload)
     except ValueError as ex:
         return None, f"Malformed {marker} payload: {ex}"
     if isinstance(parsed, dict):

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import flet as ft
 
-from components.agent_progress_pill import build_agent_progress_pill
 from components.dataset_overview_card import build_dataset_overview_card
 from components.file_import_card import build_file_import_card
 from components.project_switcher import build_project_switcher
@@ -174,34 +173,23 @@ def build_analysis_top_bar(
     projects,
     active_project_name: str,
     on_project_selected,
-    on_new_project,
     on_pick_file,
     schema_json: dict,
     is_expert_mode: bool,
     set_is_expert_mode,
     session_name: str,
-    is_pill_expanded: bool = False,
-    on_toggle_pill=None,
-) -> ft.Column:
-    """Construct top header containing project switcher, dataset badge, mode toggle, and session chip."""
+) -> ft.Control:
+    """Construct top header containing project switcher, dataset badge, mode toggle, and session chip.
+
+    The global AppShell header owns the "+" New Project action. The AI progress pill
+    now lives above the prompt bar (see build_gen_indicator) so both analysis modes
+    share one pill in one stable place.
+    """
     project_chip = build_project_switcher(
         page,
         projects,
         active_project_name=active_project_name,
         on_project_selected=on_project_selected,
-    )
-
-    new_project_btn = ft.IconButton(
-        icon=ft.Icons.ADD_ROUNDED,
-        icon_color=theme.PRIMARY,
-        tooltip="New Project",
-        style=ft.ButtonStyle(
-            bgcolor=ft.Colors.with_opacity(tokens.OPACITY_CONTAINER, theme.PRIMARY),
-            shape=ft.RoundedRectangleBorder(radius=tokens.RADIUS_SM),
-            padding=tokens.SPACE_XS,
-        ),
-        icon_size=tokens.ICON_SM,
-        on_click=lambda _: on_new_project(),
     )
 
     dataset_label = state.active_project_dataset or (
@@ -250,54 +238,26 @@ def build_analysis_top_bar(
 
     mode_switch_bar = build_mode_switch_bar(is_expert_mode, set_is_expert_mode)
     session_chip = build_session_chip(session_name, state.session_hardware)
-    is_active_progress = bool(state.autopilot_running or state.is_analyzing)
-    progress_pill = build_agent_progress_pill(
-        is_active=is_active_progress,
-        is_autopilot=bool(state.autopilot_running),
-        stage_text=state.autopilot_progress
-        if state.autopilot_running
-        else (state.analysis_stage_text or ""),
-        steps=state.autopilot_steps if state.autopilot_running else None,
-        on_stop=lambda _: setattr(state, "autopilot_cancelled", True),
-        is_expanded=is_pill_expanded,
-        on_toggle=on_toggle_pill,
-    )
 
-    return ft.Column(
-        controls=[
-            ft.Container(
-                content=ft.Row(
-                    controls=[
-                        project_chip,
-                        dataset_indicator,
-                        new_project_btn,
-                        mode_switch_bar,
-                        session_chip,
-                    ],
-                    alignment=ft.MainAxisAlignment.START,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=tokens.SPACE_SM,
-                    scroll=ft.ScrollMode.ADAPTIVE,
-                ),
-                padding=ft.Padding(
-                    tokens.SPACE_MD,
-                    tokens.SPACE_SM,
-                    tokens.SPACE_MD,
-                    tokens.SPACE_XXS,
-                ),
-            ),
-            ft.Container(
-                content=progress_pill,
-                padding=ft.Padding(
-                    tokens.SPACE_MD,
-                    tokens.SPACE_NONE,
-                    tokens.SPACE_MD,
-                    tokens.SPACE_XS,
-                ),
-                visible=is_active_progress,
-            ),
-        ],
-        spacing=tokens.SPACE_NONE,
+    return ft.Container(
+        content=ft.Row(
+            controls=[
+                project_chip,
+                dataset_indicator,
+                mode_switch_bar,
+                session_chip,
+            ],
+            alignment=ft.MainAxisAlignment.START,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=tokens.SPACE_SM,
+            scroll=ft.ScrollMode.ADAPTIVE,
+        ),
+        padding=ft.Padding(
+            tokens.SPACE_MD,
+            tokens.SPACE_SM,
+            tokens.SPACE_MD,
+            tokens.SPACE_XXS,
+        ),
     )
 
 
@@ -310,6 +270,7 @@ def build_analysis_feed(
     on_trigger_run_cell,
     on_stop_cell,
     on_delete_cell,
+    on_retry_heal,
     on_move_cell,
     on_cell_change,
     on_clear_output,
@@ -352,6 +313,7 @@ def build_analysis_feed(
         on_run_cell=on_trigger_run_cell,
         on_stop_cell=on_stop_cell,
         on_delete_cell=on_delete_cell,
+        on_retry_heal=on_retry_heal,
         on_move_cell=on_move_cell,
         on_cell_change=on_cell_change,
         on_clear_output=on_clear_output,

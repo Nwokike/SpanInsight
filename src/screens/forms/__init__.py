@@ -261,8 +261,13 @@ def FormsScreen() -> ft.Control:
         )
 
         dataset_name = f"{form_title.replace(' ', '_')}_responses.csv"
-        state.current_dataset = {"name": dataset_name}
-        state.add_cell("code", code)
+        # Hand off to the Analysis screen, which owns cell insertion and
+        # persistence (direct state writes are lost when its mount handler
+        # reloads the active project).
+        state.pending_forms_import = {
+            "name": dataset_name,
+            "code": code,
+        }
         state.current_tab = 1
         if page:
             show_snack(
@@ -274,7 +279,6 @@ def FormsScreen() -> ft.Control:
     # ── View Router ──────────────────────────────────────────────
     if mode == "editor":
         view_controls = build_form_editor(
-            page=page,
             schema=draft_schema,
             title=draft_title,
             description=draft_desc,

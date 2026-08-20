@@ -18,6 +18,7 @@ from screens.analysis.fab_menu import build_analysis_fab
 from screens.analysis.handlers import (
     connect_colab_async,
     pick_and_upload_file_async,
+    retry_with_ai_heal,
     run_autopilot_async,
     run_cell_async,
     submit_prompt_async,
@@ -190,6 +191,19 @@ def AnalysisScreen() -> Control:
         state.notebook_cells = [c for c in state.notebook_cells if c["id"] != cell_id]
         _on_cell_change()
 
+    def _retry_heal_cell(cell_id: str):
+        if page:
+            page.run_task(
+                retry_with_ai_heal,
+                cell_id,
+                state.active_session_name or session_name,
+                colab,
+                page,
+                cell_refs_map,
+                set_is_executing,
+                _on_cell_change,
+            )
+
     def _move_cell(cell_id: str, direction: int):
         cells = state.notebook_cells
         idx = next((i for i, c in enumerate(cells) if c["id"] == cell_id), -1)
@@ -222,40 +236,9 @@ def AnalysisScreen() -> Control:
                     f"{Path(dataset_name).stem if dataset_name else 'Analysis'} Report"
                 )
 
-                png_b64 = block.get("figure_png_b64", "")
-                if not png_b64 and block.get("figure_png"):
-                    import base64
+                from services.report_service import build_report_block_from_cell
 
-                    png_b64 = base64.b64encode(block["figure_png"]).decode("utf-8")
-                if not png_b64:
-                    for out in block.get("outputs", []):
-                        if (
-                            isinstance(out, dict)
-                            and "data" in out
-                            and "image/png" in out["data"]
-                        ):
-                            png_b64 = str(out["data"]["image/png"])
-                            break
-
-                stdout_text = ""
-                for out in block.get("outputs", []):
-                    if isinstance(out, dict):
-                        if out.get("output_type") == "stream":
-                            stdout_text += str(out.get("text", "")) + "\n"
-                        elif "data" in out and "text/plain" in out["data"]:
-                            stdout_text += str(out["data"]["text/plain"]) + "\n"
-
-                report_block = {
-                    "source_block_id": block.get("id"),
-                    "prompt": block.get("prompt") or "Data Analysis",
-                    "description": block.get("narration")
-                    or block.get("description", ""),
-                    "thought": block.get("thought", ""),
-                    "figure_png_b64": png_b64,
-                    "block_type": "chart" if png_b64 else "text",
-                    "serialized_result": block.get("structured_result"),
-                    "stdout": stdout_text.strip(),
-                }
+                report_block = build_report_block_from_cell(block)
 
                 existing_reports = await report_svc.list_reports()
                 target_report = next(
@@ -369,6 +352,22 @@ def AnalysisScreen() -> Control:
     ft.use_effect(
         _process_pending_dataset_load,
         [app_state.pending_dataset_load, session_name],
+    )
+
+    # ── Cross-screen survey import (Forms → Analysis) ────────────
+    async def _process_pending_forms_import():
+        pending = state.pending_forms_import
+        if not pending:
+            return
+        state.pending_forms_import = None
+        code = pending.get("code", "")
+        if not code:
+            return
+        _add_cell("code", code)
+
+    ft.use_effect(
+        _process_pending_forms_import,
+        [state.pending_forms_import],
     )
 
     # ── Auto-trigger file picker when requested from Home/Quick Start ──
@@ -536,6 +535,40 @@ def AnalysisScreen() -> Control:
         cleanup=_cleanup_fab,
     )
 
+    # ── Global "+" (AppShell header) → new project draft ─────────
+    def _on_new_project_token():
+        token = state.pending_new_project_token
+        if not token:
+            return
+        state.pending_new_project_token = ""
+
+        async def _start_draft():
+            await create_new_project(
+                projects,
+                page,
+                _cancel_pending_save,
+                set_active_project_id,
+                set_active_project_name,
+                set_schema,
+                set_suggestions,
+                set_cells_version,
+                cells_version,
+            )
+
+        if page:
+            page.run_task(_start_draft)
+
+    ft.use_effect(_on_new_project_token, [state.pending_new_project_token])
+
+    # Auto-expand the progress pill when Autopilot starts so the live step
+    # timeline — and the sponsor banner inside it — is visible without a tap.
+    # The user can still collapse it via the chevron; each new run re-expands.
+    def _auto_expand_pill_on_autopilot():
+        if state.autopilot_running:
+            set_is_pill_expanded(True)
+
+    ft.use_effect(_auto_expand_pill_on_autopilot, [state.autopilot_running])
+
     if not session_name:
         return ft.SafeArea(
             content=build_session_banner(
@@ -553,25 +586,11 @@ def AnalysisScreen() -> Control:
         projects=projects,
         active_project_name=active_project_name,
         on_project_selected=_on_project_selected,
-        on_new_project=lambda: page.run_task(
-            create_new_project,
-            projects,
-            page,
-            _cancel_pending_save,
-            set_active_project_id,
-            set_active_project_name,
-            set_schema,
-            set_suggestions,
-            set_cells_version,
-            cells_version,
-        ),
         on_pick_file=lambda: page.run_task(_pick_and_upload_file),
         schema_json=schema_json,
         is_expert_mode=is_expert_mode,
         set_is_expert_mode=set_is_expert_mode,
         session_name=session_name,
-        is_pill_expanded=is_pill_expanded,
-        on_toggle_pill=lambda: set_is_pill_expanded(not is_pill_expanded),
     )
 
     feed = build_analysis_feed(
@@ -583,6 +602,7 @@ def AnalysisScreen() -> Control:
         on_trigger_run_cell=_trigger_run_cell,
         on_stop_cell=_stop_cell,
         on_delete_cell=_delete_cell,
+        on_retry_heal=_retry_heal_cell,
         on_move_cell=_move_cell,
         on_cell_change=_on_cell_change,
         on_clear_output=_clear_cell_output,
@@ -601,9 +621,27 @@ def AnalysisScreen() -> Control:
         or getattr(app_state, "is_analyzing", False)
         or getattr(state, "is_analyzing", False)
     )
+    # One pill for both modes, parked above the prompt bar. In Autopilot it shows
+    # the full variant (badge, Stop, live step timeline, sponsor slot); in Insight
+    # the compact variant. is_pill_expanded drives the expandable timeline drawer.
+    is_autopilot_active = bool(state.autopilot_running)
+    is_ai_active = is_active_generating or is_autopilot_active
     gen_indicator = build_gen_indicator(
-        is_active_generating,
-        stage_text=state.autopilot_progress or "Reasoning & analyzing data…",
+        is_ai_active,
+        stage_text=(
+            state.autopilot_progress
+            if is_autopilot_active
+            else (state.analysis_stage_text or "Reasoning & analyzing data…")
+        ),
+        is_autopilot=is_autopilot_active,
+        steps=state.autopilot_steps if is_autopilot_active else None,
+        on_stop=(
+            (lambda _: setattr(state, "autopilot_cancelled", True))
+            if is_autopilot_active
+            else None
+        ),
+        is_expanded=is_pill_expanded,
+        on_toggle=lambda: set_is_pill_expanded(not is_pill_expanded),
     )
 
     has_dataset = bool(schema_json) or bool(state.notebook_cells)

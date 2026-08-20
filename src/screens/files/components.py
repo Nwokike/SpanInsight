@@ -46,7 +46,7 @@ def build_no_session_view(on_go_to_analysis) -> ft.Control:
             [
                 ft.Icon(
                     ft.Icons.CLOUD_OFF_ROUNDED,
-                    size=tokens.ICON_HERO_LG,
+                    size=tokens.ICON_HERO,
                     color=ft.Colors.ON_SURFACE_VARIANT,
                 ),
                 ft.Text(
@@ -82,7 +82,7 @@ def build_empty_dir_view(on_upload) -> ft.Control:
             [
                 ft.Icon(
                     ft.Icons.FOLDER_OPEN_ROUNDED,
-                    size=tokens.ICON_HERO_LG,
+                    size=tokens.ICON_HERO,
                     color=ft.Colors.with_opacity(
                         tokens.OPACITY_BORDER, ft.Colors.ON_SURFACE
                     ),

@@ -84,22 +84,27 @@ def build_report_editor(
     # Block cards
     total = len(blocks)
 
+    def _notify_blocks():
+        # The screen setter expects a fresh list (in-place mutation alone
+        # does not trigger a re-render).
+        on_blocks_changed(list(blocks))
+
     def _move(idx, direction):
         j = idx + direction
         if 0 <= j < total:
             blocks[idx], blocks[j] = blocks[j], blocks[idx]
-            on_blocks_changed()
+            _notify_blocks()
 
     def _delete(idx):
         if 0 <= idx < len(blocks):
             blocks.pop(idx)
-            on_blocks_changed()
+            _notify_blocks()
 
     for i, block in enumerate(blocks):
         controls.append(
             ft.Container(
                 content=build_report_block_card(
-                    block, i, total, on_blocks_changed, _move, _delete
+                    block, i, total, _notify_blocks, _move, _delete
                 ),
                 margin=ft.Margin(
                     tokens.SPACE_XL,

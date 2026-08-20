@@ -17,6 +17,7 @@ from pathlib import Path
 
 import flet as ft
 
+from core.json_compat import fast_dumps, fast_dumps_bytes, fast_loads
 from core.storage_patch import resolve_storage_dir
 
 logger = logging.getLogger(__name__)
@@ -80,12 +81,12 @@ class StorageService:
                 prefs = ft.SharedPreferences()
                 if self._settings_dirty:
                     self._page.run_task(
-                        prefs.set, "spaninsight_settings", json.dumps(self._settings)
+                        prefs.set, "spaninsight_settings", fast_dumps(self._settings)
                     )
                     self._settings_dirty = False
                 if self._history_dirty:
                     self._page.run_task(
-                        prefs.set, "spaninsight_history", json.dumps(self._history)
+                        prefs.set, "spaninsight_history", fast_dumps(self._history)
                     )
                     self._history_dirty = False
             self._last_write = time.monotonic()
@@ -108,7 +109,7 @@ class StorageService:
             raw = path.read_bytes()
             if not raw:
                 return {}
-            return json.loads(raw)
+            return fast_loads(raw)
         except Exception as e:
             logger.warning("Storage %s corrupted (%s) - resetting", label, e)
             try:
@@ -125,11 +126,11 @@ class StorageService:
         self._storage_dir.mkdir(parents=True, exist_ok=True)
         if write_settings:
             self._settings_file.write_bytes(
-                json.dumps(settings_copy, ensure_ascii=False).encode("utf-8"),
+                fast_dumps_bytes(settings_copy),
             )
         if write_history:
             self._history_file.write_bytes(
-                json.dumps(history_copy, ensure_ascii=False).encode("utf-8"),
+                fast_dumps_bytes(history_copy),
             )
 
     async def _save_now_async(self) -> None:
@@ -169,12 +170,12 @@ class StorageService:
             _STORAGE_DIR.mkdir(parents=True, exist_ok=True)
             if self._settings_dirty:
                 _SETTINGS_FILE.write_bytes(
-                    json.dumps(self._settings, ensure_ascii=False).encode("utf-8"),
+                    fast_dumps_bytes(self._settings),
                 )
                 self._settings_dirty = False
             if self._history_dirty:
                 _HISTORY_FILE.write_bytes(
-                    json.dumps(self._history, ensure_ascii=False).encode("utf-8"),
+                    fast_dumps_bytes(self._history),
                 )
                 self._history_dirty = False
             self._last_write = time.monotonic()
@@ -243,7 +244,7 @@ class StorageService:
     async def save_notebook(self, session_name: str, cells: list[dict]) -> None:
         """Save notebook cells for a given session."""
         key = f"notebook_{session_name}"
-        await self.set(key, json.dumps(cells, ensure_ascii=False))
+        await self.set(key, fast_dumps(cells))
 
     async def load_notebook(self, session_name: str) -> list[dict]:
         """Load notebook cells for a given session."""
@@ -251,7 +252,7 @@ class StorageService:
         raw = await self.get(key)
         if raw:
             try:
-                return json.loads(raw)
+                return fast_loads(raw)
             except json.JSONDecodeError, TypeError:
                 return []
         return []

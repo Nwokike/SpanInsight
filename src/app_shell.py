@@ -132,6 +132,27 @@ def AppShell() -> Control:
             on_click=lambda e: page.run_task(controller.toggle_theme) if page else None,
         )
 
+        new_project_btn = ft.IconButton(
+            ft.Icons.ADD_ROUNDED,
+            tooltip="New Project",
+            icon_color=ft.Colors.PRIMARY,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.with_opacity(
+                    tokens.OPACITY_CONTAINER, ft.Colors.PRIMARY
+                ),
+                shape=ft.RoundedRectangleBorder(radius=tokens.RADIUS_SM),
+                padding=tokens.SPACE_XS,
+            ),
+            icon_size=tokens.ICON_SM,
+            on_click=lambda _: controller.new_project() if page else None,
+            margin=ft.Margin(
+                tokens.SPACE_NONE,
+                tokens.SPACE_NONE,
+                tokens.SPACE_XS,
+                tokens.SPACE_NONE,
+            ),
+        )
+
         if is_connecting:
             colab_indicator = ft.Container(
                 content=ft.Row(
@@ -296,6 +317,7 @@ def AppShell() -> Control:
                             ai_busy_chip,
                             colab_indicator,
                             theme_btn,
+                            new_project_btn,
                             badge_container,
                         ],
                         spacing=tokens.SPACE_XS,
@@ -397,10 +419,15 @@ def AppShell() -> Control:
 
             screen = HomeScreen(key=ft.ValueKey("home"))
 
-    # ── Offline banner (shown by connectivity monitor) ───────────
-    from components.connectivity_monitor import build_offline_banner
+    # ── Offline banner (state-driven, monitor flips state.is_online) ─────
+    from components.connectivity_monitor import (
+        build_offline_banner,
+        recheck_connectivity,
+    )
 
-    offline_banner = build_offline_banner()
+    offline_banner = build_offline_banner(
+        on_retry=lambda _: page.run_task(recheck_connectivity, page) if page else None
+    )
     if not state.is_online:
         offline_banner.visible = True
 

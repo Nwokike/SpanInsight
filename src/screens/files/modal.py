@@ -37,7 +37,11 @@ def show_manage_files_modal(page: ft.Page, colab, session_name: str):
     selection_mode = False
 
     breadcrumb_container = ft.Container(expand=True)
-    action_row = ft.Row(spacing=tokens.SPACE_XS)
+    action_row = ft.Row(
+        spacing=tokens.SPACE_XS,
+        alignment=ft.MainAxisAlignment.END,
+        scroll=ft.ScrollMode.ADAPTIVE,
+    )
     list_container = ft.Container(
         content=ft.ProgressRing(),
         alignment=ft.Alignment.CENTER,
@@ -60,13 +64,16 @@ def show_manage_files_modal(page: ft.Page, colab, session_name: str):
             content=ft.Column(
                 controls=[
                     ft.Container(
-                        content=ft.Row(
-                            controls=[
-                                breadcrumb_container,
-                                action_row,
-                            ],
-                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        content=breadcrumb_container,
+                        padding=ft.Padding(
+                            tokens.SPACE_SM,
+                            tokens.SPACE_NONE,
+                            tokens.SPACE_SM,
+                            tokens.SPACE_NONE,
                         ),
+                    ),
+                    ft.Container(
+                        content=action_row,
                         padding=ft.Padding(
                             tokens.SPACE_SM,
                             tokens.SPACE_NONE,
@@ -102,6 +109,7 @@ def show_manage_files_modal(page: ft.Page, colab, session_name: str):
         # Update action buttons
         n_sel = len(selected_files)
         actions: list[ft.Control] = []
+        _act_style = ft.ButtonStyle(padding=tokens.SPACE_XXS)
 
         if selection_mode and n_sel > 0:
             actions.append(
@@ -127,6 +135,8 @@ def show_manage_files_modal(page: ft.Page, colab, session_name: str):
                         ft.Icons.ANALYTICS_ROUNDED,
                         tooltip="Load in Analysis",
                         icon_color=ft.Colors.PRIMARY,
+                        icon_size=tokens.ICON_MD,
+                        style=_act_style,
                         on_click=lambda _: (
                             page.pop_dialog(),
                             handle_load_in_analysis(
@@ -140,6 +150,8 @@ def show_manage_files_modal(page: ft.Page, colab, session_name: str):
                     ft.IconButton(
                         ft.Icons.DOWNLOAD_ROUNDED,
                         tooltip="Download",
+                        icon_size=tokens.ICON_MD,
+                        style=_act_style,
                         on_click=lambda _: page.run_task(
                             handle_download_async,
                             page,
@@ -155,11 +167,15 @@ def show_manage_files_modal(page: ft.Page, colab, session_name: str):
                         ft.Icons.DELETE_ROUNDED,
                         tooltip="Delete",
                         icon_color=ft.Colors.ERROR,
+                        icon_size=tokens.ICON_MD,
+                        style=_act_style,
                         on_click=lambda _: _handle_delete(),
                     ),
                     ft.IconButton(
                         ft.Icons.CLOSE_ROUNDED,
                         tooltip="Cancel selection",
+                        icon_size=tokens.ICON_MD,
+                        style=_act_style,
                         on_click=lambda _: _clear_selection(),
                     ),
                 ]
@@ -170,6 +186,8 @@ def show_manage_files_modal(page: ft.Page, colab, session_name: str):
                     ft.IconButton(
                         ft.Icons.UPLOAD_FILE_ROUNDED,
                         tooltip="Upload files",
+                        icon_size=tokens.ICON_MD,
+                        style=_act_style,
                         on_click=lambda _: page.run_task(
                             handle_upload_async,
                             page,
@@ -182,11 +200,15 @@ def show_manage_files_modal(page: ft.Page, colab, session_name: str):
                     ft.IconButton(
                         ft.Icons.CREATE_NEW_FOLDER_ROUNDED,
                         tooltip="New folder",
+                        icon_size=tokens.ICON_MD,
+                        style=_act_style,
                         on_click=lambda _: _handle_new_folder(),
                     ),
                     ft.IconButton(
                         ft.Icons.REFRESH_ROUNDED,
                         tooltip="Refresh",
+                        icon_size=tokens.ICON_MD,
+                        style=_act_style,
                         on_click=lambda _: page.run_task(_fetch_listing, current_path),
                     ),
                 ]

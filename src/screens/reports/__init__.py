@@ -87,9 +87,10 @@ def ReportsScreen() -> ft.Control:
     controller = ft.use_context(ControllerMethodsCtx)
     page = ft.context.page
 
-    # Service instances
+    # Service instances (shared singleton from Services, memoized hook)
     report_service = ft.use_memo(
-        lambda: ReportService(services.storage), [services.storage]
+        lambda: services.reports or ReportService(services.storage),
+        [services.reports, services.storage],
     )
     audio_svc = ft.use_memo(lambda: AudioService(page), [page])
 

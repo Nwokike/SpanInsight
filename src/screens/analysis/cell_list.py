@@ -18,6 +18,7 @@ def build_cells_container(
     on_run_cell: Callable[[str], None],
     on_stop_cell: Callable[[str], None],
     on_delete_cell: Callable[[str], None],
+    on_retry_heal: Callable[[str], None],
     on_move_cell: Callable[[str, int], None],
     on_cell_change: Callable[[], None],
     on_clear_output: Callable[[str], None],
@@ -41,7 +42,8 @@ def build_cells_container(
                 on_run_code=lambda code, _cid=cid: on_run_cell(_cid),
                 on_pin_report=on_pin_report,
                 on_suggestion_selected=on_suggestion_selected,
-                on_retry_ai=lambda p, _cid=cid: on_run_cell(_cid),
+                on_retry_ai=lambda p, _cid=cid: on_retry_heal(_cid),
+                on_delete=lambda _cid=cid: on_delete_cell(_cid),
                 on_change=on_cell_change,
             )
             cell_controls.append(card)

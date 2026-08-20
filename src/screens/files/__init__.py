@@ -43,10 +43,6 @@ def FilesScreen() -> Control:
 
     active_session = state.active_session_name
 
-    # ── No session guard ──────────────────────────────────────────
-    if not active_session:
-        return build_no_session_view(lambda _: setattr(state, "current_tab", 1))
-
     # ── Directory fetch ───────────────────────────────────────────
     async def fetch_listing(path: str):
         set_is_loading(True)
@@ -69,7 +65,13 @@ def FilesScreen() -> Control:
         if active_session:
             await fetch_listing(current_path)
 
+    # Hooks must run in the same order on every render, so this effect is
+    # registered before the no-session early return below.
     ft.use_effect(_fetch_effect, [current_path, active_session])
+
+    # ── No session guard ──────────────────────────────────────────
+    if not active_session:
+        return build_no_session_view(lambda _: setattr(state, "current_tab", 1))
 
     def _clear_selection():
         set_selected_files(set())

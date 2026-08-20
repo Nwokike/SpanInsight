@@ -20,6 +20,7 @@ def build_report_block_card(
 
     def _update_prompt(val):
         block["prompt"] = val
+        on_change()
 
     def _update_desc(val):
         block["description"] = val
