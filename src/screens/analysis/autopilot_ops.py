@@ -59,8 +59,29 @@ async def submit_prompt_async(
     set_is_generating(True)
     state.is_analyzing = True
     state.analysis_stage = 2
-    state.analysis_stage_text = "AI reasoning & formulating analysis…"
+    state.analysis_stage_text = "Planning approach…"
     set_prompt_text("")
+
+    def _cell_res_data(cell: dict) -> dict:
+        """Real execution artifacts for verification (mirrors _post_exec_ai caps)."""
+        stdout = "".join(
+            o.get("text", "")
+            for o in cell.get("outputs", [])
+            if isinstance(o, dict) and o.get("output_type") == "stream"
+        )
+        result_str = ""
+        for o in cell.get("outputs", []):
+            data = o.get("data", {}) if isinstance(o, dict) else {}
+            if "text/plain" in data:
+                result_str = str(data["text/plain"])
+                break
+        return {
+            "prompt": cell.get("prompt", ""),
+            "code": cell.get("source", ""),
+            "stdout": stdout[:4000],
+            "result": result_str[:4000],
+            "structured_result": cell.get("structured_result"),
+        }
 
     try:
         if credits:
@@ -70,31 +91,86 @@ async def submit_prompt_async(
                     show_snack(page, "Not enough credits", error=True)
                 return
 
+        from core.utils import build_analysis_context
         from services.ai import analysis as ai_service
 
-        meta = await ai_service.generate_code_meta(prompt, schema_json)
-        code = meta.get("code", "")
-        if not code:
-            if page:
-                show_snack(
-                    page,
-                    "AI couldn't generate code. Try rephrasing.",
-                    error=True,
+        # ── Agent pre-plan: decompose the question into 1-3 steps ──
+        try:
+            plan = await ai_service.plan_insight_approach(prompt, schema_json)
+        except Exception as plan_ex:
+            logger.warning("Approach planning failed, single-step: %s", plan_ex)
+            plan = {"steps": [prompt]}
+        steps = plan.get("steps") or [prompt]
+        logger.info("Agent plan (%d steps): %s", len(steps), steps)
+
+        schema_desc = (
+            str(schema_json.get("description", ""))
+            if isinstance(schema_json, dict)
+            else ""
+        )
+        analysis_context = build_analysis_context(state.notebook_cells)
+
+        final_cell = None
+        final_verdict = None
+        gaps: list[str] = []
+        MAX_STEPS = min(len(steps), 3)
+
+        for i, step in enumerate(steps[:MAX_STEPS]):
+            state.analysis_stage = 2
+            state.analysis_stage_text = f"Step {i + 1}/{MAX_STEPS}: {step[:70]}"
+
+            meta = await ai_service.generate_code_meta(
+                step, schema_json, analysis_context=analysis_context
+            )
+            code = meta.get("code", "")
+            if not code:
+                continue
+
+            state.analysis_stage = 3
+            state.analysis_stage_text = "Synthesizing specialized Python code…"
+
+            cell = add_cell_fn("code", code)
+            cell["prompt"] = prompt
+            cell["step"] = step
+            cell["thought"] = meta.get("thought", "")
+            cell["thought_duration"] = meta.get("duration", 0.0)
+            cell["model"] = meta.get("model", "")
+
+            state.analysis_stage = 4
+            state.analysis_stage_text = "Executing in Colab kernel & rendering visuals…"
+            await run_cell_fn(cell["id"])
+            final_cell = cell
+
+            if cell.get("failed"):
+                gaps = ["Execution failed even after self-healing."]
+                analysis_context = (analysis_context + "\n" + step)[-2500:]
+                continue
+
+            # ── Verify against the user's literal question ──
+            state.analysis_stage = 7
+            state.analysis_stage_text = "Verifying against your data…"
+            verdict = await ai_service.verify_result(
+                prompt, schema_desc, _cell_res_data(cell)
+            )
+            cell["verified"] = bool(verdict.get("verified"))
+            cell["key_numbers"] = verdict.get("key_numbers", [])
+
+            if verdict.get("satisfied") or i == MAX_STEPS - 1:
+                final_verdict = verdict
+                if verdict.get("answer"):
+                    cell["narration"] = verdict["answer"]
+                cell["answer_gaps"] = (
+                    [] if verdict.get("satisfied") else gaps or verdict.get("gaps", [])
                 )
-            return
+                cell["agent_answered"] = True
+                break
+            gaps = verdict.get("gaps") or []
+            analysis_context = (analysis_context + "\n" + step)[-2500:]
 
-        state.analysis_stage = 3
-        state.analysis_stage_text = "Synthesizing specialized Python code…"
-
-        cell = add_cell_fn("code", code)
-        cell["prompt"] = prompt
-        cell["thought"] = meta.get("thought", "")
-        cell["thought_duration"] = meta.get("duration", 0.0)
-        cell["model"] = meta.get("model", "")
-
-        state.analysis_stage = 4
-        state.analysis_stage_text = "Executing in Colab kernel & rendering visuals…"
-        await run_cell_fn(cell["id"])
+        if final_cell is not None and not final_cell.get("agent_answered"):
+            # Degraded path (verify unavailable / failed execution): the normal
+            # post-exec narration from run_cell_async stands as-is.
+            final_cell["answer_gaps"] = gaps
 
     except asyncio.CancelledError:
         logger.info("Prompt submission cancelled (app closing)")

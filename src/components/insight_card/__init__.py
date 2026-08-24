@@ -171,7 +171,73 @@ def build_insight_card(
     if raw_drawer:
         controls.append(raw_drawer)
 
-    # 5. AI Executive Narration Callout
+    # 5. Verified-Answer badge + gaps, then AI Executive Narration Callout
+    if block.get("verified"):
+        key_numbers = block.get("key_numbers") or []
+        badge_row = ft.Row(
+            [
+                ft.Icon(
+                    ft.Icons.VERIFIED_ROUNDED,
+                    size=tokens.ICON_XS,
+                    color=theme.SUCCESS,
+                ),
+                ft.Text(
+                    "Verified against executed results"
+                    + (f" · {', '.join(key_numbers[:3])}" if key_numbers else ""),
+                    size=tokens.FONT_XXS,
+                    weight=ft.FontWeight.W_600,
+                    color=theme.SUCCESS,
+                    expand=True,
+                    max_lines=2,
+                    overflow=ft.TextOverflow.ELLIPSIS,
+                ),
+            ],
+            spacing=tokens.SPACE_XS,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+        controls.append(
+            ft.Container(
+                content=badge_row,
+                padding=ft.Padding(
+                    tokens.SPACE_XS,
+                    tokens.SPACE_TINY,
+                    tokens.SPACE_XS,
+                    tokens.SPACE_NONE,
+                ),
+                border_radius=tokens.RADIUS_XS,
+                bgcolor=ft.Colors.with_opacity(tokens.OPACITY_SUBTLE, theme.SUCCESS),
+            )
+        )
+
+    gaps = block.get("answer_gaps") or []
+    if not is_failed and gaps:
+        controls.append(
+            ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Icon(
+                            ft.Icons.INFO_OUTLINE_ROUNDED,
+                            size=tokens.ICON_XS,
+                            color=theme.WARNING,
+                        ),
+                        ft.Text(
+                            "Partial answer — missing: " + "; ".join(gaps[:3]),
+                            size=tokens.FONT_XXS,
+                            color=ft.Colors.ON_SURFACE_VARIANT,
+                            expand=True,
+                        ),
+                    ],
+                    spacing=tokens.SPACE_XS,
+                ),
+                padding=ft.Padding(
+                    tokens.SPACE_XS,
+                    tokens.SPACE_TINY,
+                    tokens.SPACE_XS,
+                    tokens.SPACE_NONE,
+                ),
+            )
+        )
+
     narration = (
         block.get("narration")
         or block.get("description")

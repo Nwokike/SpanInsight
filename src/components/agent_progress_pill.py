@@ -43,6 +43,8 @@ def build_agent_progress_pill(
             if current_stage == 5
             else "🩹 AI self-healing execution error…"
             if current_stage == 6
+            else "Verifying the answer against your data…"
+            if current_stage == 7
             else "AI Agent working…"
         )
     )

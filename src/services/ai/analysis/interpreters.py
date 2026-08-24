@@ -86,3 +86,79 @@ async def interpret(result_data: dict) -> str:
     except Exception as e:
         logger.error("Interpret failed: %s", e)
         return "Analysis complete. Review workspace metrics."
+
+
+async def verify_result(
+    question: str,
+    schema_description: str,
+    res_data: dict,
+) -> dict:
+    """Verify an executed analysis against the user's literal question.
+
+    The verifier reads ONLY real execution artifacts (stdout, returned value,
+    structured result) and must ground every number it reports in them.
+    Returns a strict contract::
+
+        {"satisfied": bool,       # does this result answer the question?
+         "answer": str,           # grounded 2-4 sentence answer (plain text)
+         "gaps": [str],           # what is still missing (empty if satisfied)
+         "key_numbers": [str]}    # exact figures lifted from the outputs
+
+    On ANY gateway/parsing failure we return ``verified=False`` with the
+    generic narration fallback so the UI degrades gracefully instead of
+    blocking on verification.
+    """
+    system_prompt = (
+        "You are a rigorous data-analysis VERIFIER. You are given a user's "
+        "question and the REAL artifacts of an executed analysis (code, stdout "
+        "logs, returned value). Decide whether the execution genuinely answers "
+        "the question.\n\n"
+        "Rules:\n"
+        "- Ground EVERY number in 'answer'/'key_numbers' strictly in the "
+        "provided artifacts. NEVER invent or estimate figures.\n"
+        "- If the artifacts do not contain the needed information, set "
+        "'satisfied' to false and list exactly what is missing in 'gaps'.\n"
+        "- 'answer' is plain text, no markdown, 2 to 4 sentences, directly "
+        "answering the question using only artifact-backed facts.\n\n"
+        "Return ONLY a valid JSON object with these keys:\n"
+        '{"satisfied": boolean, "answer": string, "gaps": string[], '
+        '"key_numbers": string[]}'
+    )
+    user_content = (
+        f"User's Question:\n{question}\n\n"
+        f"Dataset Context: {schema_description}\n\n"
+        f"Executed Code:\n{res_data.get('code', '')}\n\n"
+        f"Standard Output Logs:\n{res_data.get('stdout', '')}\n"
+        f"Returned Value String:\n{res_data.get('result', '')}\n"
+        f"Structured Result JSON:\n{json.dumps(res_data.get('structured_result'), default=str)[:6000]}"
+    )
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_content},
+    ]
+    fallback = {
+        "satisfied": False,
+        "answer": "",
+        "gaps": [],
+        "key_numbers": [],
+        "verified": False,
+    }
+    try:
+        data = await call_gateway(TASK_INTERPRET, messages)
+        content = extract_content(data)
+        from services.ai.client import extract_block_by_pattern
+
+        cleaned = extract_block_by_pattern(content or "", is_json=True)
+        result = json.loads(cleaned, strict=False)
+        if not isinstance(result, dict) or "satisfied" not in result:
+            return fallback
+        return {
+            "satisfied": bool(result.get("satisfied")),
+            "answer": str(result.get("answer", "")).strip(),
+            "gaps": [str(g) for g in (result.get("gaps") or [])][:5],
+            "key_numbers": [str(k) for k in (result.get("key_numbers") or [])][:8],
+            "verified": True,
+        }
+    except Exception as e:
+        logger.warning("verify_result failed (degrading gracefully): %s", e)
+        return fallback

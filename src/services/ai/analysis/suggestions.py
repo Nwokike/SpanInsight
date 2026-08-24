@@ -214,3 +214,42 @@ async def plan_next_step(
     except Exception as e:
         logger.error("Plan next step failed: %s", e)
         return {"prompt": "", "is_complete": True, "reason": f"Planner error: {e}"}
+
+
+async def plan_insight_approach(question: str, schema_json: dict) -> dict:
+    """Plan a 1-3 step approach for a single Insight question (agent pre-plan).
+
+    Returns ``{"steps": [str, ...]}`` — concrete, individually-executable
+    analysis instructions ordered to answer the question. On any failure the
+    question itself becomes the single step, so callers always have a plan.
+    """
+    system_prompt = (
+        "You are an autonomous data-analysis agent. A user asked ONE question "
+        "about their dataset. Decompose it into a MINIMAL sequence of 1-3 "
+        "concrete Python/pandas analysis steps that, executed in order on a "
+        "DataFrame named df, produce everything needed to answer it.\n"
+        + COLAB_ENV_CONTEXT
+        + '\nReturn ONLY a valid JSON object: {"steps": ["step instruction", ...]}'
+    )
+    compressed = compress_schema(schema_json)
+    user_content = (
+        f"Dataset Schema:\n{json.dumps(compressed, default=str)}\n\n"
+        f"User Question:\n{question}"
+    )
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_content},
+    ]
+    try:
+        data = await call_gateway(TASK_SUGGEST, messages)
+        content = extract_content(data)
+        cleaned = extract_block_by_pattern(content or "", is_json=True)
+        result = json.loads(cleaned, strict=False)
+        steps = result.get("steps") if isinstance(result, dict) else None
+        if isinstance(steps, list) and steps:
+            cleaned_steps = [str(s).strip() for s in steps[:3] if str(s).strip()]
+            if cleaned_steps:
+                return {"steps": cleaned_steps}
+    except Exception as e:
+        logger.warning("plan_insight_approach failed (single-step fallback): %s", e)
+    return {"steps": [question]}

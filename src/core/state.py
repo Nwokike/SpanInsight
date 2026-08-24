@@ -65,7 +65,8 @@ class AppState:
     analysis_blocks: list = None
     is_analyzing: bool = False
     analysis_stage: int = (
-        0  # 0=idle, 1=schema, 2=reasoning, 3=code, 4=executing, 5=narrating, 6=healing
+        0  # 0=idle, 1=schema, 2=reasoning/planning, 3=code, 4=executing,
+        # 5=narrating, 6=healing, 7=verifying
     )
     analysis_stage_text: str = ""
     autopilot_enabled: bool = True

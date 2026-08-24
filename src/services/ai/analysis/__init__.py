@@ -13,9 +13,11 @@ from .interpreters import (
     describe_dataset,
     describe_result,
     interpret,
+    verify_result,
 )
 from .suggestions import (
     fallback_suggestions,
+    plan_insight_approach,
     plan_next_step,
     salvage_json_objects,
     suggest,
@@ -31,7 +33,9 @@ __all__ = [
     "generate_code_meta",
     "generate_corrected_code",
     "interpret",
+    "plan_insight_approach",
     "plan_next_step",
     "salvage_json_objects",
     "suggest",
+    "verify_result",
 ]

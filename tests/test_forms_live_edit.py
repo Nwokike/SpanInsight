@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -201,3 +202,89 @@ def test_export_csv_aliases_labels_and_dedupes():
     header, row1, row2 = text.strip().split("\n")
     assert header == "Age,legacy"  # collision falls back to storage key
     assert row1 == "39,x" and row2 == "22,"
+
+
+# ── Verified Agent: verifier + planner contracts ─────────────────────
+
+
+@pytest.mark.asyncio
+async def test_verify_result_parses_strict_contract():
+    from services.ai.analysis.interpreters import verify_result
+
+    payload = {
+        "satisfied": True,
+        "answer": "Mean income is 13,266.",
+        "gaps": [],
+        "key_numbers": ["mean=13266"],
+    }
+
+    class FakeResp:
+        status_code = 200
+
+        def json(self):
+            return {}
+
+    with (
+        patch(
+            "services.ai.analysis.interpreters.call_gateway", new_callable=AsyncMock
+        ) as mock_gw,
+        patch("services.ai.analysis.interpreters.extract_content") as mock_c,
+        # extract_block_by_pattern is imported INSIDE verify_result at call
+        # time, so it must be patched at its source module.
+        patch("services.ai.client.extract_block_by_pattern") as mock_b,
+    ):
+        mock_gw.return_value = FakeResp()
+        mock_c.return_value = "here:" + json.dumps(payload)
+        mock_b.return_value = json.dumps(payload)
+        out = await verify_result("q?", "desc", {"stdout": "x"})
+
+    assert out["satisfied"] is True and out["verified"] is True
+    assert out["answer"].startswith("Mean income")
+    assert out["key_numbers"] == ["mean=13266"]
+
+
+@pytest.mark.asyncio
+async def test_verify_result_degrades_gracefully_on_bad_payload():
+    from services.ai.analysis.interpreters import verify_result
+
+    with (
+        patch(
+            "services.ai.analysis.interpreters.call_gateway", new_callable=AsyncMock
+        ) as mock_gw,
+        patch("services.ai.analysis.interpreters.extract_content") as mock_c,
+        patch("services.ai.client.extract_block_by_pattern") as mock_b,
+    ):
+        mock_gw.side_effect = RuntimeError("gateway down")
+        out = await verify_result("q?", "d", {})
+
+    assert out["verified"] is False and out["satisfied"] is False
+
+
+@pytest.mark.asyncio
+async def test_plan_insight_approach_steps_and_fallback():
+    from services.ai.analysis.suggestions import plan_insight_approach
+
+    good = {"steps": ["filter df", "groupby price", "plot trend"]}
+
+    class FakeResp:
+        status_code = 200
+
+        def json(self):
+            return {}
+
+    with (
+        patch(
+            "services.ai.analysis.suggestions.call_gateway", new_callable=AsyncMock
+        ) as mock_gw,
+        patch("services.ai.analysis.suggestions.extract_content") as mock_c,
+        patch("services.ai.analysis.suggestions.extract_block_by_pattern") as mock_b,
+    ):
+        mock_gw.return_value = FakeResp()
+        mock_c.return_value = json.dumps(good)
+        mock_b.return_value = json.dumps(good)
+        out = await plan_insight_approach("q", {"columns": ["a"]})
+        assert out["steps"][0] == "filter df"
+
+        mock_gw.side_effect = RuntimeError("down")
+        out2 = await plan_insight_approach("What drives price?", {"columns": []})
+        assert out2["steps"] == ["What drives price?"]
