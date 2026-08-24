@@ -144,6 +144,36 @@ def report_import_failure(page: ft.Page | None, file_name: str, reason: str | No
     show_snack(page, f"⚠️ {file_name}: {msg}", error=True)
 
 
+async def ensure_remote_file(
+    colab,
+    session_name: str,
+    url: str,
+    file_name: str | None = None,
+) -> str:
+    """Download a public CSV/JSON/Excel from a URL directly ON the Colab VM.
+
+    Kernel-side fetch keeps the data flow consistent (the file lands at
+    /content/{name} exactly like an upload) and avoids mobile-network quirks.
+    Returns the remote path. Raises on HTTP failure.
+    """
+    if not file_name:
+        from pathlib import Path as _P
+
+        stem = url.split("?")[0].rstrip("/").split("/")[-1] or "dataset"
+        file_name = _P(stem).name or "url_dataset.csv"
+    code = (
+        "import requests\n"
+        f"_u = {url!r}\n"
+        f"_p = '/content/{file_name}'\n"
+        "_r = requests.get(_u, timeout=120)\n"
+        "_r.raise_for_status()\n"
+        "open(_p, 'wb').write(_r.content)\n"
+        "print('DOWNLOADED', len(_r.content), 'bytes ->', _p)\n"
+    )
+    await colab.exec_code(code, session_name=session_name, timeout=300.0)
+    return f"/content/{file_name}"
+
+
 async def run_dataset_import_dialog(
     page: ft.Page | None,
     colab,

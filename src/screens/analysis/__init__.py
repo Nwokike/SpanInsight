@@ -492,6 +492,124 @@ def AnalysisScreen() -> Control:
             except Exception:
                 pass
 
+    # ── Data Brief + Quick Import (FAB actions) ──────────────────
+    async def _create_brief_async(_=None):
+        from screens.analysis.brief_ops import compile_brief_async
+
+        reports_svc = getattr(services, "reports", None)
+        if not reports_svc:
+            from services.report_service import ReportService
+
+            reports_svc = ReportService(services.storage)
+
+        report = await compile_brief_async(
+            reports_svc,
+            state.active_project_id,
+            state.notebook_cells,
+            state.active_project_dataset or "Analysis",
+        )
+        if not report:
+            show_snack(
+                page,
+                "Nothing to brief yet — run (or pin) an analysis first.",
+                duration=3000,
+            )
+            return
+        show_snack(
+            page,
+            f"📄 Data Brief created ({len(report.get('blocks', []))} blocks) — see Reports tab.",
+            success=True,
+            duration=3500,
+        )
+        state.current_tab = 3
+
+    def _open_quick_import_dialog(_=None):
+        """URL / paste import dialog. http(s) content is fetched kernel-side;
+        anything else is treated as pasted CSV/JSON text."""
+        if not page:
+            return
+        field_ref = ft.Ref[ft.TextField]()
+
+        def _close(_=None):
+            page.pop_dialog()
+
+        async def _do_import(_=None):
+            raw = (field_ref.current.value or "").strip() if field_ref.current else ""
+            _close()
+            if not raw:
+                return
+            try:
+                if raw.startswith(("http://", "https://")):
+                    from screens.analysis.dataset_ops import ensure_remote_file
+
+                    remote = await ensure_remote_file(colab, session_name, raw)
+                    name = remote.rsplit("/", 1)[-1]
+                    state.pending_dataset_load = {
+                        "name": name,
+                        "remote_path": remote,
+                    }
+                    show_snack(
+                        page, f"🌐 Fetched {name} — loading dataset…", success=True
+                    )
+                else:
+                    import tempfile
+                    from pathlib import Path as _Path
+
+                    name = "pasted_data.csv"
+                    local = str(_Path(tempfile.gettempdir()) / name)
+                    await asyncio.to_thread(
+                        lambda: _Path(local).write_text(raw, encoding="utf-8")
+                    )
+                    state.pending_dataset_load = {
+                        "name": name,
+                        "upload_local_path": local,
+                        "remote_path": "/content/pasted_data.csv",
+                    }
+                    show_snack(
+                        page, "📋 Pasted data — loading as dataset…", success=True
+                    )
+            except Exception as ex:
+                logger.error("Quick import failed: %s", ex)
+                show_snack(page, f"⚠️ Import failed: {ex}", error=True)
+
+        page.show_dialog(
+            ft.AlertDialog(
+                modal=True,
+                title=ft.Text("Quick Import"),
+                content=ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Text(
+                                "Paste a public CSV URL — or paste raw CSV/JSON "
+                                "data directly. One row per line, comma-separated.",
+                                size=tokens.FONT_BODY_SM,
+                                color=ft.Colors.ON_SURFACE_VARIANT,
+                            ),
+                            ft.TextField(
+                                ref=field_ref,
+                                multiline=True,
+                                min_lines=3,
+                                max_lines=8,
+                                hint_text="https://example.com/data.csv  —or—  a,b,c\n1,2,3",
+                                border_radius=tokens.RADIUS_MD_SM,
+                            ),
+                        ],
+                        spacing=tokens.SPACE_SM,
+                        tight=True,
+                    ),
+                    width=tokens.DIALOG_WIDTH_MD
+                    if hasattr(tokens, "DIALOG_WIDTH_MD")
+                    else 380,
+                ),
+                actions=[
+                    ft.TextButton("Cancel", on_click=_close),
+                    ft.FilledButton(
+                        "Import", on_click=lambda e: page.run_task(_do_import)
+                    ),
+                ],
+            )
+        )
+
     def _sync_fab():
         if not page or not page.views:
             return
@@ -518,6 +636,8 @@ def AnalysisScreen() -> Control:
             on_upload_dataset=lambda: page.run_task(_pick_and_upload_file),
             on_manage_files=lambda: show_manage_files_modal(page, colab, session_name),
             on_export_ipynb=lambda: page.run_task(export_ipynb_async, page),
+            on_create_brief=lambda: page.run_task(_create_brief_async),
+            on_quick_import=_open_quick_import_dialog,
         )
 
         try:

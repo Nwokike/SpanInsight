@@ -18,6 +18,8 @@ def build_analysis_fab(
     on_manage_files=None,
     on_upload_dataset=None,
     on_export_ipynb=None,
+    on_create_brief=None,
+    on_quick_import=None,
 ) -> ft.FloatingActionButton | None:
     """Constructs the floating action button with contextual popup menu items."""
     if not has_session:
@@ -26,6 +28,14 @@ def build_analysis_fab(
     export_fn = on_export_ipynb or on_export
 
     menu_items = []
+    if has_cells and not autopilot_running and on_create_brief is not None:
+        menu_items.append(
+            ft.PopupMenuItem(
+                content="Create Data Brief",
+                icon=ft.Icons.SUMMARIZE_ROUNDED,
+                on_click=on_create_brief,
+            )
+        )
     if has_cells:
         menu_items.extend(
             [
@@ -47,6 +57,14 @@ def build_analysis_fab(
                 content="Run Autopilot",
                 icon=ft.Icons.ROCKET_LAUNCH_ROUNDED,
                 on_click=on_autopilot,
+            )
+        )
+    if on_quick_import:
+        menu_items.append(
+            ft.PopupMenuItem(
+                content="Quick Import (URL / paste)",
+                icon=ft.Icons.ADD_LINK_ROUNDED,
+                on_click=on_quick_import,
             )
         )
     if on_upload_dataset:
