@@ -65,6 +65,10 @@ class AppController:
         page.spacing = tokens.SPACE_NONE
 
         page.on_error = self._on_error
+        try:
+            page.on_app_lifecycle_state_change = self._on_app_lifecycle
+        except Exception as lifecycle_ex:
+            logger.debug("Lifecycle events unavailable: %s", lifecycle_ex)
 
         # ── Services ────────────────────────────────────────────
         self.storage = StorageService(page)
@@ -395,6 +399,7 @@ class AppController:
             logger.debug("Project cleanup failed: %s", _pe)
 
     def _on_session_lost(self, session_name: str):
+        self.colab_service.drop_runtime(session_name)
         if state.active_session_name == session_name:
             state.colab_connected = False
             state.active_session_name = None
@@ -405,6 +410,32 @@ class AppController:
                 self.page.update()
             except Exception:
                 pass
+
+    def _on_app_lifecycle(self, e: ft.AppLifecycleStateChangeEvent):
+        if e.state == ft.AppLifecycleState.SHOW and self.page:
+            self.page.run_task(self._ping_session_on_resume)
+
+    async def _ping_session_on_resume(self):
+        """Returning from background: verify the Colab socket is alive so the
+        user's first action never lands on a dead websocket silently."""
+        import asyncio as _aio
+
+        name = state.active_session_name
+        if not name or not state.colab_connected:
+            return
+        try:
+            await _aio.wait_for(
+                self.colab_service.exec_code(
+                    "print('si-resume-ping')", session_name=name, timeout=20.0
+                ),
+                timeout=25.0,
+            )
+        except Exception:
+            logger.info(
+                "Session '%s' unresponsive after resume; marking disconnected.",
+                name,
+            )
+            self._on_session_lost(name)
 
     async def _startup_checks(self):
         """Check API health and version requirements."""

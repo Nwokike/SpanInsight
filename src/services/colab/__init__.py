@@ -25,6 +25,21 @@ class ColabService:
         self._keep_alive_tasks: dict[str, asyncio.Task] = {}
         self.default_stdin_hook: Callable | None = None
         self.on_session_lost: Callable[[str], None] | None = None
+        # Long-lived kernel websocket per session: exec_code reuses one
+        # ColabRuntime instead of paying connect+teardown on every call.
+        self._runtimes: dict = {}
+        self._runtime_locks: dict = {}
+        self._preluded_sessions: set = set()
+
+    def drop_runtime(self, session_name: str):
+        """Tear down the cached websocket for a session (stop/loss/recovery)."""
+        entry = self._runtimes.pop(session_name, None)
+        self._preluded_sessions.discard(session_name)
+        if entry is not None:
+            try:
+                entry[0].stop()
+            except Exception:
+                pass
 
     @property
     def is_available(self) -> bool:
@@ -102,6 +117,7 @@ class ColabService:
     ) -> bool:
         from services.colab.session_ops import stop_session_impl
 
+        self.drop_runtime(session_name)
         return await stop_session_impl(self, session_name, auth_method)
 
     async def restart_kernel(
@@ -109,6 +125,8 @@ class ColabService:
     ) -> bool:
         from services.colab.session_ops import restart_kernel_impl
 
+        # Kernel identity changes - the cached websocket is stale.
+        self.drop_runtime(session_name)
         return await restart_kernel_impl(self, session_name, auth_method)
 
     async def get_session_url(

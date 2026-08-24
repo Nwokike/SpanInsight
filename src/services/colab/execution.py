@@ -39,46 +39,74 @@ async def exec_code_impl(
         st.auth_provider = provider
         s = st.store.get(session_name)
         if not s:
+            service.drop_runtime(session_name)
             raise ValueError(f"Session '{session_name}' not found")
 
-        def on_started(kid):
-            s.kernel_id = kid
-            st.store.add(s)
+        # One websocket per session, reused across execs. Concurrent execs on
+        # the same session serialize here — the kernel executes serially anyway.
+        runtimes = getattr(service, "_runtimes", None)
+        if runtimes is None:
+            runtimes = service._runtimes = {}
+            service._runtime_locks = {}
+            service._preluded_sessions = set()
+        rt_lock = service._runtime_locks.setdefault(session_name, threading.Lock())
 
-        def on_sess(sid):
-            s.session_id = sid
-            st.store.add(s)
+        with rt_lock:
+            entry = runtimes.get(session_name)
+            runtime = entry[0] if entry else None
+            fresh_runtime = runtime is None
 
-        runtime = ColabRuntime(
-            s.url,
-            s.token,
-            kernel_id=s.kernel_id,
-            session_id=s.session_id,
-            on_kernel_started=on_started,
-            on_session_started=on_sess,
-        )
+            def on_started(kid):
+                s.kernel_id = kid
+                st.store.add(s)
 
-        try:
-            runtime.execute_code(
-                "import os; os.makedirs('/content', exist_ok=True); os.chdir('/content')"
+            def on_sess(sid):
+                s.session_id = sid
+                st.store.add(s)
+
+            if fresh_runtime:
+                runtime = ColabRuntime(
+                    s.url,
+                    s.token,
+                    kernel_id=s.kernel_id,
+                    session_id=s.session_id,
+                    on_kernel_started=on_started,
+                    on_session_started=on_sess,
+                )
+
+            def _drop_and_raise(msg: str):
+                service.drop_runtime(session_name)
+                raise ValueError(msg)
+
+            try:
+                if fresh_runtime:
+                    # /content prelude runs once per session, not per call.
+                    runtime.execute_code(
+                        "import os; os.makedirs('/content', exist_ok=True); os.chdir('/content')"
+                    )
+                    service._runtimes[session_name] = (runtime, True)
+            except Exception as e:
+                from colab_cli.utils import is_terminal_error
+
+                if is_terminal_error(e):
+                    service.drop_runtime(session_name)
+                    try:
+                        st.prune_session(session_name)
+                    except Exception:
+                        pass
+                    if service.on_session_lost:
+                        service.on_session_lost(session_name)
+                    raise ValueError("Session lost (404/401). It may have timed out.")
+                service.drop_runtime(session_name)
+                raise
+
+            s.running = "exec(code)"
+            s.last_execution = (
+                "code",
+                None,
+                datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d %H:%M:%S"),
             )
-        except Exception as e:
-            from colab_cli.utils import is_terminal_error
-
-            if is_terminal_error(e):
-                st.prune_session(session_name)
-                if service.on_session_lost:
-                    service.on_session_lost(session_name)
-                raise ValueError("Session lost (404/401). It may have timed out.")
-            raise
-
-        s.running = "exec(code)"
-        s.last_execution = (
-            "code",
-            None,
-            datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d %H:%M:%S"),
-        )
-        st.store.add(s)
+            st.store.add(s)
 
         def output_hook(out):
             if service._cancel_event.is_set():
@@ -267,13 +295,16 @@ async def exec_code_impl(
             wrapped_user_stdin_hook = _app_stdin_hook
 
         try:
-            outputs = runtime.execute_code(
-                code,
-                output_hook=output_hook if on_output else None,
-                timeout=timeout,
-                allow_stdin=intercept_oauth or (active_stdin_hook is not None),
-                stdin_hook=wrapped_user_stdin_hook,
-            )
+            # Serialize socket use per session (hook setup above stays outside).
+            outputs = None
+            with rt_lock:
+                outputs = runtime.execute_code(
+                    code,
+                    output_hook=output_hook if on_output else None,
+                    timeout=timeout,
+                    allow_stdin=intercept_oauth or (active_stdin_hook is not None),
+                    stdin_hook=wrapped_user_stdin_hook,
+                )
             st.history.log_event(
                 session_name,
                 "execution",
@@ -284,6 +315,9 @@ async def exec_code_impl(
             )
             return outputs
         except Exception as e:
+            # Any failure invalidates the cached websocket — the next exec
+            # builds a fresh one instead of trusting a possibly-dead socket.
+            service.drop_runtime(session_name)
             err_str = str(e)
             if (
                 hasattr(e, "response")
@@ -305,6 +339,6 @@ async def exec_code_impl(
             s.running = None
             if st.store.get(session_name):
                 st.store.add(s)
-            runtime.stop()
+            # NOTE: no runtime.stop() here — the websocket stays cached for reuse.
 
     return await asyncio.to_thread(_exec)

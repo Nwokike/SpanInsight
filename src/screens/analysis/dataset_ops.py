@@ -11,6 +11,7 @@ UI decides how to surface them (dialog with Retry, snackbar, etc.).
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 import flet as ft
@@ -78,7 +79,9 @@ async def load_and_extract_schema(
                 + (f"\n{trace}" if trace else "")
             )
     else:
-        await colab.exec_code(load_code, session_name=session_name)
+        # Silent branch (no notebook cell): must carry the same generous
+        # window as initial-load cells - 60s default killed large files.
+        await colab.exec_code(load_code, session_name=session_name, timeout=600.0)
 
     if status_cb:
         status_cb("Analyzing schema & dataset statistics…")
@@ -100,17 +103,30 @@ async def enrich_schema_with_ai(
     if status_cb:
         status_cb("Compiling AI intelligence & suggestions…")
 
+    # Description and suggestions are independent - run them concurrently so
+    # first-insight latency is one gateway round-trip, not two.
+    desc_task = None
     if not schema.get("description"):
-        # describe_dataset returns fallback text on failure
-        schema["description"] = await ai_service.describe_dataset(schema)
-
+        desc_task = asyncio.create_task(ai_service.describe_dataset(schema))
+    sugg_task = None
     if not schema.get("suggestions"):
+        sugg_task = asyncio.create_task(ai_service.suggest(schema))
+
+    if desc_task is not None:
         try:
-            suggs = await ai_service.suggest(
-                schema, initial_description=schema.get("description", "")
-            )
+            schema["description"] = await desc_task
+        except Exception as ex:
+            logger.warning("AI description failed: %s", ex)
+            schema["description"] = ""
+
+    if sugg_task is not None:
+        try:
+            suggs = await sugg_task
         except Exception as ex:
             logger.warning("AI suggestions failed, using fallbacks: %s", ex)
+            suggs = None
+        if not suggs and not schema.get("description"):
+            # describe already failed too; give the honest fallback chips.
             suggs = ai_service.fallback_suggestions()
         schema["suggestions"] = suggs or ai_service.fallback_suggestions()
 
@@ -199,6 +215,9 @@ async def run_dataset_import_dialog(
             tight=True,
         ),
     )
+    upload_progress_view = upload_dialog.content
+
+    _last_prog_update = [0.0]
 
     def _on_upload_progress(sent_bytes: int, total_bytes: int):
         if total_bytes > 0:
@@ -213,10 +232,22 @@ async def run_dataset_import_dialog(
             prog_bar.value = None
             status_text.value = f"Uploading {file_name}…"
         if page:
+            # Scoped + throttled: a full page.update() per chunk caused visible
+            # re-render storms on large files.
+            import time as _time
+
+            now = _time.monotonic()
+            final = total_bytes > 0 and sent_bytes >= total_bytes
+            if not final and now - _last_prog_update[0] < 0.4:
+                return
+            _last_prog_update[0] = now
             try:
-                page.update()
+                upload_progress_view.update()
             except Exception:
-                pass
+                try:
+                    page.update()
+                except Exception:
+                    pass
 
     try:
         if upload_local_path:
@@ -237,27 +268,9 @@ async def run_dataset_import_dialog(
                     except Exception:
                         pass
 
-            # Validate that the file actually landed on Colab VM disk
-            try:
-                chk_out = await colab.exec_code(
-                    f"import os; print('EXISTS:' + str(os.path.exists({remote!r})))",
-                    session_name=session_name,
-                    timeout=15.0,
-                )
-                stdout = "".join(
-                    o.get("text", "")
-                    for o in chk_out
-                    if o.get("type") in ("stdout", "text")
-                    or o.get("output_type") == "stream"
-                )
-                if "EXISTS:True" not in stdout:
-                    logger.warning(
-                        "Remote verification warning for %s. Kernel check: %s",
-                        remote,
-                        stdout,
-                    )
-            except Exception as v_err:
-                logger.debug("Non-fatal verification warning: %s", v_err)
+        # (The old 15s EXISTS verification exec was removed: upload_impl
+        # already raises on failure, and the load step surfaces a missing
+        # file as an error — one less kernel round-trip per import.)
 
         # Load & extract schema transparently in notebook view
         schema, error = await load_and_extract_schema(
