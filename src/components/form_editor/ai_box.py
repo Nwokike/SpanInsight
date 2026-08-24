@@ -19,6 +19,7 @@ def build_ai_edit_box(
     recording_time: int = 0,
     ai_prompt_text: str = "",
     recording_timer_ref: ft.Ref[ft.Text] | None = None,
+    publish_label: str = "Publish",
 ) -> ft.Container:
     """Build the AI edit input box with voice recording and publish controls."""
     ai_field_ref = ft.Ref[ft.TextField]()
@@ -117,7 +118,7 @@ def build_ai_edit_box(
                 ft.Row(
                     [
                         ft.FilledButton(
-                            "Publish",
+                            publish_label,
                             icon=ft.Icons.PUBLISH_ROUNDED,
                             style=ft.ButtonStyle(
                                 bgcolor=theme.PRIMARY,

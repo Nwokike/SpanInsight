@@ -9,17 +9,19 @@ import logging
 import flet as ft
 
 from components.form_editor import build_form_editor
-from core import tokens
+from core import theme, tokens
 from core.utils import show_snack
 from screens.forms.dashboard_view import build_forms_dashboard
 from screens.forms.detail_view import build_form_detail_view
 from screens.forms.handlers import (
+    _form_schema_fields,
     ai_edit_schema_async,
     create_form_schema_async,
     delete_form_async,
     download_csv_async,
     load_forms_async,
     publish_form_async,
+    request_update_live_form_async,
 )
 from services import ai as ai_service
 from services import forms_service
@@ -62,6 +64,9 @@ def FormsScreen() -> ft.Control:
     editor_transcribing, set_editor_transcribing = ft.use_state(False)
     editor_recording_time, set_editor_recording_time = ft.use_state(0)
     ai_edit_text, set_ai_edit_text = ft.use_state("")
+
+    # Set while the editor holds a LIVE published form (edit-in-place flow).
+    editing_form_id, set_editing_form_id = ft.use_state("")
 
     audio_svc = ft.use_ref(lambda: AudioService(page))
 
@@ -208,6 +213,15 @@ def FormsScreen() -> ft.Control:
         set_active_form(form)
         set_mode("detail")
 
+    def on_edit_form(edit_target: dict):
+        """Open a LIVE published form in the editor for in-place smart-merge editing."""
+        set_active_form(edit_target)
+        set_draft_title(edit_target.get("title", ""))
+        set_draft_desc(edit_target.get("description", ""))
+        set_draft_schema(_form_schema_fields(edit_target))
+        set_editing_form_id(str(edit_target.get("id", "")))
+        set_mode("editor")
+
     async def on_copy_link(form_id: str):
         from core.constants import FORMS_PUBLIC_BASE_URL
         from core.utils import set_clipboard, show_snack
@@ -241,6 +255,87 @@ def FormsScreen() -> ft.Control:
         else:
             _show_error("Failed to renew.")
 
+    def on_renew_clicked(form_id: str):
+        """Confirmation modal before extending a live form (+7 days)."""
+        if not page:
+            return
+
+        def _close(_=None):
+            page.pop_dialog()
+
+        def _confirm(_=None):
+            _close()
+            if page:
+                page.run_task(on_renew_form, form_id)
+
+        page.show_dialog(
+            ft.AlertDialog(
+                modal=True,
+                title=ft.Text("Extend Form (+7 Days)?"),
+                content=ft.Container(
+                    content=ft.Text(
+                        "The share link stays the same and anyone with it can "
+                        "keep submitting for 7 more days. Collected responses "
+                        "are untouched.",
+                        size=tokens.FONT_BODY,
+                    ),
+                    width=tokens.DIALOG_WIDTH_SM,
+                ),
+                actions=[
+                    ft.TextButton("Cancel", on_click=_close),
+                    ft.FilledButton(
+                        "Extend",
+                        on_click=_confirm,
+                    ),
+                ],
+            )
+        )
+
+    def on_editor_cancel(_=None):
+        """Discard-changes confirmation when leaving the editor."""
+        if not page:
+            set_mode("dashboard")
+            set_draft_schema([])
+            set_editing_form_id("")
+            return
+
+        def _close(_=None):
+            page.pop_dialog()
+
+        def _discard(_=None):
+            _close()
+            set_mode("dashboard")
+            set_draft_schema([])
+            set_editing_form_id("")
+            set_draft_title("")
+            set_draft_desc("")
+
+        page.show_dialog(
+            ft.AlertDialog(
+                modal=True,
+                title=ft.Text(
+                    "Discard changes?" if editing_form_id else "Discard this draft?"
+                ),
+                content=ft.Container(
+                    content=ft.Text(
+                        "Everything you edited in this session will be lost. "
+                        "The published form keeps its current version.",
+                        size=tokens.FONT_BODY,
+                    ),
+                    width=tokens.DIALOG_WIDTH_SM,
+                ),
+                actions=[
+                    ft.TextButton("Cancel", on_click=_close),
+                    ft.FilledButton(
+                        "Discard",
+                        bgcolor=theme.ERROR,
+                        color=ft.Colors.WHITE,
+                        on_click=_discard,
+                    ),
+                ],
+            )
+        )
+
     def on_analyze_responses(form_data: dict):
         responses = form_data.get("_responses", [])
         if not responses:
@@ -250,11 +345,35 @@ def FormsScreen() -> ft.Control:
         form_title = form_data.get("title", "Survey")
         rows = [r.get("data", r) for r in responses]
 
+        # DataFrame columns use the questions' human-readable LABELS (raw
+        # storage key as fallback for unknown/legacy ids, and on collisions).
+        from screens.forms.handlers import _form_schema_fields
+
+        labels = {
+            str(f.get("name")): str(f.get("label") or f.get("name"))
+            for f in _form_schema_fields(form_data)
+            if f.get("name")
+        }
+        ordered_keys = []
+        for row in rows:
+            for k in row:
+                if k not in ordered_keys:
+                    ordered_keys.append(k)
+        col_map = {}
+        used = set()
+        for k in ordered_keys:
+            label = labels.get(k, k)
+            if label in used:
+                label = k
+            used.add(label)
+            col_map[k] = label
+        aliased_rows = [{col_map[k]: v for k, v in row.items()} for row in rows]
+
         code = (
             f"# Survey Dataset: {form_title}\n"
-            f"# Total Collected Responses: {len(rows)}\n"
+            f"# Total Collected Responses: {len(aliased_rows)}\n"
             f"import pandas as pd\n\n"
-            f"responses_data = {json.dumps(rows, indent=2)}\n"
+            f"responses_data = {json.dumps(aliased_rows, indent=2)}\n"
             f"df = pd.DataFrame(responses_data)\n\n"
             f"print(f\"Loaded survey '{form_title}': {{len(df)}} responses, {{len(df.columns)}} columns\")\n"
             f"df.head()"
@@ -307,25 +426,51 @@ def FormsScreen() -> ft.Control:
             on_voice_toggle=lambda e: (
                 page.run_task(on_editor_voice_toggle, e) if page else None
             ),
-            on_publish=lambda: (
-                page.run_task(
-                    publish_form_async,
-                    state.active_project_id,
-                    draft_title,
-                    draft_desc,
-                    draft_schema,
-                    page,
-                    set_is_publishing,
-                    set_mode,
-                    set_draft_schema,
-                    set_prompt_text,
-                    _load_forms,
-                    _show_error,
+            on_publish=(
+                lambda: (
+                    (
+                        page.run_task(
+                            request_update_live_form_async,
+                            active_form,
+                            draft_title,
+                            draft_desc,
+                            draft_schema,
+                            state.active_project_id,
+                            page,
+                            set_is_publishing,
+                            set_mode,
+                            set_draft_schema,
+                            set_prompt_text,
+                            set_editing_form_id,
+                            set_active_form,
+                            _load_forms,
+                            _show_error,
+                        )
+                        if page
+                        else None
+                    )
+                    if editing_form_id
+                    else (
+                        page.run_task(
+                            publish_form_async,
+                            state.active_project_id,
+                            draft_title,
+                            draft_desc,
+                            draft_schema,
+                            page,
+                            set_is_publishing,
+                            set_mode,
+                            set_draft_schema,
+                            set_prompt_text,
+                            _load_forms,
+                            _show_error,
+                        )
+                        if page
+                        else None
+                    )
                 )
-                if page
-                else None
             ),
-            on_cancel=lambda _: (set_mode("dashboard"), set_draft_schema([])),
+            on_cancel=on_editor_cancel,
             is_publishing=is_publishing,
             is_recording=editor_recording,
             is_transcribing=editor_transcribing,
@@ -333,6 +478,7 @@ def FormsScreen() -> ft.Control:
             recording_time=editor_recording_time,
             ai_prompt_text=ai_edit_text,
             recording_timer_ref=None,
+            publish_label="Update Form" if editing_form_id else "Publish",
         )
     elif mode == "detail":
         view_controls = build_form_detail_view(
@@ -340,7 +486,8 @@ def FormsScreen() -> ft.Control:
             form=active_form,
             on_back=lambda _: (set_active_form(None), set_mode("dashboard")),
             on_copy_link=lambda fid: page.run_task(on_copy_link, fid) if page else None,
-            on_renew=lambda fid: page.run_task(on_renew_form, fid) if page else None,
+            on_edit=on_edit_form,
+            on_renew=on_renew_clicked,
             on_download_csv=lambda f: (
                 page.run_task(download_csv_async, f, page, _show_error)
                 if page
@@ -375,15 +522,18 @@ def FormsScreen() -> ft.Control:
             prompt_text=prompt_text,
             set_prompt_text=set_prompt_text,
             on_create_form=lambda e: (
-                page.run_task(
-                    create_form_schema_async,
-                    prompt_text,
-                    set_is_creating,
-                    set_draft_schema,
-                    set_draft_title,
-                    set_draft_desc,
-                    set_mode,
-                    _show_error,
+                (
+                    set_editing_form_id(""),
+                    page.run_task(
+                        create_form_schema_async,
+                        prompt_text,
+                        set_is_creating,
+                        set_draft_schema,
+                        set_draft_title,
+                        set_draft_desc,
+                        set_mode,
+                        _show_error,
+                    ),
                 )
                 if page
                 else None

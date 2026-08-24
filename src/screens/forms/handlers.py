@@ -15,6 +15,50 @@ from services import forms_service
 logger = logging.getLogger("FormsHandlers")
 
 
+def normalize_field_names(
+    fields: list[dict], preserve: set[str] | None = None
+) -> list[dict]:
+    """Ensure every field has a non-empty, unique, stable ``name``.
+
+    ``name`` is the storage key collected responses are filed under, so it is
+    assigned once and never re-derived from the label afterwards. Names already
+    present in ``preserve`` (a published form's existing identities) are kept
+    untouched; empty/duplicated names get fresh generated ids. Returns copies.
+    """
+    import uuid
+
+    preserve_set = {p for p in (preserve or set()) if p}
+    seen: set[str] = set(preserve_set)
+    out: list[dict] = []
+    for raw in fields or []:
+        field = dict(raw)
+        name = str(field.get("name") or "").strip()
+        # Empty names always get generated ids; a duplicate is regenerated
+        # UNLESS it is itself one of the preserved identities.
+        if not name or (name in seen and name not in preserve_set):
+            name = "q_" + uuid.uuid4().hex[:10]
+            while name in seen:
+                name = "q_" + uuid.uuid4().hex[:10]
+        seen.add(name)
+        field["name"] = name
+        out.append(field)
+    return out
+
+
+def _form_schema_fields(form: dict) -> list[dict]:
+    """Parse a loaded form's ``schema_json`` (gateway returns a JSON string)."""
+    raw = form.get("schema_json", "")
+    if isinstance(raw, str) and raw:
+        try:
+            parsed = json.loads(raw)
+            return parsed if isinstance(parsed, list) else []
+        except Exception:
+            return []
+    if isinstance(raw, list):
+        return raw
+    return []
+
+
 async def load_forms_async(
     active_project_id: str, state, set_user_forms, set_is_loading, show_error
 ):
@@ -51,7 +95,7 @@ async def create_form_schema_async(
             show_error("AI could not generate a form. Try again.")
             return
 
-        set_draft_schema(schema.get("fields", []))
+        set_draft_schema(normalize_field_names(schema.get("fields", [])))
         set_draft_title(schema.get("title", prompt[:50]))
         set_draft_desc(schema.get("description", ""))
         set_mode("editor")
@@ -91,11 +135,20 @@ async def ai_edit_schema_async(
                 f"Title: {draft_title}\n"
                 f"Description: {draft_desc}\n\n"
                 f"User wants to modify: {prompt}\n\n"
+                "IMPORTANT: keep each existing field's exact `name` value "
+                "unchanged - it is a stable identifier tied to already-collected "
+                "responses. Only brand-new fields may use new unique names.\n\n"
                 f"Return the FULL updated form as a JSON object with title, description, fields."
             )
             schema = await ai_service.generate_form_schema(edit_prompt)
             if schema:
-                set_draft_schema(schema.get("fields", draft_schema))
+                old_names = {str(f.get("name") or "") for f in (draft_schema or [])}
+                set_draft_schema(
+                    normalize_field_names(
+                        schema.get("fields", draft_schema),
+                        preserve=old_names,
+                    )
+                )
                 set_draft_title(schema.get("title", draft_title))
                 set_draft_desc(schema.get("description", draft_desc))
                 set_ai_edit_text("")
@@ -217,7 +270,8 @@ async def download_csv_async(form: dict, page: ft.Page, show_error):
     if not responses:
         show_error("No responses to download.")
         return
-    csv_bytes = forms_service.responses_to_csv_bytes(responses)
+    schema_fields = _form_schema_fields(form)
+    csv_bytes = forms_service.responses_to_csv_bytes(responses, schema_fields)
 
     import os
     from pathlib import Path
@@ -245,3 +299,143 @@ async def download_csv_async(form: dict, page: ft.Page, show_error):
             )
     except Exception as err:
         show_error(f"Save failed: {err}")
+
+
+async def request_update_live_form_async(
+    form: dict,
+    draft_title: str,
+    draft_desc: str,
+    draft_schema: list,
+    active_project_id: str,
+    page: ft.Page | None,
+    set_is_publishing,
+    set_mode,
+    set_draft_schema,
+    set_prompt_text,
+    set_editing_form_id,
+    set_active_form,
+    load_forms_fn,
+    show_error,
+):
+    """Show the smart-merge diff confirmation, then update the LIVE form in place.
+
+    Kept questions preserve every collected answer; removed questions have their
+    stored answers permanently purged server-side (zero ghosts). The share link
+    never changes.
+    """
+    if not form or not page:
+        return
+
+    error = forms_service._validate_schema(draft_schema)
+    if error:
+        show_error(f"Cannot save: {error}")
+        return
+
+    old_fields = _form_schema_fields(form)
+    old_names = [str(f.get("name")) for f in old_fields if f.get("name")]
+    new_names = {str(f.get("name")) for f in draft_schema if f.get("name")}
+    kept_count = len({n for n in old_names if n in new_names})
+    removed = [f for f in old_fields if str(f.get("name")) not in new_names]
+    added = [f for f in draft_schema if str(f.get("name")) not in set(old_names)]
+
+    # Stored answers that will be purged along with the removed questions.
+    removed_keys = {str(f.get("name")) for f in removed}
+    purge_answers = 0
+    for r in form.get("_responses", []):
+        data = r.get("data", {})
+        purge_answers += sum(1 for k in data if k in removed_keys)
+
+    lines = [
+        f"• {kept_count} question(s) unchanged - their collected answers are preserved.",
+    ]
+    if removed:
+        shown = ", ".join(
+            "'" + str(f.get("label") or f.get("name")) + "'" for f in removed[:5]
+        ) + ("…" if len(removed) > 5 else "")
+        lines.append(
+            f"• {len(removed)} question(s) removed ({shown}) - "
+            f"{purge_answers} stored answer(s) will be PERMANENTLY deleted."
+        )
+    if added:
+        lines.append(
+            f"• {len(added)} new question(s) - older submissions show blank for these."
+        )
+    lines.append("The share link stays the same.")
+
+    def _close(_=None):
+        page.pop_dialog()
+
+    async def _confirm_apply(_=None):
+        _close()
+        set_is_publishing(True)
+        try:
+            ok = await forms_service.update_form(
+                form_id=form["id"],
+                project_id=active_project_id,
+                title=draft_title,
+                description=draft_desc,
+                schema_json=draft_schema,
+            )
+            if ok:
+                resp_data = await forms_service.get_responses(
+                    form["id"], active_project_id
+                )
+                updated = dict(form)
+                updated["title"] = draft_title
+                updated["description"] = draft_desc
+                updated["schema_json"] = json.dumps(draft_schema)
+                updated["_responses"] = resp_data.get("responses", [])
+                updated["_count"] = resp_data.get("count", 0)
+                set_active_form(updated)
+                set_mode("detail")
+                set_editing_form_id("")
+                set_draft_schema([])
+                set_prompt_text("")
+                await load_forms_fn()
+                from core.utils import show_snack
+
+                show_snack(
+                    page,
+                    "✅ Live form updated - link unchanged",
+                    success=True,
+                    duration=tokens.SNACK_DURATION_MD_MS,
+                )
+            else:
+                show_error("Update failed. Please check connection and try again.")
+        except Exception as err:
+            show_error(f"Update error: {err}")
+        finally:
+            set_is_publishing(False)
+
+    has_removals = bool(removed)
+    confirm_dlg = ft.AlertDialog(
+        modal=True,
+        title=ft.Row(
+            [
+                ft.Icon(
+                    ft.Icons.PUBLISH_ROUNDED,
+                    color=theme.ERROR if has_removals else theme.PRIMARY,
+                ),
+                ft.Text("Update Live Form?"),
+            ],
+            spacing=tokens.SPACE_SM,
+        ),
+        content=ft.Container(
+            content=ft.Column(
+                [ft.Text(ln, size=tokens.FONT_BODY) for ln in lines],
+                spacing=tokens.SPACE_XS,
+                tight=True,
+            ),
+            width=tokens.DIALOG_WIDTH_SM,
+        ),
+        actions=[
+            ft.TextButton("Cancel", on_click=_close),
+            ft.FilledButton(
+                "Update Live Form",
+                bgcolor=theme.ERROR if has_removals else theme.PRIMARY,
+                color=ft.Colors.WHITE,
+                on_click=lambda e: page.run_task(_confirm_apply) if page else None,
+            ),
+        ],
+    )
+    page.show_dialog(confirm_dlg)

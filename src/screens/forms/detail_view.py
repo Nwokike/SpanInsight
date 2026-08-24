@@ -15,6 +15,7 @@ def build_form_detail_view(
     form: dict,
     on_back,
     on_copy_link,
+    on_edit,
     on_renew,
     on_download_csv,
     on_analyze,
@@ -241,6 +242,17 @@ def build_form_detail_view(
             ),
             on_click=lambda _: on_copy_link(form["id"]),
         ),
+        # Secondary: Edit live form (in place, smart-merge responses)
+        ft.OutlinedButton(
+            "Edit Form",
+            icon=ft.Icons.EDIT_ROUNDED,
+            tooltip="Edit this live form - kept questions preserve their collected responses",
+            style=ft.ButtonStyle(
+                shape=button_shape,
+                padding=btn_padding,
+            ),
+            on_click=lambda _: on_edit(form),
+        ),
         # Secondary: Analyze in Notebook
         ft.OutlinedButton(
             "Analyze in Notebook",
@@ -431,6 +443,17 @@ def build_form_detail_view(
                     if key not in columns:
                         columns.append(key)
 
+            # Headers show the question's current LABEL, not its storage key;
+            # unknown/legacy keys fall back to the raw name.
+            labels_by_name = {
+                str(f.get("name")): str(f.get("label") or f.get("name"))
+                for f in fields
+                if f.get("name")
+            }
+
+            def _header(key: str) -> str:
+                return labels_by_name.get(key, key)
+
             controls.append(
                 ft.Container(
                     content=ft.Column(
@@ -458,7 +481,7 @@ def build_form_detail_view(
                                             columns=[
                                                 ft.DataColumn(
                                                     ft.Text(
-                                                        c,
+                                                        _header(c),
                                                         size=tokens.FONT_SM,
                                                         weight=ft.FontWeight.W_600,
                                                     )

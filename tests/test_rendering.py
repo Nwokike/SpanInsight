@@ -274,24 +274,33 @@ class TestSelfHealing:
         assert cell.get("failed") is True  # retry affordance can now appear
 
     @pytest.mark.asyncio
-    async def test_expert_cell_without_prompt_never_auto_heals(self):
+    async def test_hand_written_cell_without_prompt_still_auto_heals(self):
+        """Legacy-parity contract (2026-08, owner-approved): healing is
+        UNCONDITIONAL - even a hand-written cell with no AI prompt gets a
+        bounded self-heal attempt on error. The AI call is stubbed so the
+        outcome cannot depend on network availability."""
         colab = HealingColab(fail_times=1)
         cell = {"id": "h3", "type": "code", "source": "print('BAD')"}
         state.notebook_cells = [cell]
 
-        await run_cell_async(
-            cell_id="h3",
-            session_name="s",
-            colab=colab,
-            page=None,
-            cell_refs_map=_Refs(),
-            set_is_executing=lambda _v: None,
-            on_cell_change=lambda: None,
-        )
+        with patch(
+            "screens.analysis.execution_runner.ai_service.generate_corrected_code",
+            new_callable=AsyncMock,
+        ) as mock_gen:
+            mock_gen.return_value = "print('GOOD')"
+            await run_cell_async(
+                cell_id="h3",
+                session_name="s",
+                colab=colab,
+                page=None,
+                cell_refs_map=_Refs(),
+                set_is_executing=lambda _v: None,
+                on_cell_change=lambda: None,
+            )
 
-        assert colab.cell_execs == 1  # no heal attempts for hand-written code
-        assert cell.get("failed") is True
-        assert cell["source"] == "print('BAD')"  # source untouched
+        assert colab.cell_execs == 2  # original run + healed re-run
+        assert cell.get("failed") is not True
+        assert cell["source"] == "print('GOOD')"
 
     @pytest.mark.asyncio
     async def test_healing_stops_when_ai_cannot_improve(self):

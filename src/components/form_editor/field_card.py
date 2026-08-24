@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 import flet as ft
 
 from core import theme, tokens
@@ -38,7 +40,12 @@ HAS_OPTIONS = {"select", "radio", "checkbox"}
 
 
 def new_field(schema: list[dict], ftype="text") -> dict:
-    """Create a blank field dict with a unique label."""
+    """Create a blank field dict with a unique label and a stable opaque id.
+
+    ``name`` is the key collected responses are stored under, so it is a
+    generated immutable id - NOT derived from the label. Renaming a question
+    must never orphan its already-collected answers.
+    """
     existing_labels = {f["label"].lower() for f in schema}
     base_label = "New Field"
     if base_label.lower() not in existing_labels:
@@ -53,7 +60,7 @@ def new_field(schema: list[dict], ftype="text") -> dict:
             counter += 1
 
     return {
-        "name": label.lower().replace(" ", "_"),
+        "name": "q_" + uuid.uuid4().hex[:10],
         "label": label,
         "type": ftype,
         "required": False,
@@ -74,19 +81,9 @@ def build_field_card(
 
     def _update(key, val):
         field[key] = val
-        if key == "label":
-            base_name = val.lower().replace(" ", "_")
-            name = base_name
-            if schema:
-                existing_names = {
-                    schema[i]["name"] for i in range(len(schema)) if i != index
-                }
-                if name in existing_names:
-                    counter = 1
-                    while f"{base_name}_{counter}" in existing_names:
-                        counter += 1
-                    name = f"{base_name}_{counter}"
-            field["name"] = name
+        # NOTE: ``name`` is intentionally NEVER regenerated here. It is the
+        # storage key for collected responses; renaming a question must keep
+        # its answers attached. Names are assigned once at creation.
         if schema is not None:
             new_s = [dict(f) for f in schema]
             if 0 <= index < len(new_s):

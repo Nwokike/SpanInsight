@@ -23,6 +23,49 @@ def _resolve_project_id(project_id: str) -> str:
     return (state.active_project_id or state.user_uuid or "").strip()
 
 
+_VALID_FIELD_TYPES = frozenset(
+    {
+        "text",
+        "textarea",
+        "number",
+        "email",
+        "select",
+        "radio",
+        "checkbox",
+        "date",
+        "phone",
+        "url",
+        "rating",
+    }
+)
+
+
+def _validate_schema(schema_json: list[dict]) -> str | None:
+    """Return an error string for the first invalid field, else None.
+
+    Checks structure/type AND that every question has a non-empty UNIQUE
+    ``name`` - it is the storage key for collected responses.
+    """
+    if not isinstance(schema_json, list):
+        return f"Form schema must be a list, got {type(schema_json).__name__}"
+    seen_names: set[str] = set()
+    for i, field in enumerate(schema_json):
+        if not isinstance(field, dict):
+            return f"Field {i} is not a dict"
+        for key in ("name", "label", "type"):
+            if key not in field:
+                return f"Field {i} missing required key '{key}'"
+        if field["type"] not in _VALID_FIELD_TYPES:
+            return f"Field {i} has invalid type: {field['type']}"
+        name = str(field.get("name") or "").strip()
+        if not name:
+            return f"Field {i} ('{field['label']}') has an empty name"
+        if name in seen_names:
+            return f"Field {i} ('{field['label']}') duplicates the name '{name}'"
+        seen_names.add(name)
+    return None
+
+
 async def create_form(
     project_id: str,
     title: str,
@@ -36,34 +79,10 @@ async def create_form(
         logger.error("Create form failed: No active project or user identity found.")
         return None
 
-    # Validate schema structure before sending
-    if not isinstance(schema_json, list):
-        logger.error("Form schema must be a list, got %s", type(schema_json).__name__)
+    error = _validate_schema(schema_json)
+    if error:
+        logger.error("Create form rejected: %s", error)
         return None
-
-    valid_types = {
-        "text",
-        "textarea",
-        "number",
-        "email",
-        "select",
-        "radio",
-        "checkbox",
-        "date",
-        "phone",
-        "url",
-        "rating",
-    }
-    for i, field in enumerate(schema_json):
-        if not isinstance(field, dict):
-            logger.error("Field %d is not a dict", i)
-            return None
-        if "name" not in field or "label" not in field or "type" not in field:
-            logger.error("Field %d missing required keys (name, label, type)", i)
-            return None
-        if field["type"] not in valid_types:
-            logger.error("Field %d has invalid type: %s", i, field["type"])
-            return None
 
     payload = {
         "project_id": resolved_project_id,
@@ -94,6 +113,54 @@ async def create_form(
     except Exception as e:
         logger.error("Create form error: %s", e)
         return None
+
+
+async def update_form(
+    form_id: str,
+    project_id: str,
+    title: str,
+    description: str,
+    schema_json: list[dict],
+) -> bool:
+    """Update a LIVE published form in place (smart merge).
+
+    The gateway keeps every surviving question's collected answers and
+    permanently purges answers of removed questions. Share URL and id are
+    unchanged. Returns True on success.
+    """
+    resolved_project_id = _resolve_project_id(project_id)
+    if not resolved_project_id:
+        logger.error("Update form failed: No active project or user identity found.")
+        return False
+
+    error = _validate_schema(schema_json)
+    if error:
+        logger.error("Update form rejected: %s", error)
+        return False
+
+    payload = {
+        "project_id": resolved_project_id,
+        "title": title,
+        "description": description,
+        "schema_json": schema_json,
+    }
+    try:
+        resp = await request_with_retry(
+            "PATCH",
+            f"{API_BASE_URL}/forms/{form_id}",
+            json=payload,
+            timeout=15.0,
+        )
+        if resp.status_code == 200:
+            logger.info("Live form %s updated in place", form_id)
+            return True
+        logger.error(
+            "Update form failed HTTP %d: %s", resp.status_code, resp.text[:200]
+        )
+        return False
+    except Exception as e:
+        logger.error("Update form error: %s", e)
+        return False
 
 
 async def list_forms(project_id: str = "") -> list[dict]:
@@ -172,10 +239,14 @@ async def delete_form(form_id: str, project_id: str = "") -> bool:
         return False
 
 
-def responses_to_csv_bytes(responses: list[dict]) -> bytes:
+def responses_to_csv_bytes(
+    responses: list[dict], schema_fields: list[dict] | None = None
+) -> bytes:
     """Convert a list of response dicts to CSV bytes for download.
 
-    Each response has a 'data' dict with field values.
+    Each response has a 'data' dict keyed by question id. Column headers use
+    the question's human-readable LABEL from ``schema_fields`` when available;
+    unknown or orphaned keys fall back to the raw storage key.
     """
     if not responses:
         return b""
@@ -187,15 +258,32 @@ def responses_to_csv_bytes(responses: list[dict]) -> bytes:
     if not rows:
         return b""
 
-    # Collect all unique field names preserving order
+    labels_by_name = {
+        str(f.get("name")): str(f.get("label") or f.get("name"))
+        for f in (schema_fields or [])
+        if f.get("name")
+    }
+
+    # Collect all unique storage keys preserving order
     fieldnames = []
     for row in rows:
         for key in row:
             if key not in fieldnames:
                 fieldnames.append(key)
 
+    # Human headers; on label collisions keep the unique storage key instead.
+    headers = []
+    used = set()
+    for key in fieldnames:
+        label = labels_by_name.get(key, key)
+        if label in used:
+            label = key
+        used.add(label)
+        headers.append(label)
+
     output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
-    writer.writeheader()
-    writer.writerows(rows)
+    writer = csv.writer(output)
+    writer.writerow(headers)
+    for row in rows:
+        writer.writerow([row.get(key, "") for key in fieldnames])
     return output.getvalue().encode("utf-8")

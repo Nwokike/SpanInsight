@@ -34,6 +34,7 @@ def build_form_editor(
     recording_time: int = 0,
     ai_prompt_text: str = "",
     recording_timer_ref: ft.Ref[ft.Text] | None = None,
+    publish_label: str = "Publish",
 ) -> list[ft.Control]:
     """Build the full form editor UI. Returns a list of controls."""
     controls = []
@@ -143,6 +144,7 @@ def build_form_editor(
             recording_time=recording_time,
             ai_prompt_text=ai_prompt_text,
             recording_timer_ref=recording_timer_ref,
+            publish_label=publish_label,
         )
     )
 
