@@ -29,7 +29,11 @@ async def extract_dataset_schema(
 ) -> tuple[dict | None, str | None]:
     """Run the silent schema extractor on Colab and parse its marker payload."""
     outputs = await colab.exec_code(
-        build_schema_extraction_code(), session_name=session_name, timeout=60.0
+        # describe() over a freshly loaded multi-hundred-MB dataset (e.g.
+        # 558k-row vehicle sales) can far exceed a 60 s wall clock.
+        build_schema_extraction_code(),
+        session_name=session_name,
+        timeout=300.0,
     )
     return parse_schema_from_outputs(outputs)
 
