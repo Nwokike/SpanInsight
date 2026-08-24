@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 
 import flet as ft
@@ -28,6 +27,7 @@ from services import forms_service
 from services.audio_service import AudioService
 from state import AppStateCtx
 from state.controller_ctx import ControllerMethodsCtx
+from state.service_ctx import ServiceCtx
 
 logger = logging.getLogger("FormsScreen")
 
@@ -37,6 +37,7 @@ def FormsScreen() -> ft.Control:
     """Forms & survey builder screen with dashboard, editor, and responses view."""
     page = ft.context.page
     state = ft.use_context(AppStateCtx)
+    services = ft.use_context(ServiceCtx)
     ft.use_context(ControllerMethodsCtx)
 
     # Mode: "dashboard", "editor", "detail"
@@ -368,62 +369,52 @@ def FormsScreen() -> ft.Control:
             )
         )
 
-    def on_analyze_responses(form_data: dict):
-        responses = form_data.get("_responses", [])
-        if not responses:
+    async def on_analyze_form_async(form_data: dict):
+        """Export responses as a labeled CSV dataset via the standard pipeline.
+
+        Replaces the old inline-JSON cell dump: upload → pd.read_csv → parquet
+        snapshot, so the survey becomes a first-class dataset. Provenance is
+        recorded so returning to this project re-syncs new submissions.
+        """
+        from screens.forms.dataset_sync import (
+            build_form_file_name,
+            export_responses_to_csv,
+            record_form_dataset,
+            write_csv_temp,
+        )
+
+        rows = await forms_service.fetch_all_responses(
+            form_data.get("id", ""), state.active_project_id
+        )
+        if not rows:
             _show_error("No responses to analyze yet.")
             return
 
-        form_title = form_data.get("title", "Survey")
-        rows = [r.get("data", r) for r in responses]
+        file_name = build_form_file_name(
+            form_data.get("title", "Survey"), form_data.get("id", "")
+        )
+        csv_bytes = export_responses_to_csv(form_data, rows)
+        local_path = await write_csv_temp(file_name, csv_bytes)
 
-        # DataFrame columns use the questions' human-readable LABELS (raw
-        # storage key as fallback for unknown/legacy ids, and on collisions).
-        from screens.forms.handlers import _form_schema_fields
-
-        labels = {
-            str(f.get("name")): str(f.get("label") or f.get("name"))
-            for f in _form_schema_fields(form_data)
-            if f.get("name")
-        }
-        ordered_keys = []
-        for row in rows:
-            for k in row:
-                if k not in ordered_keys:
-                    ordered_keys.append(k)
-        col_map = {}
-        used = set()
-        for k in ordered_keys:
-            label = labels.get(k, k)
-            if label in used:
-                label = k
-            used.add(label)
-            col_map[k] = label
-        aliased_rows = [{col_map[k]: v for k, v in row.items()} for row in rows]
-
-        code = (
-            f"# Survey Dataset: {form_title}\n"
-            f"# Total Collected Responses: {len(aliased_rows)}\n"
-            f"import pandas as pd\n\n"
-            f"responses_data = {json.dumps(aliased_rows, indent=2)}\n"
-            f"df = pd.DataFrame(responses_data)\n\n"
-            f"print(f\"Loaded survey '{form_title}': {{len(df)}} responses, {{len(df.columns)}} columns\")\n"
-            f"df.head()"
+        # Provenance powers the return-to-project auto-refresh.
+        await record_form_dataset(
+            services.projects,
+            state.active_project_id,
+            form_data.get("id", ""),
+            file_name,
+            len(rows),
         )
 
-        dataset_name = f"{form_title.replace(' ', '_')}_responses.csv"
-        # Hand off to the Analysis screen, which owns cell insertion and
-        # persistence (direct state writes are lost when its mount handler
-        # reloads the active project).
-        state.pending_forms_import = {
-            "name": dataset_name,
-            "code": code,
+        state.pending_dataset_load = {
+            "name": file_name,
+            "upload_local_path": local_path,
+            "remote_path": f"/content/{file_name}",
         }
         state.current_tab = 1
         if page:
             show_snack(
                 page,
-                f"📊 Loaded {len(rows)} responses into Notebook!",
+                f"📊 Exported {len(rows)} responses - loading as a dataset…",
                 success=True,
             )
 
@@ -525,7 +516,9 @@ def FormsScreen() -> ft.Control:
                 if page
                 else None
             ),
-            on_analyze=on_analyze_responses,
+            on_analyze=lambda f: (
+                page.run_task(on_analyze_form_async, f) if page else None
+            ),
             on_delete=lambda fid: (
                 page.run_task(
                     delete_form_async,

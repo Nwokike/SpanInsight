@@ -204,7 +204,7 @@ async def get_form(form_id: str) -> dict | None:
 
 
 async def get_responses(form_id: str, project_id: str = "") -> dict:
-    """Fetch all responses for a form inside a project. Returns {count, responses}."""
+    """Fetch one page of responses for a form. Returns {count, responses}."""
     resolved_project_id = _resolve_project_id(project_id)
     try:
         client = get_client()
@@ -222,6 +222,44 @@ async def get_responses(form_id: str, project_id: str = "") -> dict:
     except Exception as e:
         logger.error("Get responses error: %s", e)
         return {"count": 0, "responses": []}
+
+
+async def fetch_all_responses(form_id: str, project_id: str = "") -> list[dict]:
+    """Fetch EVERY response for a form, walking gateway pagination.
+
+    The gateway serves RESPONSES_PAGE_SIZE (200) rows per page; exports need
+    the complete set, not just page 1.
+    """
+    resolved_project_id = _resolve_project_id(project_id)
+    all_rows: list[dict] = []
+    page = 1
+    total = None
+    try:
+        client = get_client()
+        while True:
+            params = {"page": page}
+            if resolved_project_id:
+                params["project_id"] = resolved_project_id
+            resp = await client.get(
+                f"{API_BASE_URL}/forms/{form_id}/responses",
+                params=params,
+                timeout=20.0,
+            )
+            if resp.status_code != 200:
+                break
+            data = resp.json()
+            total = int(data.get("count", 0) or 0)
+            rows = data.get("responses", []) or []
+            all_rows.extend(rows)
+            if not rows or len(all_rows) >= total:
+                break
+            page += 1
+            if page > 500:  # hard safety bound (~100k rows)
+                break
+        return all_rows
+    except Exception as e:
+        logger.error("Fetch all responses error: %s", e)
+        return all_rows
 
 
 async def renew_form(form_id: str, project_id: str = "") -> str | None:

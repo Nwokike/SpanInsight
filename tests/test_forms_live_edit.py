@@ -134,3 +134,70 @@ async def test_update_form_rejects_invalid_schema_before_network():
 
     assert ok is False
     mock_req.assert_not_called()
+
+
+# ── Survey → CSV dataset pipeline ─────────────────────────────────────
+
+
+def test_build_form_file_name_is_stable_and_collision_free():
+    from screens.forms.dataset_sync import build_form_file_name
+
+    a = build_form_file_name("Jollof Rice Test!", "form_ujb5o7dbXZoZ")
+    b = build_form_file_name("Jollof Rice Test!", "form_abcdef1234")
+    assert a == "Jollof_Rice_Test_dbXZoZ_responses.csv"
+    assert a != b  # id suffix keeps same-titled forms apart
+    assert build_form_file_name("", "") == "survey_000000_responses.csv"
+
+
+def test_snapshot_path_matches_load_code():
+    from services.file_service import snapshot_path_for, suggest_load_code
+
+    name = "My Survey (2026)_responses.csv"
+    assert snapshot_path_for(name) in suggest_load_code(name)
+
+
+@pytest.mark.asyncio
+async def test_fetch_all_responses_walks_pagination():
+    from services.forms_service import fetch_all_responses
+
+    pages = {
+        1: {"count": 3, "responses": [{"id": 1, "data": {"a": 1}}, {"id": 2}]},
+        2: {"count": 3, "responses": [{"id": 3, "data": {"a": 2}}]},
+    }
+
+    class FakeResp:
+        def __init__(self, payload):
+            self.status_code = 200
+            self._p = payload
+
+        def json(self):
+            return self._p
+
+    class FakeClient:
+        async def get(self, url, params=None, timeout=None):
+            return FakeResp(pages[params["page"]])
+
+    with patch("services.forms_service.get_client", return_value=FakeClient()):
+        rows = await fetch_all_responses("f1", "proj_1")
+
+    assert [r["id"] for r in rows] == [1, 2, 3]
+
+
+def test_export_csv_aliases_labels_and_dedupes():
+    from screens.forms.dataset_sync import export_responses_to_csv
+
+    form = {
+        "title": "S",
+        "schema_json": [
+            {"name": "q1", "label": "Age", "type": "number"},
+            {"name": "legacy", "label": "Age", "type": "text"},  # collision
+        ],
+    }
+    responses = [
+        {"data": {"q1": 39, "legacy": "x"}},
+        {"data": {"q1": 22}},
+    ]
+    text = export_responses_to_csv(form, responses).decode().replace("\r\n", "\n")
+    header, row1, row2 = text.strip().split("\n")
+    assert header == "Age,legacy"  # collision falls back to storage key
+    assert row1 == "39,x" and row2 == "22,"

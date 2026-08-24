@@ -94,6 +94,20 @@ def get_file_info(file_path: str) -> dict:
     }
 
 
+def snapshot_path_for(file_name: str) -> str:
+    """The VM-side parquet snapshot path for a source dataset file.
+
+    Keyed by file name so two datasets on one Colab VM never shadow each
+    other. Shared with the form-dataset sync flow, which deletes this file
+    when it overwrites the source CSV (otherwise stale cached rows would be
+    served by the instant-load path).
+    """
+    safe_stem = "".join(
+        c if c.isalnum() or c in "._-" else "_" for c in Path(file_name).stem
+    )[:60]
+    return f"/content/_si_snapshot_{safe_stem}.parquet"
+
+
 def suggest_load_code(file_name: str) -> str:
     """Suggest Python code to load a file on Colab based on its extension.
 
@@ -119,11 +133,8 @@ def suggest_load_code(file_name: str) -> str:
             ("    " + ln if ln.strip() else ln) for ln in code.splitlines(keepends=True)
         )
 
-    # Snapshot keyed by file name so two datasets on one VM never shadow.
-    safe_stem = "".join(
-        c if c.isalnum() or c in "._-" else "_" for c in Path(file_name).stem
-    )[:60]
-    snapshot_path = f"/content/_si_snapshot_{safe_stem}.parquet"
+    # Snapshot path shared with the sync flow (which invalidates it on refresh).
+    snapshot_path = snapshot_path_for(file_name)
 
     def _snapshot_prelude() -> str:
         return (

@@ -129,6 +129,14 @@ def AnalysisScreen() -> Control:
             set_cells_version=set_cells_version,
             cells_version=cells_version,
         )
+        # Returning to the project: refresh tracked survey datasets in the
+        # background so new form submissions are never missing.
+        if page and colab:
+            from screens.forms.dataset_sync import sync_form_datasets_on_mount
+
+            page.run_task(
+                sync_form_datasets_on_mount, colab, projects, session_name, page
+            )
 
     ft.use_effect(_on_mount, [active_project_id])
 
@@ -346,28 +354,13 @@ def AnalysisScreen() -> Control:
             _run_cell,
             set_schema,
             set_is_generating=set_is_generating,
+            upload_local_path=pending.get("upload_local_path"),
             remote_path=pending.get("remote_path") or f"/content/{name}",
         )
 
     ft.use_effect(
         _process_pending_dataset_load,
         [app_state.pending_dataset_load, session_name],
-    )
-
-    # ── Cross-screen survey import (Forms → Analysis) ────────────
-    async def _process_pending_forms_import():
-        pending = state.pending_forms_import
-        if not pending:
-            return
-        state.pending_forms_import = None
-        code = pending.get("code", "")
-        if not code:
-            return
-        _add_cell("code", code)
-
-    ft.use_effect(
-        _process_pending_forms_import,
-        [state.pending_forms_import],
     )
 
     # ── Auto-trigger file picker when requested from Home/Quick Start ──

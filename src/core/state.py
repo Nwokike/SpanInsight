@@ -100,7 +100,6 @@ class AppState:
     def __init__(self):
         self.notebook_cells = []
         self.pending_dataset_load = None
-        self.pending_forms_import = None
         self.active_sessions = []
         self.forms = []
         self.projects_list = []
