@@ -15,7 +15,9 @@ def build_project_switcher(
     on_project_selected=None,
 ) -> ft.Control:
     """Builds a compact header chip showing active project with a dropdown modal to switch/create projects."""
-    active_name = active_project_name or state.active_project_name or "Project 1"
+    # Live observable state wins over the caller's snapshot prop so a rename
+    # (or load_project) is reflected in the chip on the very next re-render.
+    active_name = state.active_project_name or active_project_name or "Project 1"
 
     async def _show_switcher_modal(_=None):
         if not project_service or not page:

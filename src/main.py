@@ -123,7 +123,7 @@ class AppController:
         # ── Connectivity monitor (updates state.is_online) ─────────
         from components.connectivity_monitor import start_connectivity_monitor
 
-        # AppShell owns the real banner (state-driven, with Retry action)
+        # AppShell owns the real banner (visibility driven by state.is_online)
         page.run_task(start_connectivity_monitor, page)
 
         # ── Build controller methods ────────────────────────────
@@ -296,6 +296,20 @@ class AppController:
                 state.keep_alive_enabled = saved_ka == "true"
         except Exception as e:
             logger.warning("Settings restore failed: %s", e)
+
+        # Restore the last active project so a cold start resumes where the
+        # user stopped (Analysis mounts and reloads its notebook via _on_mount).
+        try:
+            from core.constants import STORAGE_LAST_PROJECT
+
+            last_pid = await self.storage.get(STORAGE_LAST_PROJECT)
+            if last_pid:
+                proj = await self.project_service.get_project(last_pid)
+                if proj:
+                    state.load_project(proj)
+                    logger.info("Restored last project: %s", proj.get("name", ""))
+        except Exception as e:
+            logger.warning("Last-project restore failed: %s", e)
 
         # Check connectivity - never force re-onboarding when offline
         try:

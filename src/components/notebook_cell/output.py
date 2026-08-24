@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import base64
+import json
 import logging
+from html.parser import HTMLParser as _HTMLParser
 
 import flet as ft
 
@@ -44,6 +46,82 @@ def _html_to_text(html: str) -> str:
 
         text = re.sub(r"<[^>]+>", " ", html)
         return text.strip()
+
+
+class _TableExtractor(_HTMLParser):
+    """Pull plain-text cell grids out of <table> markup (stdlib only)."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.tables: list[list[list[str]]] = []
+        self._depth = 0
+        self._rows: list[list[str]] | None = None
+        self._row: list[str] | None = None
+        self._cell: list[str] | None = None
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "table":
+            self._depth += 1
+            if self._depth == 1:
+                self._rows = []
+        elif self._depth and tag == "tr":
+            self._row = []
+        elif self._depth and tag in ("td", "th") and self._row is not None:
+            self._cell = []
+
+    def handle_endtag(self, tag):
+        if tag == "table" and self._depth:
+            self._depth -= 1
+            if self._depth == 0 and self._rows is not None:
+                self.tables.append(self._rows)
+                self._rows = None
+        elif self._depth and tag == "tr" and self._row is not None:
+            if self._rows is not None and self._row:
+                self._rows.append(self._row)
+            self._row = None
+        elif self._depth and tag in ("td", "th") and self._cell is not None:
+            if self._row is not None:
+                self._row.append(" ".join("".join(self._cell).split()))
+            self._cell = None
+
+    def handle_data(self, data):
+        if self._cell is not None:
+            self._cell.append(data)
+
+
+_MAX_MD_TABLES = 4
+_MAX_MD_ROWS = 60
+
+
+def _markdown_from_html_tables(html: str) -> str | None:
+    """Render HTML <table>s (styled DataFrames) as native markdown tables.
+
+    Returns markdown text or None when the html holds no usable table, so the
+    caller can fall back to plain-text conversion.
+    """
+    try:
+        parser = _TableExtractor()
+        parser.feed(html)
+        parts = []
+        for rows in parser.tables[:_MAX_MD_TABLES]:
+            rows = [r for r in rows[:_MAX_MD_ROWS] if r]
+            if len(rows) < 2:
+                continue  # need a header plus at least one body row
+            ncols = max(len(r) for r in rows)
+
+            def _fmt(r: list[str], _ncols: int = ncols) -> str:
+                return (
+                    "| "
+                    + " | ".join(r[c] if c < len(r) else "" for c in range(_ncols))
+                    + " |"
+                )
+
+            lines = [_fmt(rows[0]), "|" + "|".join([" --- "] * ncols) + "|"]
+            lines.extend(_fmt(r) for r in rows[1:])
+            parts.append("\n".join(lines))
+        return "\n\n".join(parts) or None
+    except Exception:
+        return None
 
 
 def parse_outputs_to_controls(outputs: list) -> list[ft.Control]:
@@ -132,10 +210,42 @@ def parse_outputs_to_controls(outputs: list) -> list[ft.Control]:
                             default_size=tokens.FONT_SM,
                         )
                     )
+            elif "application/json" in data:
+                payload = data["application/json"]
+                try:
+                    pretty = json.dumps(
+                        payload, indent=2, ensure_ascii=False, default=str
+                    )
+                except Exception:
+                    pretty = str(payload)
+                if len(pretty) > 5000:
+                    pretty = pretty[:5000] + "\n…"
+                output_controls.append(
+                    ft.Container(
+                        content=parse_ansi_to_flet_text(
+                            pretty, default_size=tokens.FONT_SM
+                        ),
+                        padding=tokens.SPACE_SM,
+                        bgcolor=theme.TERMINAL_BG,
+                        border_radius=tokens.RADIUS_SM,
+                    )
+                )
             elif "text/html" in data:
                 html = data["text/html"]
                 if isinstance(html, (list, tuple)):
                     html = "".join(str(h) for h in html)
+                # Styled DataFrames ship as HTML tables - render them as real
+                # tables via markdown; fall back to plain text otherwise.
+                md_tables = _markdown_from_html_tables(str(html))
+                if md_tables:
+                    output_controls.append(
+                        ft.Markdown(
+                            value=md_tables,
+                            selectable=True,
+                            extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+                        )
+                    )
+                    continue
                 readable = _html_to_text(str(html))
                 if readable:
                     output_controls.append(

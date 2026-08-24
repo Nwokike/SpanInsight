@@ -101,12 +101,6 @@ def AppShell() -> Control:
         badge = build_credit_badge(state.credits_remaining)
         badge_container = ft.Container(
             content=badge,
-            margin=ft.Margin(
-                tokens.SPACE_NONE,
-                tokens.SPACE_NONE,
-                tokens.SPACE_MD,
-                tokens.SPACE_NONE,
-            ),
             on_click=lambda e: (
                 show_credits_dialog(page, services.credits) if page else None
             ),
@@ -136,21 +130,8 @@ def AppShell() -> Control:
             ft.Icons.ADD_ROUNDED,
             tooltip="New Project",
             icon_color=ft.Colors.PRIMARY,
-            style=ft.ButtonStyle(
-                bgcolor=ft.Colors.with_opacity(
-                    tokens.OPACITY_CONTAINER, ft.Colors.PRIMARY
-                ),
-                shape=ft.RoundedRectangleBorder(radius=tokens.RADIUS_SM),
-                padding=tokens.SPACE_XS,
-            ),
-            icon_size=tokens.ICON_SM,
+            icon_size=tokens.ICON_BASE,
             on_click=lambda _: controller.new_project() if page else None,
-            margin=ft.Margin(
-                tokens.SPACE_NONE,
-                tokens.SPACE_NONE,
-                tokens.SPACE_XS,
-                tokens.SPACE_NONE,
-            ),
         )
 
         if is_connecting:
@@ -180,12 +161,6 @@ def AppShell() -> Control:
                 border_radius=tokens.RADIUS_SM,
                 bgcolor=ft.Colors.with_opacity(
                     tokens.OPACITY_CONTAINER, ft.Colors.PRIMARY
-                ),
-                margin=ft.Margin(
-                    tokens.SPACE_NONE,
-                    tokens.SPACE_NONE,
-                    tokens.SPACE_XS,
-                    tokens.SPACE_NONE,
                 ),
             )
         elif state.colab_connected and state.active_session_name:
@@ -218,12 +193,6 @@ def AppShell() -> Control:
                     tokens.OPACITY_CONTAINER, ft.Colors.PRIMARY
                 ),
                 tooltip=f"Colab Connected: {state.active_session_name} ({state.session_hardware}) - Tap for status",
-                margin=ft.Margin(
-                    tokens.SPACE_NONE,
-                    tokens.SPACE_NONE,
-                    tokens.SPACE_XS,
-                    tokens.SPACE_NONE,
-                ),
                 on_click=lambda _: __import__(
                     "components.colab_status_dialog"
                 ).colab_status_dialog.show_colab_status_dialog(
@@ -260,12 +229,6 @@ def AppShell() -> Control:
                     ft.Colors.with_opacity(tokens.OPACITY_BORDER, ft.Colors.ON_SURFACE),
                 ),
                 tooltip="Colab Disconnected - Click to connect",
-                margin=ft.Margin(
-                    tokens.SPACE_NONE,
-                    tokens.SPACE_NONE,
-                    tokens.SPACE_XS,
-                    tokens.SPACE_NONE,
-                ),
                 on_click=lambda _: (
                     page.run_task(_connect_colab_header) if page else None
                 ),
@@ -299,12 +262,6 @@ def AppShell() -> Control:
             border_radius=tokens.RADIUS_SM,
             bgcolor=ft.Colors.with_opacity(tokens.OPACITY_CONTAINER, ft.Colors.PRIMARY),
             tooltip="An AI task is running - results appear on the Analysis tab",
-            margin=ft.Margin(
-                tokens.SPACE_NONE,
-                tokens.SPACE_NONE,
-                tokens.SPACE_XS,
-                tokens.SPACE_NONE,
-            ),
             visible=ai_busy,
         )
 
@@ -316,9 +273,9 @@ def AppShell() -> Control:
                         controls=[
                             ai_busy_chip,
                             colab_indicator,
-                            theme_btn,
                             new_project_btn,
                             badge_container,
+                            theme_btn,
                         ],
                         spacing=tokens.SPACE_XS,
                         alignment=ft.MainAxisAlignment.END,
@@ -420,14 +377,9 @@ def AppShell() -> Control:
             screen = HomeScreen(key=ft.ValueKey("home"))
 
     # ── Offline banner (state-driven, monitor flips state.is_online) ─────
-    from components.connectivity_monitor import (
-        build_offline_banner,
-        recheck_connectivity,
-    )
+    from components.connectivity_monitor import build_offline_banner
 
-    offline_banner = build_offline_banner(
-        on_retry=lambda _: page.run_task(recheck_connectivity, page) if page else None
-    )
+    offline_banner = build_offline_banner()
     if not state.is_online:
         offline_banner.visible = True
 

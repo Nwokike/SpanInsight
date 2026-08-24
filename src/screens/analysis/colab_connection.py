@@ -39,7 +39,9 @@ async def ensure_active_dataset_in_kernel(colab, session_name: str) -> bool:
         try:
             await colab.upload(str(cached), remote_path, session_name)
             load_code = suggest_load_code(cached.name)
-            await colab.exec_code(load_code, session_name=session_name)
+            # Hydration parses the source file kernel-side (a 50MB Excel can
+            # take minutes on a free CPU VM) - never use the 60s default here.
+            await colab.exec_code(load_code, session_name=session_name, timeout=600.0)
             return True
         except Exception as ex:
             logger.warning("Failed to hydrate dataset in kernel: %s", ex)
@@ -77,10 +79,9 @@ async def connect_colab_async(colab, page: ft.Page | None, set_is_connecting):
         # ── Interstitial Ad on Session Creation (Mobile) ─────────────
         if page and page.platform in (ft.PagePlatform.ANDROID, ft.PagePlatform.IOS):
             try:
-                from services.ad_service import AdService
+                from services.ad_service import get_ad_service
 
-                ad_service = AdService(page)
-                page.run_task(ad_service.show_interstitial)
+                page.run_task(get_ad_service(page).show_interstitial)
             except Exception as ad_err:
                 logger.warning("Session creation Interstitial failed: %s", ad_err)
 

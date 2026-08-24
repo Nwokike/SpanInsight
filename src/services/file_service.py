@@ -100,6 +100,11 @@ def suggest_load_code(file_name: str) -> str:
     Every tabular branch MUST leave a ``df`` DataFrame in the kernel - the
     schema extractor looks for it. Non-tabular branches leave ``data`` or
     print honest info instead of pretending to be a DataFrame.
+
+    Heavy tabular branches (csv/tsv/txt/xlsx/json) are wrapped with a parquet
+    SNAPSHOT protocol: the first load parses the source file and caches a
+    parquet copy on the VM; every later hydration (reconnect, tab reload,
+    heal) reads the snapshot instantly instead of re-parsing a 50MB Excel.
     """
     ext = Path(file_name).suffix.lower()
     path = f"/content/{file_name}"
@@ -108,10 +113,48 @@ def suggest_load_code(file_name: str) -> str:
         'print(f"Loaded {len(df):,} rows × {len(df.columns)} cols")\ndf.head()'
     )
 
+    def _indent(code: str) -> str:
+        """Indent a load snippet one level (it runs inside `else:`)."""
+        return "".join(
+            ("    " + ln if ln.strip() else ln) for ln in code.splitlines(keepends=True)
+        )
+
+    # Snapshot keyed by file name so two datasets on one VM never shadow.
+    safe_stem = "".join(
+        c if c.isalnum() or c in "._-" else "_" for c in Path(file_name).stem
+    )[:60]
+    snapshot_path = f"/content/_si_snapshot_{safe_stem}.parquet"
+
+    def _snapshot_prelude() -> str:
+        return (
+            "import os\n"
+            "import pandas as pd\n"
+            f'_si_snap = "{snapshot_path}"\n'
+            "df = None\n"
+            "if os.path.exists(_si_snap):\n"
+            "    try:\n"
+            "        df = pd.read_parquet(_si_snap)\n"
+            '        print("Reading cached parquet snapshot…")\n'
+            "    except Exception:\n"
+            "        df = None\n"
+            "if df is not None:\n"
+            "    pass  # instant path - skip source parsing\n"
+            "else:\n"
+        )
+
+    def _snapshot_save_tail() -> str:
+        return (
+            "try:\n"
+            "    df.to_parquet(_si_snap)\n"
+            '    print("Cached parquet snapshot - future loads are instant")\n'
+            "except Exception:\n"
+            "    pass\n"
+        )
+
     if ext in (".csv", ".tsv"):
         sep = "\\t" if ext == ".tsv" else ","
-        return (
-            "import pandas as pd\n"
+        body = (
+            'print("Reading file…")\n'
             "df = None\n"
             "for _enc in ('utf-8', 'latin-1'):\n"
             "    try:\n"
@@ -121,13 +164,13 @@ def suggest_load_code(file_name: str) -> str:
             "        continue\n"
             "if df is None:\n"
             f'    raise ValueError("Could not decode {file_name} as utf-8 or latin-1")\n'
-            + loaded_tail
         )
+        return _snapshot_prelude() + _indent(body) + _snapshot_save_tail() + loaded_tail
 
     if ext == ".txt":
         # Delimiter-sniffed text (v1 parity): sep=None + python engine detects the separator
-        return (
-            "import pandas as pd\n"
+        body = (
+            'print("Reading file (sniffing delimiter)…")\n'
             "df = None\n"
             "for _enc in ('utf-8', 'latin-1'):\n"
             "    try:\n"
@@ -137,28 +180,36 @@ def suggest_load_code(file_name: str) -> str:
             "        continue\n"
             "if df is None:\n"
             f'    raise ValueError("Could not decode {file_name} as utf-8 or latin-1")\n'
-            + loaded_tail
         )
+        return _snapshot_prelude() + _indent(body) + _snapshot_save_tail() + loaded_tail
 
     if ext in (".xlsx", ".xls"):
-        return (
-            "import os\n"
-            "import pandas as pd\n"
+        # Excel is the heaviest common load (50MB+ can take minutes on a free
+        # CPU VM): staged prints keep iopub alive, calamine parses fastest, and
+        # the parquet snapshot makes every later hydration instant.
+        body = (
+            'print("Reading Excel file… (large files can take a while)")\n'
             f'_p = "{path}" if os.path.exists("{path}") else "{file_name}"\n'
             "try:\n"
             "    df = pd.read_excel(_p, engine='calamine')\n"
+            '    print("Parsed with calamine engine")\n'
             "except Exception:\n"
             "    try:\n"
             "        df = pd.read_excel(_p, engine='openpyxl')\n"
+            '        print("Parsed with openpyxl engine")\n'
             "    except Exception:\n"
             "        try:\n"
             "            df = pd.read_excel(_p)\n"
+            '            print("Parsed with default engine")\n'
             "        except Exception:\n"
-            "            df = pd.read_excel(_p, engine='xlrd')\n" + loaded_tail
+            "            df = pd.read_excel(_p, engine='xlrd')\n"
+            '            print("Parsed with xlrd engine")\n'
         )
+        return _snapshot_prelude() + _indent(body) + _snapshot_save_tail() + loaded_tail
 
     if ext in (".json", ".jsonl"):
-        return f'import pandas as pd\ndf = pd.read_json("{path}")\n' + loaded_tail
+        body = f'print("Reading JSON file…")\ndf = pd.read_json("{path}")\n'
+        return _snapshot_prelude() + _indent(body) + _snapshot_save_tail() + loaded_tail
 
     if ext in (".parquet", ".pq"):
         return f'import pandas as pd\ndf = pd.read_parquet("{path}")\n' + loaded_tail

@@ -153,9 +153,9 @@ class ReportService:
             from core.state import state
 
             source_ids = {
-                b.get("source_block_id")
+                b.get("source_block_id") or b.get("id")
                 for b in target.get("blocks", [])
-                if b.get("source_block_id")
+                if b.get("source_block_id") or b.get("id")
             }
             if source_ids:
                 for cell in state.notebook_cells:

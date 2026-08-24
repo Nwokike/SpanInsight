@@ -242,9 +242,9 @@ def build_analysis_top_bar(
     return ft.Container(
         content=ft.Row(
             controls=[
+                mode_switch_bar,
                 project_chip,
                 dataset_indicator,
-                mode_switch_bar,
                 session_chip,
             ],
             alignment=ft.MainAxisAlignment.START,

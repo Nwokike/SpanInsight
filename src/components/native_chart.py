@@ -26,6 +26,7 @@ _PALETTE = [
 ]
 
 _LABEL_CAP = 14  # max x-axis labels rendered before thinning
+_SCATTER_DOT_RADIUS = 5.0
 
 
 def _num(v) -> float | None:
@@ -87,8 +88,12 @@ def build_native_chart(spec: dict) -> ft.Control | None:
             chart = _build_pie(spec, series)
         elif chart_type == "line":
             chart = _build_line(spec, series, x_labels)
-        elif chart_type == "bar":
+        elif chart_type in ("bar", "histogram", "hist"):
             chart = _build_bar(spec, series)
+        elif chart_type == "scatter":
+            chart = _build_scatter(series)
+        elif chart_type == "radar":
+            chart = _build_radar(spec, series, x_labels)
         else:
             return None
     except Exception as ex:
@@ -115,7 +120,7 @@ def build_native_chart(spec: dict) -> ft.Control | None:
         legend_names = [name for name, _ in series]
     legend = _build_legend(legend_names) if len(legend_names) > 1 else []
 
-    if chart_type == "bar" and len(x_labels) > 6:
+    if chart_type in ("bar", "histogram", "hist") and len(x_labels) > 6:
         chart_container = ft.Container(
             content=ft.Row(
                 [
@@ -289,6 +294,58 @@ def _build_bar(
             else None
         ),
         bottom_axis=fch.ChartAxis(labels=bottom_labels) if bottom_labels else None,
+        animation=ft.Animation(
+            tokens.OUTPUT_THROTTLE_MS, ft.AnimationCurve.EASE_OUT_CUBIC
+        ),
+    )
+
+
+def _build_scatter(
+    series: list[tuple[str, list[float | None]]],
+) -> fch.ScatterChart:
+    """X is the point index; one dot per non-null y, colored per series."""
+    spots = []
+    for i, (_, ys) in enumerate(series):
+        for j, y in enumerate(ys):
+            if y is None:
+                continue
+            spots.append(
+                fch.ScatterChartSpot(
+                    x=j,
+                    y=y,
+                    radius=_SCATTER_DOT_RADIUS,
+                    color=_PALETTE[i % len(_PALETTE)],
+                )
+            )
+    return fch.ScatterChart(spots=spots, interactive=True, expand=True)
+
+
+def _build_radar(
+    spec: dict,
+    series: list[tuple[str, list[float | None]]],
+    x_labels: list[str],
+) -> fch.RadarChart:
+    """Axes come from x labels (or positional index); one filled polygon per series."""
+    n = len(x_labels) or max((len(ys) for _, ys in series), default=0)
+    data_sets = []
+    for i, (_, ys) in enumerate(series):
+        entries = [fch.RadarDataSetEntry(value=v) for v in ys[:n] if v is not None]
+        if not entries:
+            continue
+        color = _PALETTE[i % len(_PALETTE)]
+        data_sets.append(
+            fch.RadarDataSet(
+                entries=entries,
+                fill_color=ft.Colors.with_opacity(tokens.OPACITY_BORDER, color),
+                border_color=color,
+            )
+        )
+    titles = [fch.RadarChartTitle(text=str(lbl)) for lbl in (x_labels[:n] or [])]
+    return fch.RadarChart(
+        data_sets=data_sets,
+        titles=titles,
+        interactive=True,
+        expand=True,
         animation=ft.Animation(
             tokens.OUTPUT_THROTTLE_MS, ft.AnimationCurve.EASE_OUT_CUBIC
         ),

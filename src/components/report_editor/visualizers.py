@@ -144,6 +144,19 @@ def _build_result_table(
     )
 
 
+def _empty_result_note() -> ft.Control:
+    """Subtle placeholder so an empty result never renders as blank space."""
+    return ft.Container(
+        content=ft.Text(
+            "No structured result to display",
+            size=tokens.FONT_XXS,
+            color=ft.Colors.ON_SURFACE_VARIANT,
+            italic=True,
+        ),
+        padding=tokens.SPACE_SM,
+    )
+
+
 def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
     """Renders structured analysis output (DataFrames, Series, Dicts, Arrays, Charts) as native UI."""
     if not ser_res or not isinstance(ser_res, dict):
@@ -385,12 +398,18 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
 
         if controls:
             return ft.Column(controls, spacing=tokens.SPACE_SM)
+        return _empty_result_note()
 
     # 3. Ndarray / List
     if res_type in ("ndarray", "list"):
         list_data = ser_res.get("data") or []
         if not list_data:
             return None
+
+        payload_total = ser_res.get("total_rows")
+        shown_total = (
+            payload_total if isinstance(payload_total, int) else len(list_data)
+        )
 
         if all(isinstance(x, dict) and "type" in x for x in list_data):
             sub_controls = []
@@ -433,13 +452,11 @@ def build_serialized_result_visualizer(ser_res) -> ft.Control | None:
                     if k not in col_names:
                         col_names.append(str(k))
             rows = [[x.get(c) for c in col_names] for x in list_data[:_MAX_TABLE_ROWS]]
-            return _build_result_table(
-                col_names, rows, total=len(list_data), unit="items"
-            )
+            return _build_result_table(col_names, rows, total=shown_total, unit="items")
 
         rows = [[i, x] for i, x in enumerate(list_data[:_MAX_TABLE_ROWS])]
         return _build_result_table(
-            ["Index", "Value"], rows, total=len(list_data), unit="items"
+            ["Index", "Value"], rows, total=shown_total, unit="items"
         )
 
     return None

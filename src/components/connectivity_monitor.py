@@ -1,15 +1,16 @@
 """Global connectivity monitor - shows 'No Internet' banner.
 
 Uses the real ft.Connectivity service (on_change for instant updates)
-plus a polling fallback every 15 s. Never forces re-onboarding when
-offline - just shows a non-intrusive banner with a manual retry button.
+plus a fast polling fallback every 5 s. An OFFLINE declaration always
+requires HTTP-probe confirmation, so transient dropouts (e.g. right
+after the app resumes) never flash the banner. Returning to the
+foreground triggers an immediate silent recheck.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Callable
 
 import flet as ft
 
@@ -18,7 +19,7 @@ from core.state import state
 
 logger = logging.getLogger(__name__)
 
-_CHECK_INTERVAL = 15  # seconds between polls
+_CHECK_INTERVAL = 5  # seconds between polls
 _CHECK_URL = "https://clients3.google.com/generate_204"
 _CHECK_TIMEOUT = 5
 
@@ -53,8 +54,8 @@ async def _check_online(page: ft.Page) -> bool:
     return await _http_online()
 
 
-def build_offline_banner(on_retry: Callable[[], None] | None = None) -> ft.Container:
-    """'No Internet' banner - hidden by default, optional Retry action."""
+def build_offline_banner() -> ft.Container:
+    """'No Internet' banner - hidden by default; visibility is state-driven."""
     controls: list[ft.Control] = [
         ft.Icon(
             ft.Icons.WIFI_OFF_ROUNDED,
@@ -71,18 +72,6 @@ def build_offline_banner(on_retry: Callable[[], None] | None = None) -> ft.Conta
             overflow=ft.TextOverflow.ELLIPSIS,
         ),
     ]
-    if on_retry is not None:
-        controls.append(
-            ft.TextButton(
-                "Retry",
-                icon=ft.Icons.REFRESH_ROUNDED,
-                on_click=lambda _: on_retry(),
-                style=ft.ButtonStyle(
-                    color=ft.Colors.WHITE,
-                    padding=tokens.SPACE_XS,
-                ),
-            )
-        )
     return ft.Container(
         content=ft.Row(
             controls=controls,
@@ -98,7 +87,7 @@ def build_offline_banner(on_retry: Callable[[], None] | None = None) -> ft.Conta
 
 
 async def recheck_connectivity(page: ft.Page) -> bool:
-    """Manual retry: re-probe connectivity and update state immediately.
+    """Re-probe connectivity and update state immediately.
 
     AppShell owns the real banner and re-renders from ``state.is_online``,
     so flipping the observable field is enough to hide/show the banner.
@@ -106,7 +95,7 @@ async def recheck_connectivity(page: ft.Page) -> bool:
     online = await _check_online(page)
     state.is_online = online
     state.gateway_online = online
-    logger.info("Manual connectivity recheck: %s", "online" if online else "offline")
+    logger.info("Connectivity recheck: %s", "online" if online else "offline")
     try:
         if page:
             page.update()
@@ -136,21 +125,38 @@ async def start_connectivity_monitor(page: ft.Page, banner: ft.Container | None 
     cleanly because `asyncio.CancelledError` is a BaseException (it is
     not swallowed by the loop's `except Exception`).
     """
-    # Wire real-time connectivity events if the service was registered
+    # Wire real-time connectivity events if the service was registered.
+    # Going ONLINE is applied instantly; going OFFLINE is only applied after
+    # an HTTP probe confirms it - Android briefly reports NONE when the app
+    # resumes, and trusting it blindly flashed the banner for seconds.
     connectivity: ft.Connectivity | None = getattr(page, "connectivity", None)
 
     if connectivity is not None:
 
-        def _on_change(e: ft.ConnectivityChangeEvent):
-            online = ft.ConnectivityType.NONE not in e.connectivity
+        async def _confirm_offline():
+            online = await _check_online(page)
             _apply_state(online, banner, page)
-            logger.info(
-                "Connectivity changed: %s → %s",
-                e.connectivity,
-                "online" if online else "offline",
-            )
+
+        def _on_change(e: ft.ConnectivityChangeEvent):
+            if ft.ConnectivityType.NONE in e.connectivity:
+                page.run_task(_confirm_offline)
+                logger.info("Connectivity reported NONE - confirming via probe…")
+            else:
+                _apply_state(True, banner, page)
+                logger.info("Connectivity changed: %s → online", e.connectivity)
 
         connectivity.on_change = _on_change
+
+    # Returning to the foreground (mobile resume): recheck immediately so a
+    # stale offline state clears without waiting for the next poll.
+    def _on_lifecycle(e: ft.AppLifecycleStateChangeEvent):
+        if e.state == ft.AppLifecycleState.SHOW:
+            page.run_task(recheck_connectivity, page)
+
+    try:
+        page.on_app_lifecycle_state_change = _on_lifecycle
+    except Exception as ex:
+        logger.debug("Lifecycle events unavailable on this platform: %s", ex)
 
     # Polling loop - covers platforms where on_change may not fire
     while True:

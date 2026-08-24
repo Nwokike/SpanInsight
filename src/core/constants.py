@@ -61,6 +61,7 @@ STORAGE_DEFAULT_GPU = "spaninsight_default_gpu"
 STORAGE_DEFAULT_TPU = "spaninsight_default_tpu"
 STORAGE_DEFAULT_TIMEOUT = "spaninsight_default_timeout"
 STORAGE_KEEP_ALIVE = "spaninsight_keep_alive"
+STORAGE_LAST_PROJECT = "spaninsight_last_project"
 
 # ── Network ─────────────────────────────────────────────────────────
 ERR_NETWORK = "No internet connection. Please check your network and try again."

@@ -142,6 +142,32 @@ class AppState:
             self.session_hardware = project["hardware"]
         if project.get("session_name"):
             self.active_session_name = project["session_name"]
+        # Persist the activation so a cold start resumes where the user stopped.
+        self._persist_last_project()
+
+    def _persist_last_project(self):
+        """Fire-and-forget save of the active project id (best effort)."""
+        try:
+            import asyncio
+
+            page = ft.context.page
+            if not page or not self.active_project_id:
+                return
+
+            async def _save():
+                try:
+                    from core.constants import STORAGE_LAST_PROJECT
+                    from services.storage_service import StorageService
+
+                    await StorageService(page).set(
+                        STORAGE_LAST_PROJECT, self.active_project_id
+                    )
+                except Exception:
+                    pass
+
+            asyncio.get_running_loop().create_task(_save())
+        except Exception:
+            pass
 
     def add_cell(self, cell_type: str = "code", source: str = "") -> dict:
         """Add a new cell to the notebook."""

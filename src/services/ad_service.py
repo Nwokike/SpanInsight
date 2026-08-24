@@ -53,6 +53,7 @@ class AdService:
         self._on_close: Callable | None = None
         self._can_request_ads: bool = True
         self._consent_manager = None
+        self.MIN_INTERSTITIAL_INTERVAL = 90.0
 
     @property
     def banner_id(self) -> str:
@@ -149,14 +150,51 @@ class AdService:
         await self.preload_interstitial(on_close=self._on_close)
 
     async def show_interstitial(self) -> bool:
-        """Show a preloaded interstitial. Returns True if shown."""
-        if self.interstitial:
+        """Show an interstitial: the preloaded instance when available, else a
+        fresh self-loading one (the same proven pattern as rewarded ads).
+
+        A 90 s cooldown keeps session-start and autopilot-completion spots
+        from stacking back-to-back. Returns True when a show was triggered.
+        """
+        if not _HAS_ADS or not self._is_mobile() or not self._can_request_ads:
+            return False
+        import time as _time
+
+        now = _time.monotonic()
+        if (
+            now - getattr(self, "_last_interstitial_at", 0.0)
+            < self.MIN_INTERSTITIAL_INTERVAL
+        ):
+            logger.debug("Interstitial skipped - cooldown active")
+            return False
+
+        if self.interstitial is not None:
+            ad = self.interstitial
+            self.interstitial = None  # flet_ads instances are single-show
             try:
-                await self.interstitial.show()
+                await ad.show()
+                self._last_interstitial_at = now
                 return True
             except Exception:
-                return False
-        return False
+                pass  # stale preload - fall through to the fresh-instance path
+
+        try:
+
+            async def _show(e):
+                await e.control.show()
+                self._last_interstitial_at = _time.monotonic()
+
+            # Strong ref prevents GC before the ad loads and displays.
+            self._active_interstitial = fta.InterstitialAd(
+                unit_id=self.interstitial_id,
+                on_load=lambda e: self.page.run_task(_show, e),
+                on_close=self._handle_close,
+                on_error=lambda e: logger.warning("Interstitial error: %s", e.data),
+            )
+            return True
+        except Exception as err:
+            logger.warning("Fresh interstitial failed: %s", err)
+            return False
 
     async def show_rewarded_interstitial(self, on_close: Callable) -> bool:
         """Show a rewarded interstitial ad, triggering on_close when closed."""
@@ -198,3 +236,16 @@ class AdService:
             else:
                 on_close()
             return False
+
+
+_shared_instance: AdService | None = None
+
+
+def get_ad_service(page: ft.Page) -> AdService:
+    """Process-wide AdService so the startup-preloaded ad is shared by every
+    call site (session creation, autopilot completion) instead of each spot
+    building a throwaway instance whose interstitial was never preloaded."""
+    global _shared_instance
+    if _shared_instance is None:
+        _shared_instance = AdService(page)
+    return _shared_instance

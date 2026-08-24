@@ -307,7 +307,7 @@ def FormsScreen() -> ft.Control:
             on_voice_toggle=lambda e: (
                 page.run_task(on_editor_voice_toggle, e) if page else None
             ),
-            on_publish=lambda e: (
+            on_publish=lambda: (
                 page.run_task(
                     publish_form_async,
                     draft_title,
