@@ -20,6 +20,7 @@ dev = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3.0",
     "ruff",
+    "tabfm>=1.0.1",
 ]
 
 [tool.flet]
