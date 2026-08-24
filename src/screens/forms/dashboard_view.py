@@ -8,6 +8,7 @@ from components.brand_header import build_brand_header
 from components.refresh_button import build_refresh_button
 from core import theme, tokens, utils
 from screens.forms.form_card import render_form_card
+from screens.forms.templates import TEMPLATES
 
 
 def build_forms_dashboard(
@@ -132,6 +133,19 @@ def build_forms_dashboard(
                         color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
                     ft.Container(height=tokens.SPACE_SM),
+                    # Starter templates: one tap fills the prompt (flywheel).
+                    ft.Row(
+                        [
+                            ft.ActionChip(
+                                label=ft.Text(t["title"], size=tokens.FONT_XS),
+                                tooltip=t["prompt"][:120],
+                                on_click=lambda e, _p=t["prompt"]: set_prompt_text(_p),
+                            )
+                            for t in TEMPLATES
+                        ],
+                        spacing=tokens.SPACE_XS,
+                        wrap=True,
+                    ),
                     ft.Row(
                         [
                             ft.TextField(

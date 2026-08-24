@@ -251,8 +251,8 @@ async def test_verify_result_degrades_gracefully_on_bad_payload():
         patch(
             "services.ai.analysis.interpreters.call_gateway", new_callable=AsyncMock
         ) as mock_gw,
-        patch("services.ai.analysis.interpreters.extract_content") as mock_c,
-        patch("services.ai.client.extract_block_by_pattern") as mock_b,
+        patch("services.ai.analysis.interpreters.extract_content"),
+        patch("services.ai.client.extract_block_by_pattern"),
     ):
         mock_gw.side_effect = RuntimeError("gateway down")
         out = await verify_result("q?", "d", {})

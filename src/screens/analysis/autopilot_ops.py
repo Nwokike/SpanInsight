@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 
 import flet as ft
 
@@ -27,8 +28,9 @@ async def submit_prompt_async(
     set_prompt_text,
     on_cell_change,
     colab=None,
+    projects=None,
 ):
-    """Handle natural-language AI query, generate Python, and execute."""
+    """Handle natural-language AI query: plan, execute, verify, remember."""
     if not prompt.strip():
         return
 
@@ -91,8 +93,13 @@ async def submit_prompt_async(
                     show_snack(page, "Not enough credits", error=True)
                 return
 
-        from core.utils import build_analysis_context
+        from core.utils import build_analysis_context, build_findings_context
         from services.ai import analysis as ai_service
+
+        findings_ctx = build_findings_context(getattr(state, "findings", None))
+        analysis_context = build_analysis_context(
+            state.notebook_cells, findings_context=findings_ctx
+        )
 
         # ── Agent pre-plan: decompose the question into 1-3 steps ──
         try:
@@ -108,10 +115,8 @@ async def submit_prompt_async(
             if isinstance(schema_json, dict)
             else ""
         )
-        analysis_context = build_analysis_context(state.notebook_cells)
 
         final_cell = None
-        final_verdict = None
         gaps: list[str] = []
         MAX_STEPS = min(len(steps), 3)
 
@@ -156,13 +161,33 @@ async def submit_prompt_async(
             cell["key_numbers"] = verdict.get("key_numbers", [])
 
             if verdict.get("satisfied") or i == MAX_STEPS - 1:
-                final_verdict = verdict
                 if verdict.get("answer"):
                     cell["narration"] = verdict["answer"]
                 cell["answer_gaps"] = (
                     [] if verdict.get("satisfied") else gaps or verdict.get("gaps", [])
                 )
                 cell["agent_answered"] = True
+                # Verified + satisfied -> commit to Findings Memory so the
+                # project remembers this fact in every future prompt.
+                if (
+                    verdict.get("satisfied")
+                    and projects
+                    and state.active_project_id
+                    and verdict.get("answer")
+                ):
+                    try:
+                        finding = {
+                            "id": cell.get("id"),
+                            "text": verdict["answer"][:280],
+                            "key_numbers": verdict.get("key_numbers", [])[:3],
+                            "question": prompt[:160],
+                            "created_at": time.time(),
+                        }
+                        state.findings = await projects.add_finding(
+                            state.active_project_id, finding
+                        )
+                    except Exception as mem_ex:
+                        logger.warning("Findings memory save skipped: %s", mem_ex)
                 break
             gaps = verdict.get("gaps") or []
             analysis_context = (analysis_context + "\n" + step)[-2500:]

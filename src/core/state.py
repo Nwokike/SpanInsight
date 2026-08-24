@@ -58,6 +58,7 @@ class AppState:
 
     # ── Reports ─────────────────────────────────────────────────────
     user_reports: list[dict] = None
+    findings: list[dict] = None  # verified insights for the active project
 
     # ── AI / Analysis State ─────────────────────────────────────────
     suggestions: list[dict] = None
@@ -106,6 +107,7 @@ class AppState:
         self.projects_list = []
         self.user_projects = {}
         self.user_reports = []
+        self.findings = []
         self.suggestions = []
         self.active_schema_json = {}
         self.analysis_blocks = []
@@ -133,6 +135,7 @@ class AppState:
             "dataset_name", ""
         )
         self.notebook_cells = list(project.get("notebook_cells", []))
+        self.findings = list(project.get("findings") or [])
         self.suggestions = list(project.get("schema_json", {}).get("suggestions", []))
         self.current_df = None
         self.current_df_name = ""

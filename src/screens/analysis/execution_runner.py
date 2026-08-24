@@ -12,7 +12,7 @@ import flet as ft
 from components.notebook_cell.output import parse_cell_outputs
 from core.constants import COLAB_DEFAULT_TIMEOUT
 from core.state import state
-from core.utils import build_analysis_context, show_snack
+from core.utils import build_analysis_context, build_findings_context, show_snack
 from services import ai as ai_service
 from services.colab.introspection import (
     build_result_serialization_code,
@@ -332,7 +332,10 @@ async def run_cell_async(
                             "stdout": stdout_str[:4000],
                             "result": result_str[:4000],
                         }
-                        ctx = build_analysis_context(state.notebook_cells)
+                        ctx = build_analysis_context(
+                            state.notebook_cells,
+                            findings_context=build_findings_context(state.findings),
+                        )
                         schema = state.active_schema_json or {}
                         desc_task = ai_service.describe_result(
                             schema.get("description", "Dataset Analysis"), res_data

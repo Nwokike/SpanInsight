@@ -11,6 +11,7 @@ from core import theme, tokens
 from core.utils import get_banner_ad
 from screens.home.cards import (
     action_card,
+    build_findings_section,
     build_recent_projects_section,
     feature_card,
     step_row,
@@ -400,6 +401,10 @@ def HomeScreen() -> ft.Control:
                 ),
                 on_delete=_show_delete_dialog,
                 on_view_all=lambda _: controller.open_projects_screen(),
+            ),
+            build_findings_section(
+                state.active_project_name or "your project",
+                state.findings or [],
             ),
             _create_home_ad(),
             cloud_banner,

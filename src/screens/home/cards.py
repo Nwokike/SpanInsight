@@ -283,3 +283,93 @@ def build_recent_projects_section(
             tokens.SPACE_MD,
         ),
     )
+
+
+def build_findings_section(
+    project_name: str, findings: list[dict]
+) -> ft.Container | None:
+    """'What we know' — verified insights the project has accumulated."""
+    items = [f for f in (findings or []) if f.get("text")]
+    if not items:
+        return None
+
+    rows = []
+    for f in items[:5]:
+        nums = f.get("key_numbers") or []
+        meta_bits = []
+        if nums:
+            meta_bits.append(" · ".join(str(n) for n in nums[:2]))
+        meta_line = "  ".join(meta_bits)
+        rows.append(
+            ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Icon(
+                            ft.Icons.VERIFIED_ROUNDED,
+                            size=tokens.ICON_XS,
+                            color=theme.SUCCESS,
+                        ),
+                        ft.Column(
+                            [
+                                ft.Text(
+                                    str(f.get("text")),
+                                    size=tokens.FONT_SM,
+                                    max_lines=2,
+                                    overflow=ft.TextOverflow.ELLIPSIS,
+                                ),
+                                ft.Text(
+                                    meta_line or str(f.get("question", ""))[:80],
+                                    size=tokens.FONT_XXS,
+                                    color=ft.Colors.ON_SURFACE_VARIANT,
+                                    max_lines=1,
+                                    overflow=ft.TextOverflow.ELLIPSIS,
+                                )
+                                if (meta_line or f.get("question"))
+                                else ft.Container(height=0),
+                            ],
+                            spacing=tokens.SPACE_MICRO,
+                            expand=True,
+                        ),
+                    ],
+                    spacing=tokens.SPACE_SM,
+                    vertical_alignment=ft.CrossAxisAlignment.START,
+                ),
+                padding=tokens.SPACE_SM,
+                border_radius=tokens.RADIUS_MD,
+                bgcolor=ft.Colors.with_opacity(tokens.OPACITY_FAINT, theme.SUCCESS),
+            )
+        )
+
+    header = ft.Row(
+        [
+            ft.Icon(
+                ft.Icons.PSYCHOLOGY_ROUNDED, size=tokens.ICON_SM, color=theme.ACCENT
+            ),
+            ft.Text(
+                f"What we know · {project_name}",
+                size=tokens.FONT_BODY,
+                weight=ft.FontWeight.W_700,
+                expand=True,
+            ),
+            ft.Text(
+                f"{len(items)} verified",
+                size=tokens.FONT_XXS,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+            ),
+        ],
+        spacing=tokens.SPACE_XS,
+    )
+
+    return ft.Container(
+        content=ft.Column(
+            [header, ft.Column(rows, spacing=tokens.SPACE_XS)],
+            spacing=tokens.SPACE_SM,
+        ),
+        margin=ft.Margin(
+            tokens.SPACE_XL, tokens.SPACE_XS, tokens.SPACE_XL, tokens.SPACE_NONE
+        ),
+        padding=tokens.SPACE_MD,
+        border_radius=tokens.RADIUS_LG,
+        bgcolor=theme.GLASS_BG,
+        border=ft.Border.all(tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR),
+    )

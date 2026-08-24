@@ -318,9 +318,12 @@ def AnalysisScreen() -> Control:
         ):
             set_suggestions_loading(True)
             try:
-                from core.utils import build_analysis_context
+                from core.utils import build_analysis_context, build_findings_context
 
-                ctx = build_analysis_context(state.notebook_cells)
+                ctx = build_analysis_context(
+                    state.notebook_cells,
+                    findings_context=build_findings_context(state.findings),
+                )
                 desc = schema_json.get("description", "")
                 try:
                     result = await ai_service.suggest(
@@ -403,6 +406,7 @@ def AnalysisScreen() -> Control:
                 set_prompt_text,
                 _on_cell_change,
                 colab=colab,
+                projects=services.projects,
             )
         finally:
             try:

@@ -265,13 +265,18 @@ def sanitize_numpy(val):
 
 
 def build_analysis_context(
-    cells: list[dict], max_cells: int = 6, max_chars: int = 2500
+    cells: list[dict],
+    max_cells: int = 6,
+    max_chars: int = 2500,
+    findings_context: str = "",
 ) -> str:
-    """Compact 'recent work' context for AI prompts.
+    """Compact 'recent work' context for AI prompts, plus protected findings.
 
     Long notebooks used to inflate suggest/code prompts (10K+ chars observed
     live), multiplying gateway latency on reasoning models. Only the most
-    recent code steps matter for "do NOT repeat" guidance.
+    recent code steps matter for "do NOT repeat" guidance. Verified findings
+    get their own 1200-char budget prepended, so past knowledge can never be
+    clipped by the recency truncation.
     """
     steps = []
     for c in cells or []:
@@ -283,4 +288,29 @@ def build_analysis_context(
     ctx = "\n".join(steps[-max_cells:])
     if len(ctx) > max_chars:
         ctx = "…\n" + ctx[-max_chars:]
-    return ctx
+
+    findings_block = ""
+    fb = (findings_context or "").strip()
+    if fb:
+        if len(fb) > 1200:
+            fb = fb[:1200]
+        findings_block = (
+            "VERIFIED FINDINGS (established facts about this data):\n" + fb + "\n\n"
+        )
+
+    return findings_block + ctx
+
+
+def build_findings_context(findings: list[dict]) -> str:
+    """Format verified findings for prompt injection (bounded by caller)."""
+    lines = []
+    for f in (findings or [])[:8]:
+        text = str(f.get("text") or "").strip()
+        if not text:
+            continue
+        nums = f.get("key_numbers") or []
+        line = f"• {text}"
+        if nums:
+            line += f" [{'; '.join(str(n) for n in nums[:3])}]"
+        lines.append(line)
+    return "\n".join(lines)

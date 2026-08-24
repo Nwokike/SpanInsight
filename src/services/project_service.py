@@ -149,6 +149,35 @@ class ProjectService:
         await self.save_project(project)
         return project
 
+    async def add_finding(self, project_id: str, finding: dict) -> list[dict]:
+        """Record a verified insight in the project's Findings Memory.
+
+        Deduplicated by ``id`` (the source cell id). Returns the updated list.
+        """
+        proj = await self.get_project(project_id)
+        if not proj:
+            return []
+        fid = finding.get("id")
+        findings = [f for f in (proj.get("findings") or []) if f.get("id") != fid]
+        findings.insert(0, dict(finding))
+        proj["findings"] = findings[:50]  # bounded: memory, not archive
+        await self.save_project(proj)
+        return proj["findings"]
+
+    async def get_findings(self, project_id: str) -> list[dict]:
+        proj = await self.get_project(project_id)
+        return (proj or {}).get("findings") or []
+
+    async def remove_finding(self, project_id: str, finding_id: str) -> list[dict]:
+        proj = await self.get_project(project_id)
+        if not proj:
+            return []
+        proj["findings"] = [
+            f for f in (proj.get("findings") or []) if f.get("id") != finding_id
+        ]
+        await self.save_project(proj)
+        return proj["findings"]
+
     async def save_project(self, project: dict) -> None:
         """Save project state, convert notebook cells to .ipynb JSON format, and update index timestamp."""
         project_id = project["id"]
