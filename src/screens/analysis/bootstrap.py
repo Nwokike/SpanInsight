@@ -29,17 +29,25 @@ async def setup_colab_environment(colab, session_name: str, is_dark: bool = Fals
         # Fast Excel engine: stock VMs lack python-calamine, so
         # pd.read_excel(engine='calamine') silently fell back to openpyxl,
         # which chokes on large workbooks (hundreds of MB of worksheet XML).
-        # Install once per VM, quietly, and never fail the bootstrap over it.
-        "import importlib.util as _ilu, subprocess as _sp, sys as _sys\n"
+        # Install once per VM - prefer uv (parallel downloads) with plain pip
+        # as fallback - and never fail the bootstrap over it.
+        "import importlib.util as _ilu, shutil as _sh, subprocess as _sp\n"
+        "import sys as _sys, os as _os\n"
         "if _ilu.find_spec('python_calamine') is None:\n"
-        "    try:\n"
-        "        _sp.run(\n"
-        "            [_sys.executable, '-m', 'pip', 'install', '-q', 'python-calamine'],\n"
-        "            timeout=180,\n"
-        "        )\n"
-        "        print('\\u2713 Installed python-calamine (fast Excel engine)')\n"
-        "    except Exception as _cal_ex:\n"
-        "        print(f'calamine install skipped: {_cal_ex}')\n"
+        "    _attempts = []\n"
+        "    if _sh.which('uv'):\n"
+        "        _flags = [] if _os.environ.get('VIRTUAL_ENV') else ['--system']\n"
+        "        _attempts.append(['uv', 'pip', 'install', '-q'] + _flags + ['python-calamine'])\n"
+        "    _attempts.append([_sys.executable, '-m', 'pip', 'install', '-q', 'python-calamine'])\n"
+        "    for _cmd in _attempts:\n"
+        "        try:\n"
+        "            _res = _sp.run(_cmd, timeout=180)\n"
+        "            _ilu.invalidate_caches()\n"
+        "            if _res.returncode == 0 and _ilu.find_spec('python_calamine'):\n"
+        "                print('\\u2713 Installed python-calamine via ' + _cmd[0])\n"
+        "                break\n"
+        "        except Exception:\n"
+        "            continue\n"
         "try:\n"
         "    import seaborn as sns\n"
         f"    sns.set_theme(style='{sns_style}')\n"
