@@ -323,116 +323,7 @@ def build_form_detail_view(
         )
     )
 
-    # 4. Form Fields Preview Section
-    if fields:
-        field_controls = []
-        for idx, field in enumerate(fields):
-            label = field.get("label", field.get("name", f"Field {idx + 1}"))
-            ftype = field.get("type", "text")
-            required = field.get("required", False)
-            options = field.get("options", [])
-            field_controls.append(
-                ft.Container(
-                    content=ft.Row(
-                        [
-                            ft.Icon(
-                                TYPE_ICONS.get(ftype, ft.Icons.TEXT_FIELDS),
-                                size=tokens.ICON_SM,
-                                color=theme.ACCENT,
-                            ),
-                            ft.Column(
-                                [
-                                    ft.Row(
-                                        [
-                                            ft.Text(
-                                                label,
-                                                size=tokens.FONT_BODY,
-                                                weight=ft.FontWeight.W_500,
-                                                expand=True,
-                                            ),
-                                            ft.Container(
-                                                content=ft.Text(
-                                                    ftype.upper(),
-                                                    size=tokens.FONT_XS,
-                                                    color=theme.PRIMARY,
-                                                    weight="bold",
-                                                ),
-                                                padding=ft.Padding(
-                                                    tokens.SPACE_SM_XS,
-                                                    tokens.SPACE_XXS,
-                                                    tokens.SPACE_SM_XS,
-                                                    tokens.SPACE_XXS,
-                                                ),
-                                                border_radius=tokens.RADIUS_XS,
-                                                bgcolor=ft.Colors.with_opacity(
-                                                    tokens.OPACITY_MUTED,
-                                                    theme.PRIMARY,
-                                                ),
-                                            ),
-                                            ft.Text(
-                                                "*",
-                                                size=tokens.FONT_MD,
-                                                color=theme.ERROR,
-                                                weight="bold",
-                                            )
-                                            if required
-                                            else ft.Container(),
-                                        ],
-                                        spacing=tokens.SPACE_SM_XS,
-                                    ),
-                                    ft.Text(
-                                        ", ".join(options[:5]),
-                                        size=tokens.FONT_XS,
-                                        color=ft.Colors.ON_SURFACE_VARIANT,
-                                        max_lines=1,
-                                        overflow=ft.TextOverflow.ELLIPSIS,
-                                    )
-                                    if options
-                                    else ft.Container(),
-                                ],
-                                spacing=tokens.SPACE_XXS,
-                                expand=True,
-                            ),
-                        ],
-                        spacing=tokens.SPACE_MD_SM,
-                        vertical_alignment=ft.CrossAxisAlignment.START,
-                    ),
-                    padding=ft.Padding(
-                        tokens.SPACE_MD,
-                        tokens.SPACE_SM,
-                        tokens.SPACE_MD,
-                        tokens.SPACE_SM,
-                    ),
-                    border_radius=tokens.RADIUS_SM,
-                    bgcolor=ft.Colors.with_opacity(
-                        tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE
-                    ),
-                )
-            )
-
-        controls.append(
-            ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Text(
-                            f"Survey Schema ({len(fields)} {'Question' if len(fields) == 1 else 'Questions'})",
-                            weight="bold",
-                            size=tokens.FONT_BODY,
-                        ),
-                        ft.Column(field_controls, spacing=tokens.SPACE_XS),
-                    ],
-                    spacing=tokens.SPACE_SM,
-                ),
-                padding=ft.Padding(
-                    tokens.SPACE_XL,
-                    tokens.SPACE_SM,
-                    tokens.SPACE_XL,
-                    tokens.SPACE_SM,
-                ),
-            )
-        )
-
-    # 5. Responses Table or Sleek Empty State
+    # 4. Responses Table or Sleek Empty State
     responses = form.get("_responses", [])
     if responses:
         rows_data = [r["data"] for r in responses[:50]]
@@ -574,7 +465,7 @@ def build_form_detail_view(
             )
         )
 
-    # 6. Mobile Ad slot (if mobile)
+    # 5. Sponsor slot between responses and the field reference
     if page and page.platform in (ft.PagePlatform.ANDROID, ft.PagePlatform.IOS):
         controls.append(
             ft.Container(
@@ -600,6 +491,115 @@ def build_form_detail_view(
                     tokens.DIVIDER_THICKNESS, theme.GLASS_BORDER_COLOR
                 ),
                 margin=ft.Margin(
+                    tokens.SPACE_XL,
+                    tokens.SPACE_SM,
+                    tokens.SPACE_XL,
+                    tokens.SPACE_SM,
+                ),
+            )
+        )
+
+    # 6. Form Fields Preview Section
+    if fields:
+        field_controls = []
+        for idx, field in enumerate(fields):
+            label = field.get("label", field.get("name", f"Field {idx + 1}"))
+            ftype = field.get("type", "text")
+            required = field.get("required", False)
+            options = field.get("options", [])
+            field_controls.append(
+                ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Icon(
+                                TYPE_ICONS.get(ftype, ft.Icons.TEXT_FIELDS),
+                                size=tokens.ICON_SM,
+                                color=theme.ACCENT,
+                            ),
+                            ft.Column(
+                                [
+                                    ft.Row(
+                                        [
+                                            ft.Text(
+                                                label,
+                                                size=tokens.FONT_BODY,
+                                                weight=ft.FontWeight.W_500,
+                                                expand=True,
+                                            ),
+                                            ft.Container(
+                                                content=ft.Text(
+                                                    ftype.upper(),
+                                                    size=tokens.FONT_XS,
+                                                    color=theme.PRIMARY,
+                                                    weight="bold",
+                                                ),
+                                                padding=ft.Padding(
+                                                    tokens.SPACE_SM_XS,
+                                                    tokens.SPACE_XXS,
+                                                    tokens.SPACE_SM_XS,
+                                                    tokens.SPACE_XXS,
+                                                ),
+                                                border_radius=tokens.RADIUS_XS,
+                                                bgcolor=ft.Colors.with_opacity(
+                                                    tokens.OPACITY_MUTED,
+                                                    theme.PRIMARY,
+                                                ),
+                                            ),
+                                            ft.Text(
+                                                "*",
+                                                size=tokens.FONT_MD,
+                                                color=theme.ERROR,
+                                                weight="bold",
+                                            )
+                                            if required
+                                            else ft.Container(),
+                                        ],
+                                        spacing=tokens.SPACE_SM_XS,
+                                    ),
+                                    ft.Text(
+                                        ", ".join(options[:5]),
+                                        size=tokens.FONT_XS,
+                                        color=ft.Colors.ON_SURFACE_VARIANT,
+                                        max_lines=1,
+                                        overflow=ft.TextOverflow.ELLIPSIS,
+                                    )
+                                    if options
+                                    else ft.Container(),
+                                ],
+                                spacing=tokens.SPACE_XXS,
+                                expand=True,
+                            ),
+                        ],
+                        spacing=tokens.SPACE_MD_SM,
+                        vertical_alignment=ft.CrossAxisAlignment.START,
+                    ),
+                    padding=ft.Padding(
+                        tokens.SPACE_MD,
+                        tokens.SPACE_SM,
+                        tokens.SPACE_MD,
+                        tokens.SPACE_SM,
+                    ),
+                    border_radius=tokens.RADIUS_SM,
+                    bgcolor=ft.Colors.with_opacity(
+                        tokens.OPACITY_SUBTLE, ft.Colors.ON_SURFACE
+                    ),
+                )
+            )
+
+        controls.append(
+            ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Text(
+                            f"Survey Schema ({len(fields)} {'Question' if len(fields) == 1 else 'Questions'})",
+                            weight="bold",
+                            size=tokens.FONT_BODY,
+                        ),
+                        ft.Column(field_controls, spacing=tokens.SPACE_XS),
+                    ],
+                    spacing=tokens.SPACE_SM,
+                ),
+                padding=ft.Padding(
                     tokens.SPACE_XL,
                     tokens.SPACE_SM,
                     tokens.SPACE_XL,

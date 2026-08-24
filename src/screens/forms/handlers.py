@@ -195,6 +195,14 @@ async def publish_form_async(
                 )
                 await set_clipboard(page, result["url"])
             await load_forms_fn()
+            # Interstitial after publishing (mobile; cooldown-guarded).
+            if page:
+                try:
+                    from services.ad_service import get_ad_service
+
+                    page.run_task(get_ad_service(page).show_interstitial)
+                except Exception:
+                    pass
         else:
             show_error("Publish failed. Please check connection or try again.")
     except Exception as err:
@@ -331,6 +339,15 @@ async def request_update_live_form_async(
         show_error(f"Cannot save: {error}")
         return
 
+    # Compute the diff from SERVER TRUTH, not from a possibly-stale snapshot:
+    # re-fetch the live definition and the current response count at the
+    # moment the user asks to update, so every line in the dialog is current.
+    fresh = await forms_service.get_form(form["id"])
+    resp_data = await forms_service.get_responses(form["id"], active_project_id)
+    if fresh:
+        form = {**form, "schema_json": fresh.get("schema_json", [])}
+    total_responses = resp_data.get("count", len(resp_data.get("responses", [])))
+
     old_fields = _form_schema_fields(form)
     old_names = [str(f.get("name")) for f in old_fields if f.get("name")]
     new_names = {str(f.get("name")) for f in draft_schema if f.get("name")}
@@ -338,29 +355,23 @@ async def request_update_live_form_async(
     removed = [f for f in old_fields if str(f.get("name")) not in new_names]
     added = [f for f in draft_schema if str(f.get("name")) not in set(old_names)]
 
-    # Stored answers that will be purged along with the removed questions.
-    removed_keys = {str(f.get("name")) for f in removed}
-    purge_answers = 0
-    for r in form.get("_responses", []):
-        data = r.get("data", {})
-        purge_answers += sum(1 for k in data if k in removed_keys)
-
     lines = [
-        f"• {kept_count} question(s) unchanged - their collected answers are preserved.",
+        f"• Questions you keep ({kept_count}) keep all their collected answers.",
     ]
     if removed:
         shown = ", ".join(
             "'" + str(f.get("label") or f.get("name")) + "'" for f in removed[:5]
         ) + ("…" if len(removed) > 5 else "")
         lines.append(
-            f"• {len(removed)} question(s) removed ({shown}) - "
-            f"{purge_answers} stored answer(s) will be PERMANENTLY deleted."
+            f"• Removed ({len(removed)}): {shown} - EVERY stored answer for "
+            "these questions is permanently deleted from the database."
         )
     if added:
-        lines.append(
-            f"• {len(added)} new question(s) - older submissions show blank for these."
-        )
-    lines.append("The share link stays the same.")
+        lines.append(f"• New ({len(added)}): older submissions show blank for these.")
+    lines.append(
+        f"This form has {total_responses} response(s) right now. "
+        "The share link stays the same."
+    )
 
     def _close(_=None):
         page.pop_dialog()
@@ -400,6 +411,14 @@ async def request_update_live_form_async(
                     success=True,
                     duration=tokens.SNACK_DURATION_MD_MS,
                 )
+                # Interstitial after the update completes (mobile; cooldown-
+                # guarded so it can never feel spammy).
+                try:
+                    from services.ad_service import get_ad_service
+
+                    page.run_task(get_ad_service(page).show_interstitial)
+                except Exception:
+                    pass
             else:
                 show_error("Update failed. Please check connection and try again.")
         except Exception as err:
