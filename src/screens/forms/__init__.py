@@ -210,6 +210,13 @@ def FormsScreen() -> ft.Control:
         )
         form["_responses"] = resp_data.get("responses", [])
         form["_count"] = resp_data.get("count", 0)
+        # The list route omits schema_json - hydrate the full definition so
+        # the field preview is populated.
+        if not _form_schema_fields(form):
+            full = await forms_service.get_form(form["id"])
+            if full:
+                form["schema_json"] = full.get("schema_json", [])
+                form.setdefault("expires_at", full.get("expires_at", ""))
         set_active_form(form)
         set_mode("detail")
 
@@ -221,6 +228,31 @@ def FormsScreen() -> ft.Control:
         set_draft_schema(_form_schema_fields(edit_target))
         set_editing_form_id(str(edit_target.get("id", "")))
         set_mode("editor")
+
+    async def on_edit_form_async(edit_target: dict):
+        """Hydrate the form's questions first, then open the editor.
+
+        The list route omits schema_json, so editing straight from the
+        dashboard must fetch the full definition before rendering.
+        """
+        if not _form_schema_fields(edit_target):
+            full = await forms_service.get_form(edit_target.get("id", ""))
+            if not full:
+                _show_error(
+                    "Could not load this form's questions. Check connection "
+                    "or try again."
+                )
+                return
+            edit_target = {
+                **edit_target,
+                **{
+                    k: full[k]
+                    for k in ("schema_json", "expires_at", "is_active")
+                    if k in full
+                },
+            }
+            set_active_form(edit_target)
+        on_edit_form(edit_target)
 
     async def on_copy_link(form_id: str):
         from core.constants import FORMS_PUBLIC_BASE_URL
@@ -486,7 +518,7 @@ def FormsScreen() -> ft.Control:
             form=active_form,
             on_back=lambda _: (set_active_form(None), set_mode("dashboard")),
             on_copy_link=lambda fid: page.run_task(on_copy_link, fid) if page else None,
-            on_edit=on_edit_form,
+            on_edit=lambda f: page.run_task(on_edit_form_async, f) if page else None,
             on_renew=on_renew_clicked,
             on_download_csv=lambda f: (
                 page.run_task(download_csv_async, f, page, _show_error)

@@ -183,6 +183,26 @@ async def list_forms(project_id: str = "") -> list[dict]:
         return []
 
 
+async def get_form(form_id: str) -> dict | None:
+    """Fetch one form's FULL definition (including parsed schema_json).
+
+    Uses the public GET /forms/{id} route - the project list route omits
+    schema_json to keep listings light, so any edit/detail flow that needs
+    the actual questions must hydrate through here.
+    """
+    if not form_id:
+        return None
+    try:
+        client = get_client()
+        resp = await client.get(f"{API_BASE_URL}/forms/{form_id}", timeout=10.0)
+        if resp.status_code == 200:
+            return resp.json()
+        return None
+    except Exception as e:
+        logger.error("Get form error: %s", e)
+        return None
+
+
 async def get_responses(form_id: str, project_id: str = "") -> dict:
     """Fetch all responses for a form inside a project. Returns {count, responses}."""
     resolved_project_id = _resolve_project_id(project_id)
