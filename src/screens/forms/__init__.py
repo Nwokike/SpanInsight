@@ -310,13 +310,15 @@ def FormsScreen() -> ft.Control:
             on_publish=lambda: (
                 page.run_task(
                     publish_form_async,
+                    state.active_project_id,
                     draft_title,
                     draft_desc,
                     draft_schema,
-                    state.active_project_id,
                     page,
                     set_is_publishing,
                     set_mode,
+                    set_draft_schema,
+                    set_prompt_text,
                     _load_forms,
                     _show_error,
                 )
