@@ -405,6 +405,31 @@ def FormsScreen() -> ft.Control:
             len(rows),
         )
 
+        # Auto-connect Colab BEFORE handing off — the Analysis handoff waits
+        # for a live session, and a cold app would otherwise park the import
+        # silently until the user connects manually.
+        if not state.active_session_name or not state.colab_connected:
+            if page:
+                show_snack(
+                    page,
+                    "🔄 Connecting Colab to load your survey…",
+                    duration=3000,
+                )
+            from screens.analysis.colab_connection import connect_colab_async
+
+            await connect_colab_async(services.colab, page, lambda _v: None)
+        if not state.active_session_name:
+            _show_error(
+                "Could not connect to Colab. Connect in Analysis, then tap "
+                "Analyze again — your export is ready."
+            )
+            return
+
+        logger.info(
+            "Survey export ready: %s (%d rows) -> pending handoff",
+            file_name,
+            len(rows),
+        )
         state.pending_dataset_load = {
             "name": file_name,
             "upload_local_path": local_path,

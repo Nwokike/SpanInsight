@@ -158,5 +158,5 @@ class CreditService:
         val = await self._storage.get(STORAGE_CREDITS)
         try:
             return int(val) if val else DAILY_FREE_CREDITS
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return DAILY_FREE_CREDITS

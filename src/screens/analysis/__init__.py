@@ -342,8 +342,20 @@ def AnalysisScreen() -> Control:
     # ── Cross-screen dataset handoff ────────────────────────────
     async def _process_pending_dataset_load():
         pending = state.pending_dataset_load
-        if not pending or not session_name:
+        if not pending:
+            logger.info(
+                "[handoff] effect fired with no pending import (session=%r)",
+                session_name,
+            )
             return
+        if not session_name:
+            logger.info(
+                "[handoff] import '%s' waiting for a Colab session — will "
+                "resume automatically once connected",
+                pending.get("name"),
+            )
+            return
+        logger.info("[handoff] consuming import '%s'", pending.get("name"))
         state.pending_dataset_load = None
         from screens.analysis.dataset_ops import run_dataset_import_dialog
 
