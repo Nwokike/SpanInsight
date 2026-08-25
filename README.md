@@ -24,9 +24,9 @@
 | :---: | :---: | :--- |
 | 🤖 **Android (Google Play)** | [![Play Store](https://img.shields.io/badge/Google_Play-414141?style=flat-square&logo=google-play&logoColor=white)](https://play.google.com/store/apps/details?id=com.spaninsight.app) | Recommended for Android phone and tablet users |
 | 🪟 **Windows** | [![Windows Release](https://img.shields.io/badge/Download_Windows_Release-0078D6?style=flat-square&logo=windows&logoColor=white)](https://github.com/Nwokike/spaninsight/releases/latest/download/SpanInsight_Setup.exe) | Automated standalone setup installer with desktop shortcut integration |
-| 🐧 **Linux (Debian/Ubuntu)** | [![Linux DEB](https://img.shields.io/badge/Download_Linux_DEB-FCC624?style=flat-square&logo=linux&logoColor=black)](https://github.com/Nwokike/spaninsight/releases/latest) | Desktop package tailored for Ubuntu, Debian, Linux Mint & Pop!_OS |
-| 🎩 **Linux (Fedora/RHEL)** | [![Linux RPM](https://img.shields.io/badge/Download_Linux_RPM-E91E63?style=flat-square&logo=redhat&logoColor=white)](https://github.com/Nwokike/spaninsight/releases/latest) | Desktop package tailored for Fedora, openSUSE, RHEL & CentOS |
-| 📦 **Linux (Universal Portable)** | [![Linux TAR.GZ](https://img.shields.io/badge/Download_Linux_TAR.GZ-9C27B0?style=flat-square&logo=linux&logoColor=white)](https://github.com/Nwokike/spaninsight/releases/latest) | Universal standalone portable archive for Arch, Alpine, Steam Deck & all distros |
+| 🐧 **Linux (Debian/Ubuntu)** | [![Linux DEB](https://img.shields.io/badge/Download_Linux_DEB-FCC624?style=flat-square&logo=linux&logoColor=black)](https://github.com/Nwokike/spaninsight/releases/latest/download/SpanInsight_amd64.deb) | Desktop package tailored for Ubuntu, Debian, Linux Mint & Pop!_OS |
+| 🎩 **Linux (Fedora/RHEL)** | [![Linux RPM](https://img.shields.io/badge/Download_Linux_RPM-E91E63?style=flat-square&logo=redhat&logoColor=white)](https://github.com/Nwokike/spaninsight/releases/latest/download/SpanInsight_x86_64.rpm) | Desktop package tailored for Fedora, openSUSE, RHEL & CentOS |
+| 📦 **Linux (Universal Portable)** | [![Linux TAR.GZ](https://img.shields.io/badge/Download_Linux_TAR.GZ-9C27B0?style=flat-square&logo=linux&logoColor=white)](https://github.com/Nwokike/spaninsight/releases/latest/download/SpanInsight_linux_x86_64.tar.gz) | Universal standalone portable archive for Arch, Alpine, Steam Deck & all distros |
 
 ### Android Architecture Build Splits (Direct APK)
 
