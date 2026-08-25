@@ -252,6 +252,13 @@ async def run_cell_async(
                 break
             if heal_attempt >= MAX_HEAL_ATTEMPTS:
                 cell["failed"] = True
+                if page:
+                    show_snack(
+                        page,
+                        "🩹 Self-healing couldn't fix this cell after "
+                        f"{MAX_HEAL_ATTEMPTS} attempts.",
+                        error=True,
+                    )
                 break
             if not await heal_cell_once(cell, page, on_cell_change, heal_attempt):
                 cell["failed"] = True

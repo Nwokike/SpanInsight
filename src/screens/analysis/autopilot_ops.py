@@ -10,7 +10,12 @@ import flet as ft
 
 from core.constants import COST_AUTOPILOT, COST_CUSTOM_PROMPT
 from core.state import state
-from core.utils import show_snack
+from core.utils import (
+    build_analysis_context,
+    build_findings_context,
+    show_snack,
+    user_friendly_error,
+)
 
 logger = logging.getLogger("AutopilotHandlers")
 
@@ -93,8 +98,7 @@ async def submit_prompt_async(
                     show_snack(page, "Not enough credits", error=True)
                 return
 
-        from core.utils import build_analysis_context, build_findings_context
-        from services.ai import analysis as ai_service
+                from services.ai import analysis as ai_service
 
         findings_ctx = build_findings_context(getattr(state, "findings", None))
         analysis_context = build_analysis_context(
@@ -115,12 +119,16 @@ async def submit_prompt_async(
             if isinstance(schema_json, dict)
             else ""
         )
+        state.autopilot_cancelled = False  # shared Stop control for Insight runs
 
         final_cell = None
         gaps: list[str] = []
         MAX_STEPS = min(len(steps), 3)
 
         for i, step in enumerate(steps[:MAX_STEPS]):
+            if state.autopilot_cancelled:
+                logger.info("Insight run cancelled by user before step %d", i + 1)
+                break
             state.analysis_stage = 2
             state.analysis_stage_text = f"Step {i + 1}/{MAX_STEPS}: {step[:70]}"
 
@@ -145,6 +153,11 @@ async def submit_prompt_async(
             state.analysis_stage_text = "Executing in Colab kernel & rendering visuals…"
             await run_cell_fn(cell["id"])
             final_cell = cell
+
+            if state.autopilot_cancelled:
+                cell["answer_gaps"] = ["Cancelled by user."]
+                cell["agent_answered"] = True
+                break
 
             if cell.get("failed"):
                 gaps = ["Execution failed even after self-healing."]
@@ -192,7 +205,15 @@ async def submit_prompt_async(
             gaps = verdict.get("gaps") or []
             analysis_context = (analysis_context + "\n" + step)[-2500:]
 
-        if final_cell is not None and not final_cell.get("agent_answered"):
+        if final_cell is None:
+            # No code could be generated for any step — say so instead of a
+            # silent no-op.
+            show_snack(
+                page,
+                "Hmm — I couldn't generate analysis for that. Try rephrasing.",
+                error=True,
+            )
+        elif not final_cell.get("agent_answered"):
             # Degraded path (verify unavailable / failed execution): the normal
             # post-exec narration from run_cell_async stands as-is.
             final_cell["answer_gaps"] = gaps
@@ -204,7 +225,12 @@ async def submit_prompt_async(
         logger.error("Prompt submission failed: %s", e)
         if page:
             try:
-                show_snack(page, f"Error: {e}", error=True)
+                show_snack(
+                    page,
+                    "Analysis couldn't complete — your data is unchanged. "
+                    + user_friendly_error(e),
+                    error=True,
+                )
             except Exception:
                 pass
     finally:

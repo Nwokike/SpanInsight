@@ -109,7 +109,51 @@ async def on_view_live(page: ft.Page, ui_state, report_service, ad_service):
 async def on_toggle_featured(
     page: ft.Page, ui_state, report_service, is_featured: bool
 ):
-    """Real-time handler when user flips 'Feature on spaninsight.com' toggle."""
+    """Handler when user flips 'Feature on spaninsight.com' toggle.
+
+    Featuring PUBLISHES to the public community gallery — the ON direction
+    confirms first; toggling OFF applies immediately.
+    """
+    if is_featured and page:
+
+        async def _confirmed(_=None):
+            page.pop_dialog()
+            await _apply_feature_toggle(page, ui_state, report_service, True)
+
+        def _cancel(_=None):
+            ui_state.is_public["value"] = False
+            ui_state.rebuild()
+            page.pop_dialog()
+
+        page.show_dialog(
+            ft.AlertDialog(
+                modal=True,
+                title=ft.Text("Feature publicly?"),
+                content=ft.Container(
+                    content=ft.Text(
+                        "This publishes your report to the public "
+                        "spaninsight.com community gallery — anyone can view "
+                        "it while featured. Continue?",
+                        size=tokens.FONT_BODY,
+                    ),
+                    width=tokens.DIALOG_WIDTH_SM,
+                ),
+                actions=[
+                    ft.TextButton("Cancel", on_click=_cancel),
+                    ft.FilledButton(
+                        "Feature", on_click=lambda e: page.run_task(_confirmed)
+                    ),
+                ],
+            )
+        )
+        return
+
+    await _apply_feature_toggle(page, ui_state, report_service, is_featured)
+
+
+async def _apply_feature_toggle(
+    page: ft.Page, ui_state, report_service, is_featured: bool
+):
     report = ui_state.active_report["data"]
     if not report:
         return

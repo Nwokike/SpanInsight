@@ -56,11 +56,15 @@ async def compile_brief_async(
         return None
 
     blocks = [build_report_block_from_cell(c) for c in chosen]
-    # Drop blocks with nothing to show.
+    # Drop blocks with nothing to show. Text-only VERIFIED answers count:
+    # their narration IS the finding.
     blocks = [
         b
         for b in blocks
-        if b.get("figure_png_b64") or b.get("stdout") or b.get("serialized_result")
+        if b.get("figure_png_b64")
+        or b.get("stdout")
+        or b.get("serialized_result")
+        or b.get("description")
     ]
     if not blocks:
         return None
@@ -83,7 +87,12 @@ def brief_to_html(report: dict) -> bytes:
     giving mobile users a deliverable without an in-app rendering engine.
     """
     esc = lambda s: (
-        str(s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        str(s or "")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&#39;")
     )
     parts = [
         "<!doctype html><html><head><meta charset='utf-8'>",

@@ -82,7 +82,7 @@ def _build_result_table(
     ]
 
     data_rows = []
-    for row in rows:
+    for row in rows[:_MAX_TABLE_ROWS]:
         cells = []
         for cell in row:
             cells.append(

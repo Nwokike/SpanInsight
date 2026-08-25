@@ -12,7 +12,12 @@ from flet import Control
 from components.suggestion_chips import build_suggestion_chips
 from core import tokens
 from core.state import state
-from core.utils import show_snack
+from core.utils import (
+    build_analysis_context,
+    build_findings_context,
+    show_snack,
+    user_friendly_error,
+)
 from screens.analysis.export_ops import export_ipynb_async
 from screens.analysis.fab_menu import build_analysis_fab
 from screens.analysis.handlers import (
@@ -325,8 +330,6 @@ def AnalysisScreen() -> Control:
         ):
             set_suggestions_loading(True)
             try:
-                from core.utils import build_analysis_context, build_findings_context
-
                 ctx = build_analysis_context(
                     state.notebook_cells,
                     findings_context=build_findings_context(state.findings),
@@ -577,6 +580,14 @@ def AnalysisScreen() -> Control:
                     show_snack(
                         page, f"🌐 Fetched {name} — loading dataset…", success=True
                     )
+                elif len(raw) > 2_000_000:
+                    show_snack(
+                        page,
+                        "That paste is too large (2 MB limit). Save it as a "
+                        "file and use Import Dataset.",
+                        error=True,
+                        duration=4000,
+                    )
                 else:
                     import tempfile
                     from pathlib import Path as _Path
@@ -596,7 +607,12 @@ def AnalysisScreen() -> Control:
                     )
             except Exception as ex:
                 logger.error("Quick import failed: %s", ex)
-                show_snack(page, f"⚠️ Import failed: {ex}", error=True)
+                show_snack(
+                    page,
+                    "⚠️ Import failed: "
+                    + user_friendly_error(ex, "That URL or data couldn't be imported."),
+                    error=True,
+                )
 
         page.show_dialog(
             ft.AlertDialog(
@@ -780,7 +796,7 @@ def AnalysisScreen() -> Control:
         steps=state.autopilot_steps if is_autopilot_active else None,
         on_stop=(
             (lambda _: setattr(state, "autopilot_cancelled", True))
-            if is_autopilot_active
+            if is_ai_active
             else None
         ),
         is_expanded=is_pill_expanded,

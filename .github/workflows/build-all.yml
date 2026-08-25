@@ -22,6 +22,8 @@ env:
   PYTHONUTF8: "1"
   FLET_CLI_NO_RICH_OUTPUT: "1"
   UV_PYTHON: "3.14"
+  # Tag pushes (vX.Y.Z): add a job-level step setting GITHUB_ENV BUILD_VERSION
+  # from ${GITHUB_REF_NAME#v}; manual runs pass inputs.build_version.
   BUILD_VERSION: ${{ inputs.build_version || '2.0.0' }}
   BUILD_NUMBER: ${{ inputs.build_number || '7' }}
 

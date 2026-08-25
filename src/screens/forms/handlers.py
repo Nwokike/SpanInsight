@@ -9,6 +9,7 @@ import logging
 import flet as ft
 
 from core import theme, tokens
+from core.utils import resolve_save_path, set_clipboard, show_snack, user_friendly_error
 from services import ai as ai_service
 from services import forms_service
 
@@ -100,7 +101,9 @@ async def create_form_schema_async(
         set_draft_desc(schema.get("description", ""))
         set_mode("editor")
     except Exception as err:
-        show_error(f"Error: {err}")
+        show_error(
+            user_friendly_error(err, "Couldn't generate the form. Try rephrasing.")
+        )
         logger.exception("Create form error")
     finally:
         set_is_creating(False)
@@ -153,7 +156,9 @@ async def ai_edit_schema_async(
                 set_draft_desc(schema.get("description", draft_desc))
                 set_ai_edit_text("")
         except Exception as err:
-            show_error(f"AI edit failed: {err}")
+            show_error(
+                user_friendly_error(err, "AI edit failed. Try again or rephrase.")
+            )
         finally:
             set_is_ai_editing(False)
 
@@ -185,8 +190,6 @@ async def publish_form_async(
             set_draft_schema([])
             set_prompt_text("")
             if page:
-                from core.utils import set_clipboard, show_snack
-
                 show_snack(
                     page,
                     f"Published! Link: {result['url']}",
@@ -206,7 +209,11 @@ async def publish_form_async(
         else:
             show_error("Publish failed. Please check connection or try again.")
     except Exception as err:
-        show_error(f"Publish error: {err}")
+        show_error(
+            user_friendly_error(
+                err, "Publish failed. Check your connection and try again."
+            )
+        )
     finally:
         set_is_publishing(False)
 
@@ -235,8 +242,6 @@ async def delete_form_async(
             set_active_form(None)
             set_mode("dashboard")
             if page:
-                from core.utils import show_snack
-
                 show_snack(
                     page,
                     "Form permanently deleted from project.",
@@ -284,8 +289,6 @@ async def download_csv_async(form: dict, page: ft.Page, show_error):
     import os
     from pathlib import Path
 
-    from core.utils import resolve_save_path, show_snack
-
     try:
         safe_name = form.get("title", "form").replace(" ", "_").replace("/", "-")
         default_name = f"{safe_name}_responses.csv"
@@ -306,7 +309,7 @@ async def download_csv_async(form: dict, page: ft.Page, show_error):
                 duration=tokens.SNACK_DURATION_MD_MS,
             )
     except Exception as err:
-        show_error(f"Save failed: {err}")
+        show_error(user_friendly_error(err, "Save failed. Please try again."))
 
 
 async def request_update_live_form_async(
@@ -403,7 +406,6 @@ async def request_update_live_form_async(
                 set_draft_schema([])
                 set_prompt_text("")
                 await load_forms_fn()
-                from core.utils import show_snack
 
                 show_snack(
                     page,
@@ -422,7 +424,7 @@ async def request_update_live_form_async(
             else:
                 show_error("Update failed. Please check connection and try again.")
         except Exception as err:
-            show_error(f"Update error: {err}")
+            show_error(user_friendly_error(err, "Update failed. Please try again."))
         finally:
             set_is_publishing(False)
 

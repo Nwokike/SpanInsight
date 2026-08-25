@@ -1,7 +1,8 @@
 """AdMob service - banner and interstitial ads.
 
-Direct port of KTV Player's production AdService pattern.
-Uses test Ad IDs until Play Store launch.
+Production AdService pattern (KTV Player lineage) with real Ad Unit IDs and
+UMP consent gating. Interstitials are cooldown-limited via the shared
+singleton (see get_ad_service).
 """
 
 from __future__ import annotations
@@ -87,8 +88,8 @@ class AdService:
             await self._consent_manager.load_and_show_consent_form_if_required()
             self._can_request_ads = await self._consent_manager.can_request_ads()
         except Exception as e:
-            logger.warning("UMP consent flow failed, defaulting to allow ads: %s", e)
-            self._can_request_ads = True
+            logger.warning("UMP consent flow failed — ads disabled this session: %s", e)
+            self._can_request_ads = False
 
     async def show_privacy_options(self):
         """Show privacy options form if required by regulation (GDPR)."""

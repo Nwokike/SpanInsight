@@ -314,3 +314,64 @@ def build_findings_context(findings: list[dict]) -> str:
             line += f" [{'; '.join(str(n) for n in nums[:3])}]"
         lines.append(line)
     return "\n".join(lines)
+
+
+def user_friendly_error(
+    ex: BaseException | str, fallback: str = "Something went wrong. Please try again."
+) -> str:
+    """Map an exception to a short, actionable user-facing message.
+
+    Raw exception text never belongs in a snackbar. Known failure families
+    get specific guidance; anything unknown gets the fallback. The raw error
+    is still logged for diagnosis.
+    """
+    import logging as _logging
+
+    _log = _logging.getLogger(__name__)
+    raw = str(ex)
+    _log.warning("user_friendly_error: %s: %s", type(ex).__name__, raw[:300])
+    low = raw.lower()
+
+    if any(
+        k in low
+        for k in (
+            "timeout",
+            "timed out",
+            "connection",
+            "network",
+            "unreachable",
+            "getaddrinfo",
+        )
+    ):
+        return "Network issue — check your connection and try again."
+    if any(
+        k in low
+        for k in (
+            "quota",
+            "capacity",
+            "resource_exhausted",
+            "usage limit",
+            "colab limit",
+        )
+    ):
+        return (
+            "Colab has no free sessions right now (quota/capacity). "
+            "Try again in a few minutes."
+        )
+    if any(k in low for k in ("401", "unauthorized", "auth", "token", "credentials")):
+        return "Your Google session expired — please sign in again."
+    if any(
+        k in low for k in ("404", "not found", "session lost", "session has expired")
+    ):
+        return (
+            "The Colab session ended. Reconnect and we'll pick up where you left off."
+        )
+    if any(
+        k in low for k in ("jsondecode", "parse", "expecting value", "invalid json")
+    ):
+        return "The AI returned something unreadable. Try again or rephrase."
+    if any(k in low for k in ("filenotfound", "no such file")):
+        return "That file is no longer accessible on this device."
+    if "maximum upload size" in low:
+        return raw  # already user-facing by design
+    return fallback

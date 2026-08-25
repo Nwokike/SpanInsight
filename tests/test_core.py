@@ -73,3 +73,21 @@ class TestUtils:
         data = figure_to_png_bytes(mock_fig)
         assert isinstance(data, bytes)
         assert data.startswith(b"\x89PNG")
+
+
+def test_no_python314_only_comma_except_syntax():
+    """Guard: PEP-758 comma-except breaks any runtime below 3.14 (embedded
+    APK Python included) and the flet-mcp verifier sandbox."""
+    import re
+    from pathlib import Path
+
+    src = Path(__file__).resolve().parent.parent / "src"
+    pat = re.compile(
+        r"except [A-Za-z_][A-Za-z0-9_.]*(?:\s*,\s*[A-Za-z_][A-Za-z0-9_.]*)+:"
+    )
+    offenders = [
+        str(p)
+        for p in src.rglob("*.py")
+        if pat.search(p.read_text(encoding="utf-8", errors="ignore"))
+    ]
+    assert not offenders, f"comma-except syntax found in: {offenders}"

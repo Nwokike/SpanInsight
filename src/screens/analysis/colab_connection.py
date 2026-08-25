@@ -7,7 +7,7 @@ import logging
 import flet as ft
 
 from core.state import state
-from core.utils import show_snack
+from core.utils import show_snack, user_friendly_error
 from screens.analysis.bootstrap import setup_colab_environment
 
 logger = logging.getLogger("ColabConnection")
@@ -106,7 +106,13 @@ async def connect_colab_async(colab, page: ft.Page | None, set_is_connecting):
     except Exception as e:
         logger.error("Connect failed: %s", e)
         if page:
-            show_snack(page, f"Connection failed: {e}", error=True)
+            show_snack(
+                page,
+                user_friendly_error(
+                    e, "Couldn't connect to Colab. Try again in a moment."
+                ),
+                error=True,
+            )
     finally:
         set_is_connecting(False)
 

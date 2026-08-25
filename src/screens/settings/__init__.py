@@ -251,6 +251,19 @@ def SettingsScreen() -> ft.Control:
         )
         page.show_dialog(dialog)
 
+    async def _open_ad_privacy(e=None):
+        if not page or page.platform not in (
+            ft.PagePlatform.ANDROID,
+            ft.PagePlatform.IOS,
+        ):
+            return
+        try:
+            from services.ad_service import get_ad_service
+
+            await get_ad_service(page).show_privacy_options()
+        except Exception as ex:
+            logger.warning("Ad privacy options failed: %s", ex)
+
     async def on_clear_dataset_cache(e=None):
         """Delete all locally-cached dataset files for all projects."""
         try:
@@ -333,6 +346,19 @@ def SettingsScreen() -> ft.Control:
             lambda e: page.run_task(_on_keep_alive_change, e),
         )
     )
+    if page and page.platform in (
+        ft.PagePlatform.ANDROID,
+        ft.PagePlatform.IOS,
+    ):
+        controls.append(section_header("Privacy"))
+        controls.append(
+            setting_tile(
+                icon=ft.Icons.PRIVACY_TIP_ROUNDED,
+                title="Ad Privacy",
+                subtitle="Review your ads consent choices",
+                on_click=lambda e: page.run_task(_open_ad_privacy, e),
+            )
+        )
     controls.append(section_header("AI Credits"))
     controls.append(
         setting_tile(

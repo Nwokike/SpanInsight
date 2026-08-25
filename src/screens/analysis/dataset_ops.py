@@ -17,6 +17,7 @@ import logging
 import flet as ft
 
 from core.state import state
+from core.utils import show_snack, user_friendly_error
 from services.colab.introspection import (
     build_schema_extraction_code,
     parse_schema_from_outputs,
@@ -138,7 +139,6 @@ def report_import_failure(page: ft.Page | None, file_name: str, reason: str | No
     """Surface an import failure as a snackbar (used by non-dialog flows)."""
     if not page:
         return
-    from core.utils import show_snack
 
     msg = reason or "Unknown error while analyzing the dataset."
     show_snack(page, f"⚠️ {file_name}: {msg}", error=True)
@@ -157,10 +157,18 @@ async def ensure_remote_file(
     Returns the remote path. Raises on HTTP failure.
     """
     if not file_name:
+        import re as _re
         from pathlib import Path as _P
+        from urllib.parse import unquote as _unquote
+        from urllib.parse import urlsplit
 
-        stem = url.split("?")[0].rstrip("/").split("/")[-1] or "dataset"
-        file_name = _P(stem).name or "url_dataset.csv"
+        parts = urlsplit(url)
+        stem = _unquote(parts.path.rstrip("/").split("/")[-1]) or "dataset"
+        safe_stem = _re.sub(r"[^A-Za-z0-9._-]+", "_", stem).strip("._") or "dataset"
+        name = _P(safe_stem).name
+        if "." not in name:
+            name += ".csv"  # loader picks csv parsing by default
+        file_name = name[:80]
     code = (
         "import requests\n"
         f"_u = {url!r}\n"
@@ -197,7 +205,6 @@ async def run_dataset_import_dialog(
     import os
 
     from core import tokens
-    from core.utils import show_snack
     from services.file_service import suggest_load_code
 
     remote = remote_path or f"/content/{file_name}"
@@ -315,7 +322,14 @@ async def run_dataset_import_dialog(
             err_msg = error or "Could not read a tabular dataset."
             logger.error("Dataset load failed: %s", err_msg)
             if page:
-                show_snack(page, f"Dataset load failed: {err_msg}", error=True)
+                show_snack(
+                    page,
+                    "Dataset load failed: "
+                    + user_friendly_error(
+                        err_msg, "The file couldn't be read as a table."
+                    ),
+                    error=True,
+                )
             return False
 
         # AI Enrichment (overview description + starter chips)
@@ -329,7 +343,11 @@ async def run_dataset_import_dialog(
     except Exception as e:
         logger.error("Dataset import failed: %s", e)
         if page:
-            show_snack(page, f"Import failed: {e}", error=True)
+            show_snack(
+                page,
+                user_friendly_error(e, "Import failed. Please try again."),
+                error=True,
+            )
         return False
     finally:
         if page:

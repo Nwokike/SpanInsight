@@ -289,7 +289,7 @@ def build_agent_progress_pill(
 
     # Right controls: Stop button (if Autopilot) + Expand toggle
     right_controls = []
-    if is_autopilot and on_stop:
+    if on_stop:
         right_controls.append(
             ft.TextButton(
                 "Stop",

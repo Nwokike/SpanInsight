@@ -46,7 +46,7 @@ COST_AUTOPILOT = 15
 # ── Colab Defaults ──────────────────────────────────────────────────
 COLAB_DEFAULT_TIMEOUT = 120.0  # Default code execution timeout (seconds)
 COLAB_CONTENT_DIR = "/content"  # Default working directory on Colab
-COLAB_UPLOAD_MAX_MB = 2048  # Support large dataset uploads up to 2GB
+COLAB_UPLOAD_MAX_MB = 100  # Support large dataset uploads up to 2GB
 
 # ── Storage Keys (for local persistence) ────────────────────────────
 STORAGE_UUID = "spaninsight_uuid"

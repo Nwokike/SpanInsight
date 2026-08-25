@@ -8,6 +8,7 @@ import flet as ft
 
 from core import theme, tokens
 from core.constants import STORAGE_ONBOARDING_DONE
+from core.utils import user_friendly_error
 from state import AppStateCtx
 from state.service_ctx import ServiceCtx
 
@@ -46,7 +47,9 @@ def OnboardingScreen() -> ft.Control:
             set_is_loading_auth(False)
         except Exception as ex:
             logger.error("OAuth URL failed: %s", ex)
-            set_auth_status(f"Error: {ex}")
+            set_auth_status(
+                user_friendly_error(ex, "Sign-in failed. Please try again.")
+            )
             set_auth_status_color(theme.ERROR)
             set_is_loading_auth(False)
 
@@ -79,12 +82,19 @@ def OnboardingScreen() -> ft.Control:
                 set_auth_status_color(theme.SUCCESS)
                 set_is_loading_auth(False)
             else:
-                set_auth_status(f"Failed: {result.get('error', 'Unknown')}")
+                set_auth_status(
+                    user_friendly_error(
+                        result.get("error", "Unknown"),
+                        "Sign-in failed. Check the code and try again.",
+                    )
+                )
                 set_auth_status_color(theme.ERROR)
                 set_is_loading_auth(False)
                 is_submitting_ref.current = False
         except Exception as ex:
-            set_auth_status(f"Error: {ex}")
+            set_auth_status(
+                user_friendly_error(ex, "Sign-in failed. Please try again.")
+            )
             set_auth_status_color(theme.ERROR)
             set_is_loading_auth(False)
             is_submitting_ref.current = False

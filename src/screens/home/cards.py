@@ -363,12 +363,21 @@ def build_findings_section(
         spacing=tokens.SPACE_XS,
     )
 
+    body: list[ft.Control] = [header]
+    if items:
+        body.append(ft.Column(rows, spacing=tokens.SPACE_XS))
+    else:
+        body.append(
+            ft.Text(
+                "No verified insights yet — run an analysis and confirmed "
+                "answers collect here.",
+                size=tokens.FONT_XS,
+                color=ft.Colors.ON_SURFACE_VARIANT,
+            )
+        )
+
     return ft.Container(
-        visible=bool(items),
-        content=ft.Column(
-            [header, ft.Column(rows, spacing=tokens.SPACE_XS)],
-            spacing=tokens.SPACE_SM,
-        ),
+        content=ft.Column(body, spacing=tokens.SPACE_SM),
         margin=ft.Margin(
             tokens.SPACE_XL, tokens.SPACE_XS, tokens.SPACE_XL, tokens.SPACE_NONE
         ),

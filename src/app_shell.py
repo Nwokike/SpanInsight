@@ -14,6 +14,7 @@ from flet import Control
 from components.credit_badge import build_credit_badge, show_credits_dialog
 from components.offline_flow import OfflineFlow
 from core import tokens
+from core.utils import show_snack, user_friendly_error
 from state import AppStateCtx
 from state.controller_ctx import ControllerMethodsCtx
 from state.service_ctx import ServiceCtx
@@ -69,8 +70,6 @@ def AppShell() -> Control:
                 )
                 state.colab_connected = True
                 if page:
-                    from core.utils import show_snack
-
                     show_snack(
                         page,
                         f"Connected to Colab ({state.session_hardware})",
@@ -78,9 +77,11 @@ def AppShell() -> Control:
                     )
         except Exception as ex:
             if page:
-                from core.utils import show_snack
-
-                show_snack(page, f"Colab connect failed: {ex}", error=True)
+                show_snack(
+                    page,
+                    user_friendly_error(ex, "Colab connect failed. Try again."),
+                    error=True,
+                )
         finally:
             set_is_connecting(False)
 
@@ -356,11 +357,10 @@ def AppShell() -> Control:
 
         async def _retry_connection():
             from components.connectivity_monitor import recheck_connectivity
-            from core.utils import show_snack as _snack
 
             await recheck_connectivity(page)
             if state.is_online:
-                _snack(page, "Back online!", success=True)
+                show_snack(page, "Back online!", success=True)
 
         screen = OfflineFlow(
             on_retry=lambda _: page.run_task(_retry_connection) if page else None

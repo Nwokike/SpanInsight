@@ -358,7 +358,12 @@ def build_form_detail_view(
                                         expand=True,
                                     ),
                                     ft.Text(
-                                        f"Showing top {min(50, len(responses))}",
+                                        (
+                                            f"Showing top {min(50, len(responses))} "
+                                            "· Export CSV for the full set"
+                                            if len(responses) > 50
+                                            else f"Showing {len(responses)}"
+                                        ),
                                         size=tokens.FONT_XS,
                                         color=ft.Colors.ON_SURFACE_VARIANT,
                                     ),
