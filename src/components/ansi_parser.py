@@ -1,7 +1,14 @@
 import flet as ft
-from rich.ansi import AnsiDecoder
 
 from core import theme
+
+try:
+    from rich.ansi import AnsiDecoder
+
+    _HAS_RICH = True
+except ImportError:  # pragma: no cover - rich is a declared dep; safety net
+    AnsiDecoder = None
+    _HAS_RICH = False
 
 # Maximum number of styled spans we produce before falling back to plain text
 # (protects against memory blowout from absurdly long terminal dumps).
@@ -52,6 +59,18 @@ def parse_ansi_to_flet_text(
     """
     if is_error:
         default_color = theme.ERROR
+
+    if not _HAS_RICH:
+        # Graceful degradation: strip ANSI escapes, single styled Text.
+        import re as _re
+
+        plain = _re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", raw_text or "")
+        return ft.Text(
+            plain,
+            size=default_size,
+            color=default_color,
+            selectable=True,
+        )
 
     # Clean carriage returns: simulate terminal overwrite by taking the last segment per line
     lines = raw_text.split("\n")
