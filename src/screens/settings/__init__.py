@@ -114,18 +114,22 @@ def SettingsScreen() -> ft.Control:
                 if confirmed:
                     from core.constants import STORAGE_ONBOARDING_DONE
 
-                    if services.colab:
-                        await services.colab.clear_token()
                     if services.storage:
                         await services.storage.set(STORAGE_ONBOARDING_DONE, "false")
                     state.onboarding_done = False
                     state.is_authenticated = False
                     state.colab_authenticated = False
                     state.auth_email = ""
+                    if services.colab:
+                        services.colab.drop_runtime(state.active_session_name)
+                        await services.colab.clear_token()
                     state.colab_connected = False
                     state.active_session_name = ""
                     state.active_sessions = []
                     state.current_tab = 0
+                    # Stale cross-session state must not survive sign-out.
+                    state.pending_dataset_load = None
+                    state.findings = []
                     if page:
                         from core.utils import show_snack
 

@@ -65,10 +65,6 @@ class AppController:
         page.spacing = tokens.SPACE_NONE
 
         page.on_error = self._on_error
-        try:
-            page.on_app_lifecycle_state_change = self._on_app_lifecycle
-        except Exception as lifecycle_ex:
-            logger.debug("Lifecycle events unavailable: %s", lifecycle_ex)
 
         # ── Services ────────────────────────────────────────────
         self.storage = StorageService(page)
@@ -128,7 +124,9 @@ class AppController:
         from components.connectivity_monitor import start_connectivity_monitor
 
         # AppShell owns the real banner (visibility driven by state.is_online)
-        page.run_task(start_connectivity_monitor, page)
+        page.run_task(
+            start_connectivity_monitor, page, None, self._ping_session_on_resume
+        )
 
         # ── Build controller methods ────────────────────────────
         from state.controller_ctx import ControllerMethods, ControllerMethodsCtx

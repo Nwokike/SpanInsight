@@ -12,6 +12,7 @@ import flet as ft
 from flet import Control
 
 from components.credit_badge import build_credit_badge, show_credits_dialog
+from components.offline_flow import OfflineFlow
 from core import tokens
 from state import AppStateCtx
 from state.controller_ctx import ControllerMethodsCtx
@@ -345,6 +346,24 @@ def AppShell() -> Control:
             ),
             expand=True,
             alignment=ft.Alignment.CENTER,
+        )
+    elif not state.is_online and (
+        not state.onboarding_done or not state.is_authenticated
+    ):
+        # Offline gate (collabshell pattern): never trap users mid-signup.
+        # Sign-in needs the network, so offline + unauthenticated renders a
+        # full retry surface instead of the slides.
+
+        async def _retry_connection():
+            from components.connectivity_monitor import recheck_connectivity
+            from core.utils import show_snack as _snack
+
+            await recheck_connectivity(page)
+            if state.is_online:
+                _snack(page, "Back online!", success=True)
+
+        screen = OfflineFlow(
+            on_retry=lambda _: page.run_task(_retry_connection) if page else None
         )
     elif not state.onboarding_done or not state.is_authenticated:
         from screens.onboarding import OnboardingScreen

@@ -118,6 +118,7 @@ class AppState:
     def clear_notebook(self):
         """Reset notebook state for a new session."""
         self.notebook_cells = []
+        self.findings = []  # never leak prior project's facts into a new one
         self.current_notebook_name = ""
         self.active_project_dataset = ""
         self.current_df = None

@@ -192,7 +192,7 @@ def extract_content(data: dict) -> str:
             content = message.get("content", "") or ""
             content = strip_thinking(content)
             return content.strip()
-    except (IndexError, KeyError, TypeError):
+    except IndexError, KeyError, TypeError:
         pass
     return ""
 

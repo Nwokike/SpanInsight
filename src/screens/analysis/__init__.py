@@ -131,7 +131,14 @@ def AnalysisScreen() -> Control:
         )
         # Returning to the project: refresh tracked survey datasets in the
         # background so new form submissions are never missing.
-        if page and colab:
+        if (
+            page
+            and colab
+            and not (
+                getattr(state, "autopilot_running", False)
+                or getattr(state, "is_analyzing", False)
+            )
+        ):
             from screens.forms.dataset_sync import sync_form_datasets_on_mount
 
             page.run_task(
@@ -348,6 +355,11 @@ def AnalysisScreen() -> Control:
                 session_name,
             )
             return
+        if state.autopilot_running or state.is_analyzing:
+            # Never swap the kernel dataset out from under a running analysis
+            # — the pending import stays queued and consumes afterwards.
+            logger.info("[handoff] deferred: an AI run is in progress")
+            return
         if not session_name:
             logger.info(
                 "[handoff] import '%s' waiting for a Colab session — will "
@@ -380,6 +392,8 @@ def AnalysisScreen() -> Control:
 
     # ── Auto-trigger file picker when requested from Home/Quick Start ──
     async def _check_trigger_file_picker():
+        if state.autopilot_running or state.is_analyzing:
+            return  # importing mid-analysis would silently swap df
         if app_state.trigger_file_picker:
             app_state.trigger_file_picker = False
             await asyncio.sleep(0.1)

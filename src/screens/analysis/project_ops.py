@@ -143,6 +143,10 @@ async def save_notebook(projects, schema_json: dict, suggestions: list):
                 proj["schema_json"] = current_schema
             if suggestions:
                 proj["suggestions"] = suggestions
+            # Merge findings from state so debounced saves can never clobber
+            # a finding added moments ago by the agent loop.
+            if state.findings is not None:
+                proj["findings"] = list(state.findings)
             await projects.save_project(proj)
     except Exception as e:
         logger.warning("Failed to save notebook: %s", e)

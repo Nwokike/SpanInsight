@@ -49,3 +49,6 @@ wheels/
 # Temp
 scratch/
 *.log
+
+# Owner's private local release notes (never committed)
+release_notes.md

@@ -72,7 +72,7 @@ class ReportService:
             if raw:
                 try:
                     state.user_reports = fast_loads(raw)
-                except (json.JSONDecodeError, ValueError):
+                except json.JSONDecodeError, ValueError:
                     state.user_reports = []
         return state.user_reports
 

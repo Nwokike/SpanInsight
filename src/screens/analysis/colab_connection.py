@@ -63,6 +63,11 @@ async def connect_colab_async(colab, page: ft.Page | None, set_is_connecting):
         state.colab_authenticated = True
         state.is_authenticated = True
 
+        # The previous cached websocket belongs to the old session name —
+        # drop it before new_session overwrites the name (else it leaks).
+        if state.active_session_name:
+            colab.drop_runtime(state.active_session_name)
+
         result = await colab.new_session(
             gpu=state.default_gpu or None,
             tpu=state.default_tpu or None,

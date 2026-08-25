@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 
 import flet as ft
 
@@ -117,7 +118,11 @@ def _apply_state(online: bool, banner: ft.Container | None, page: ft.Page):
             pass
 
 
-async def start_connectivity_monitor(page: ft.Page, banner: ft.Container | None = None):
+async def start_connectivity_monitor(
+    page: ft.Page,
+    banner: ft.Container | None = None,
+    on_resume: Callable[[], None] | None = None,
+):
     """Wire ft.Connectivity.on_change for instant updates + poll fallback.
 
     Call via `page.run_task(start_connectivity_monitor, page, banner)`.
@@ -152,6 +157,11 @@ async def start_connectivity_monitor(page: ft.Page, banner: ft.Container | None 
     def _on_lifecycle(e: ft.AppLifecycleStateChangeEvent):
         if e.state == ft.AppLifecycleState.SHOW:
             page.run_task(recheck_connectivity, page)
+            if on_resume is not None:
+                try:
+                    on_resume()
+                except Exception as ex:
+                    logger.debug("on_resume callback failed: %s", ex)
 
     try:
         page.on_app_lifecycle_state_change = _on_lifecycle
