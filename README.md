@@ -48,7 +48,7 @@
 | **Jupyter (.ipynb) Session Export** | Export your entire notebook session with all code cells, narrative explanations, and execution outputs directly to standard `.ipynb` files for VS Code or Google Colab. |
 | **Expert Code Mode** | Expandable VS Code-style terminal for direct Python execution. Write and run custom code with full kernel control at zero credit cost. |
 | **Interactive Colab File Explorer** | Complete cloud file manager with breadcrumb navigation, folder zip downloads, upload pipelines, and 1-tap dataset loading into Analysis. |
-| **Smart Voice Surveys** | Natural language survey generation (Voice or Text) with instant mobile preview, cloud responses tracking, and CSV export protected by Cloudflare Turnstile anti-bot verification. |
+| **Smart Voice Surveys** | Natural language survey generation (Voice or Text) with instant mobile preview, cloud responses tracking, and CSV export protected by built-in anti-bot verification. |
 | **Rich Report Editor & Live Web Sharing** | Reorderable narrative blocks, interactive metrics, chart visualizers, and AI executive summary polishing with live public web sharing on `reports.spaninsight.com`. |
 
 ---
@@ -126,7 +126,7 @@
 - **Autonomous Self-Healing**: Automatically catches runtime Python exceptions, extracts error context, prompts the AI repair pipeline, and heals code seamlessly.
 - **Jupyter (.ipynb) Interoperability**: Export notebooks directly to `.ipynb` format for instant sharing across VS Code, JupyterLab, or Colab.
 - **Expert Code Mode**: Write, inspect, modify, and execute Python code manually with zero credit consumption.
-- **Smart Surveys & Turnstile Bot Shield**: Voice-driven survey creation with Cloudflare Turnstile anti-bot verification and 1-tap DataFrame import.
+- **Smart Surveys & Bot Shield**: Voice-driven survey creation with anti-bot human verification and 1-tap DataFrame import.
 - **Live Web Report Publishing**: Publish interactive visual reports to `reports.spaninsight.com` with responsive cards, metrics, and print-ready PDF export.
 - **Flet 0.86 Reactive Architecture**: Smooth UI animations, adaptive light/dark theming, and responsive layouts across mobile, tablet, and desktop screens.
 - **100% Tested Codebase**: Full test coverage with strict linting and formatting compliance (`pytest` + `ruff`).
@@ -139,9 +139,9 @@
 | :--- | :--- | :--- |
 | **Frontend UI** | Flet (Python on Flutter) | Cross-platform reactive client with dark/light theming, thought accordions, and chart rendering |
 | **Cloud Runtime** | Google Colab VM (`/content`) | Remote high-performance Python data science kernel (pandas, numpy, scikit-learn, PyTorch, TF) |
-| **AI Edge Gateway** | Cloudflare Worker (`api.spaninsight.com`) | Multi-model AI orchestration, prompt compression, and code generation routing |
-| **Survey Database** | Cloudflare D1 | Secure, encrypted relational storage for public survey definitions and response capturing |
-| **Report Hosting** | Cloudflare R2 (`reports.spaninsight.com`) | Ephemeral public web report hosting with responsive HTML/CSS/JS rendering |
+| **AI Service** | Managed endpoint (`api.spaninsight.com`) | AI orchestration, prompt optimization, and code generation routing |
+| **Survey Database** | Managed cloud database | Secure, encrypted relational storage for public survey definitions and response capturing |
+| **Report Hosting** | `reports.spaninsight.com` | Ephemeral public web report hosting with responsive HTML/CSS/JS rendering |
 | **Local Storage** | Platform SharedPreferences / Local JSON | Client-side OAuth tokens, project state persistence, and hardware preferences |
 
 ### Visual Flow
@@ -168,15 +168,15 @@ flowchart TD
 
     subgraph GATEWAY ["🔒 Edge Gateway & Cloud Services"]
         AI["🤖 Multi-Model AI Orchestrator"]
-        D1["💾 Form Submissions Database"]
-        R2["🌐 Ephemeral Report Sharing (7-day lifecycle)"]
+        DB["💾 Form Submissions Database"]
+        RS["🌐 Ephemeral Report Sharing (7-day lifecycle)"]
     end
 
     Analysis <==>|Jupyter Protocol / WebSocket| VM
     Files <==>|Direct POSIX File Transfer| POSIX
     Analysis <-->|Prompts & Error Auto-Healing| AI
-    Forms <-->|Publish & Submissions| D1
-    Reports <-->|Web Share URL| R2
+    Forms <-->|Publish & Submissions| DB
+    Reports <-->|Web Share URL| RS
     Home --> Analysis
 ```
 
@@ -215,7 +215,7 @@ SpanInsight is built with a strict **Privacy-First** architecture:
 
 1. **Direct Cloud VM Routing**: When connected to Google Colab, code execution and data processing run directly in your private Colab sandbox. No third-party servers intermediate your raw dataset files.
 2. **Encrypted Gateway Transit**: All AI prompts sent to the gateway are encrypted via TLS 1.3 with cryptographic client challenge headers.
-3. **Turnstile Bot Shield**: Public survey forms on `forms.spaninsight.com` require non-intrusive Cloudflare Turnstile human verification.
+3. **Bot Shield**: Public survey forms on `f.spaninsight.com` require non-intrusive human verification, so only legitimate responses are captured.
 4. **Data Sovereignty**: Exported notebooks (`.ipynb`), CSV responses, and PDF reports reside 100% on your local device.
 
 ---

@@ -392,14 +392,6 @@ def AppShell() -> Control:
     if top_bar is not None:
         layout_controls.append(top_bar)
 
-    screen_host = ft.Container(
-        content=screen,
-        left=tokens.SPACE_NONE,
-        top=tokens.SPACE_NONE,
-        right=tokens.SPACE_NONE,
-        bottom=tokens.SPACE_NONE,
-    )
-
     # Offline gate (collabshell pattern), as an OVERLAY instead of a branch
     # swap: sign-in needs the network, so offline + unauthenticated covers
     # the screen with a full retry card. Swapping the branch would remount
@@ -415,17 +407,34 @@ def AppShell() -> Control:
             if state.is_online:
                 show_snack(page, "Back online!", success=True)
 
-        gate = ft.Container(
-            content=OfflineFlow(
-                on_retry=lambda _: page.run_task(_retry_connection) if page else None
-            ),
-            left=tokens.SPACE_NONE,
-            top=tokens.SPACE_NONE,
-            right=tokens.SPACE_NONE,
-            bottom=tokens.SPACE_NONE,
-            bgcolor=ft.Colors.SURFACE,
+        # Positioned children ("left"/"top"/"right"/"bottom") are legal ONLY
+        # inside a Stack — the normal path below must stay a plain Container.
+        screen_host = ft.Stack(
+            [
+                ft.Container(
+                    content=screen,
+                    left=tokens.SPACE_NONE,
+                    top=tokens.SPACE_NONE,
+                    right=tokens.SPACE_NONE,
+                    bottom=tokens.SPACE_NONE,
+                ),
+                ft.Container(
+                    content=OfflineFlow(
+                        on_retry=lambda _: (
+                            page.run_task(_retry_connection) if page else None
+                        )
+                    ),
+                    left=tokens.SPACE_NONE,
+                    top=tokens.SPACE_NONE,
+                    right=tokens.SPACE_NONE,
+                    bottom=tokens.SPACE_NONE,
+                    bgcolor=ft.Colors.SURFACE,
+                ),
+            ],
+            expand=True,
         )
-        screen_host = ft.Stack([screen_host, gate], expand=True)
+    else:
+        screen_host = ft.Container(content=screen, expand=True)
 
     layout_controls.append(screen_host)
     if bottom_bar is not None:
