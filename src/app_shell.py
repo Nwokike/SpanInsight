@@ -348,23 +348,6 @@ def AppShell() -> Control:
             expand=True,
             alignment=ft.Alignment.CENTER,
         )
-    elif not state.is_online and (
-        not state.onboarding_done or not state.is_authenticated
-    ):
-        # Offline gate (collabshell pattern): never trap users mid-signup.
-        # Sign-in needs the network, so offline + unauthenticated renders a
-        # full retry surface instead of the slides.
-
-        async def _retry_connection():
-            from components.connectivity_monitor import recheck_connectivity
-
-            await recheck_connectivity(page)
-            if state.is_online:
-                show_snack(page, "Back online!", success=True)
-
-        screen = OfflineFlow(
-            on_retry=lambda _: page.run_task(_retry_connection) if page else None
-        )
     elif not state.onboarding_done or not state.is_authenticated:
         from screens.onboarding import OnboardingScreen
 
@@ -396,7 +379,10 @@ def AppShell() -> Control:
             screen = HomeScreen(key=ft.ValueKey("home"))
 
     # ── Offline banner (state-driven, monitor flips state.is_online) ─────
-    from components.connectivity_monitor import build_offline_banner
+    from components.connectivity_monitor import (
+        build_offline_banner,
+        recheck_connectivity,
+    )
 
     offline_banner = build_offline_banner()
     if not state.is_online:
@@ -405,7 +391,43 @@ def AppShell() -> Control:
     layout_controls = [offline_banner]
     if top_bar is not None:
         layout_controls.append(top_bar)
-    layout_controls.append(ft.Container(content=screen, expand=True))
+
+    screen_host = ft.Container(
+        content=screen,
+        left=tokens.SPACE_NONE,
+        top=tokens.SPACE_NONE,
+        right=tokens.SPACE_NONE,
+        bottom=tokens.SPACE_NONE,
+    )
+
+    # Offline gate (collabshell pattern), as an OVERLAY instead of a branch
+    # swap: sign-in needs the network, so offline + unauthenticated covers
+    # the screen with a full retry card. Swapping the branch would remount
+    # OnboardingScreen on every connectivity flap — and Android briefly
+    # reports NONE on each resume (e.g. returning from the OAuth browser),
+    # which restarted the slides from page one mid-signup.
+    if not state.is_online and (
+        not state.onboarding_done or not state.is_authenticated
+    ):
+
+        async def _retry_connection():
+            await recheck_connectivity(page)
+            if state.is_online:
+                show_snack(page, "Back online!", success=True)
+
+        gate = ft.Container(
+            content=OfflineFlow(
+                on_retry=lambda _: page.run_task(_retry_connection) if page else None
+            ),
+            left=tokens.SPACE_NONE,
+            top=tokens.SPACE_NONE,
+            right=tokens.SPACE_NONE,
+            bottom=tokens.SPACE_NONE,
+            bgcolor=ft.Colors.SURFACE,
+        )
+        screen_host = ft.Stack([screen_host, gate], expand=True)
+
+    layout_controls.append(screen_host)
     if bottom_bar is not None:
         layout_controls.append(bottom_bar)
 

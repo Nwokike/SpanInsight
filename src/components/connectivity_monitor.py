@@ -87,6 +87,16 @@ def build_offline_banner() -> ft.Container:
     )
 
 
+async def _await_on_resume(coro):
+    """Run an on_resume coroutine to completion as a page-lifetime task."""
+    try:
+        await coro
+    except asyncio.CancelledError:
+        raise
+    except Exception as ex:
+        logger.debug("on_resume task failed: %s", ex)
+
+
 async def recheck_connectivity(page: ft.Page) -> bool:
     """Re-probe connectivity and update state immediately.
 
@@ -94,6 +104,11 @@ async def recheck_connectivity(page: ft.Page) -> bool:
     so flipping the observable field is enough to hide/show the banner.
     """
     online = await _check_online(page)
+    if state.is_online == online and state.gateway_online == online:
+        # Steady state: the poll runs every few seconds for the whole app
+        # lifetime - a full page.update() on every tick starved the UI
+        # (and destabilized desktop GL). Only touch anything on a flip.
+        return online
     state.is_online = online
     state.gateway_online = online
     logger.info("Connectivity recheck: %s", "online" if online else "offline")
@@ -159,9 +174,15 @@ async def start_connectivity_monitor(
             page.run_task(recheck_connectivity, page)
             if on_resume is not None:
                 try:
-                    on_resume()
+                    result = on_resume()
                 except Exception as ex:
                     logger.debug("on_resume callback failed: %s", ex)
+                else:
+                    # The hook is usually a coroutine function (e.g. the
+                    # Colab resume ping) - it must be scheduled, not called,
+                    # or it dies with "coroutine was never awaited".
+                    if asyncio.iscoroutine(result):
+                        page.run_task(_await_on_resume, result)
 
     try:
         page.on_app_lifecycle_state_change = _on_lifecycle

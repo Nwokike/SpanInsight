@@ -62,9 +62,13 @@ def show_dataset_inspector(
         stat_text = ""
         if stats:
             parts = []
-            if "mean" in stats:
+            # Columns with all-NaN / non-numeric data serialize their
+            # stats as null - formatting those crashes the inspector.
+            if isinstance(stats.get("mean"), (int, float)):
                 parts.append(f"mean: {stats['mean']:.2f}")
-            if "min" in stats and "max" in stats:
+            if isinstance(stats.get("min"), (int, float)) and isinstance(
+                stats.get("max"), (int, float)
+            ):
                 parts.append(f"range: [{stats['min']}, {stats['max']}]")
             stat_text = " · ".join(parts)
 

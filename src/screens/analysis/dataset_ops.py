@@ -360,3 +360,88 @@ async def run_dataset_import_dialog(
                 set_is_generating(False)
             except Exception:
                 pass
+
+
+async def run_form_dataset_handoff_async(
+    page: ft.Page | None,
+    colab,
+    local_path: str,
+    file_name: str,
+) -> bool:
+    """Analyze-from-form import that survives tab switches.
+
+    The old handoff parked a pending payload for the Analysis screen's
+    ``use_effect`` to consume - but that coroutine lived inside the component,
+    so leaving Analysis (or bouncing tabs) silently killed the import
+    mid-upload and nothing ever appeared. This runs the SAME pipeline at page
+    scope instead: upload → load as a visible notebook cell → schema → AI
+    enrichment, writing every result into AppState. Whichever screen is
+    mounted simply renders the outcome.
+    """
+    import types
+
+    from screens.analysis.execution_runner import run_cell_async
+    from services.file_service import suggest_load_code
+
+    session = state.active_session_name
+    if not session or not colab:
+        show_snack(
+            page,
+            "Connect to Colab in Analysis first, then tap Analyze again.",
+            error=True,
+        )
+        return False
+
+    remote = f"/content/{file_name}"
+    try:
+        await colab.upload(local_path, remote, session)
+
+        def _add_cell(cell_type: str = "code", source: str = ""):
+            # AppState-owned: the notebook renders it whenever Analysis mounts.
+            return state.add_cell(cell_type, source)
+
+        async def _run_cell(cell_id: str):
+            await run_cell_async(
+                cell_id,
+                session,
+                colab,
+                page,
+                types.SimpleNamespace(current={}),  # no live cell refs headlessly
+                lambda _v: None,
+                lambda: None,
+            )
+
+        schema, error = await load_and_extract_schema(
+            colab,
+            session,
+            suggest_load_code(file_name),
+            add_cell_fn=_add_cell,
+            run_cell_fn=_run_cell,
+            cell_prompt=f"Load Dataset: {file_name}",
+        )
+        if schema is None:
+            logger.error("Form dataset load failed: %s", error)
+            show_snack(
+                page,
+                "Dataset load failed: "
+                + user_friendly_error(error or "", "The file couldn't be read."),
+                error=True,
+            )
+            return False
+
+        schema = await enrich_schema_with_ai(schema)
+        state.active_schema_json = schema
+        state.suggestions = schema.get("suggestions", [])
+        state.active_project_dataset = file_name
+        state.pending_dataset_load = None
+
+        show_snack(page, f"✅ Ready: {file_name}", success=True, duration=2500)
+        return True
+    except Exception as e:
+        logger.error("Form dataset handoff failed: %s", e)
+        show_snack(
+            page,
+            user_friendly_error(e, "Import failed. Please try again."),
+            error=True,
+        )
+        return False

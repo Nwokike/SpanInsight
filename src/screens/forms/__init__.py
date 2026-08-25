@@ -90,6 +90,14 @@ def FormsScreen() -> ft.Control:
             state.active_project_id, state, set_user_forms, set_is_loading, _show_error
         )
 
+    # Forms are scoped per project; with no active project they file under
+    # the account itself - say so, or users read an empty list as data loss.
+    forms_scope_label = (
+        ""
+        if state.active_project_id
+        else "Default workspace — open a project to see the forms that belong to it."
+    )
+
     # ── Mount ────────────────────────────────────────────────────
     async def _on_mount():
         await _load_forms()
@@ -426,22 +434,33 @@ def FormsScreen() -> ft.Control:
             return
 
         logger.info(
-            "Survey export ready: %s (%d rows) -> pending handoff",
+            "Survey export ready: %s (%d rows) -> page-scope handoff",
             file_name,
             len(rows),
         )
-        state.pending_dataset_load = {
-            "name": file_name,
-            "upload_local_path": local_path,
-            "remote_path": f"/content/{file_name}",
-        }
-        state.current_tab = 1
         if page:
             show_snack(
                 page,
                 f"📊 Exported {len(rows)} responses - loading as a dataset…",
-                success=True,
+                duration=3000,
             )
+        # Navigate first, then run the import AT PAGE SCOPE: the old pending-
+        # effect handoff lived inside the Analysis component, so leaving that
+        # screen silently killed the import. A page.run_task keeps running no
+        # matter which tab is mounted, and results land in AppState.
+        state.current_tab = 1
+        if page:
+
+            async def _run_handoff():
+                from screens.analysis.dataset_ops import (
+                    run_form_dataset_handoff_async,
+                )
+
+                await run_form_dataset_handoff_async(
+                    page, services.colab, local_path, file_name
+                )
+
+            page.run_task(_run_handoff)
 
     # ── View Router ──────────────────────────────────────────────
     if mode == "editor":
@@ -571,6 +590,7 @@ def FormsScreen() -> ft.Control:
             recording_time=recording_time,
             prompt_text=prompt_text,
             set_prompt_text=set_prompt_text,
+            scope_label=forms_scope_label,
             on_create_form=lambda e: (
                 (
                     set_editing_form_id(""),

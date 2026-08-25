@@ -151,7 +151,17 @@ async def submit_prompt_async(
 
             state.analysis_stage = 4
             state.analysis_stage_text = "Executing in Colab kernel & rendering visuals…"
-            await run_cell_fn(cell["id"])
+            try:
+                await run_cell_fn(cell["id"])
+            except Exception as run_ex:
+                logger.error(
+                    "Insight cell execution raised at step %d: %s", i + 1, run_ex
+                )
+                cell["failed"] = True
+            if not cell.get("failed"):
+                # Executed successfully -> belongs in reports/briefs even if
+                # a later step or the verification is what falls short.
+                cell["pinned"] = True
             final_cell = cell
 
             if state.autopilot_cancelled:
@@ -420,11 +430,17 @@ async def run_autopilot_async(
             cell["model"] = meta.get("model", "")
             # Autopilot narrates each step itself - skip per-cell post-exec AI
             cell["skip_narration"] = True
-            await run_cell_fn(cell["id"])
+            try:
+                await run_cell_fn(cell["id"])
+            except Exception as run_ex:
+                # A dead cell must never kill the run (legacy behavior):
+                # mark it failed and keep going to the next step.
+                logger.error("Cell execution raised at step %d: %s", step + 1, run_ex)
+                cell["failed"] = True
 
-            success = True
+            success = not cell.get("failed")
             desc = ""
-            if cell.get("outputs"):
+            if success and cell.get("outputs"):
                 last_out = cell["outputs"][-1]
                 if last_out.get("output_type") == "error":
                     success = False
@@ -439,10 +455,17 @@ async def run_autopilot_async(
                         logger.warning("Autopilot step narration failed: %s", desc_ex)
                         desc = "Completed"
 
-            if success:
-                cell["pinned"] = True
-                if desc:
-                    cell["narration"] = desc
+            # Legacy parity: EVERY executed cell is pinned, so a partially
+            # completed run still compiles everything that succeeded into
+            # the report. Failed cells stay pinned-but-flagged for the UI;
+            # report compilation filters them out.
+            cell["pinned"] = True
+            if success and desc:
+                cell["narration"] = desc
+            elif not success:
+                cell["narration"] = cell.get("narration") or (
+                    "This step failed even after self-healing."
+                )
 
             step_duration = time.monotonic() - step_start
             step_entry["status"] = "done" if success else "pending"
@@ -472,7 +495,11 @@ async def run_autopilot_async(
             )
 
     # ── Auto-compile into a ready-to-share Report ────────────────
-    pinned_blocks = [c for c in state.notebook_cells if c.get("pinned")]
+    # Legacy parity: only successful cells reach the report; failed ones
+    # remain visible in the notebook with their failure caption.
+    pinned_blocks = [
+        c for c in state.notebook_cells if c.get("pinned") and not c.get("failed")
+    ]
     if pinned_blocks:
         try:
             from services.report_service import ReportService
