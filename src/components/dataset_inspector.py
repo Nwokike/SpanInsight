@@ -152,14 +152,26 @@ def show_dataset_inspector(
         ),
         actions=[
             ft.TextButton("Close", on_click=_close),
-            ft.FilledButton(
-                "Analyze in Colab",
-                icon=ft.Icons.AUTO_AWESOME_ROUNDED,
-                style=ft.ButtonStyle(bgcolor=theme.PRIMARY, color=ft.Colors.WHITE),
-                on_click=lambda e: (
-                    _close(),
-                    on_load_in_analysis() if on_load_in_analysis else None,
-                ),
+            # The load CTA belongs to the Files screen, where the inspected
+            # file is NOT the active dataset yet. Inside Analysis the data is
+            # already live in the kernel - a dead "Analyze in Colab" button
+            # there would be nonsense.
+            *(
+                [
+                    ft.FilledButton(
+                        "Analyze in Colab",
+                        icon=ft.Icons.AUTO_AWESOME_ROUNDED,
+                        style=ft.ButtonStyle(
+                            bgcolor=theme.PRIMARY, color=ft.Colors.WHITE
+                        ),
+                        on_click=lambda e: (
+                            _close(),
+                            on_load_in_analysis() if on_load_in_analysis else None,
+                        ),
+                    )
+                ]
+                if on_load_in_analysis
+                else []
             ),
         ],
     )

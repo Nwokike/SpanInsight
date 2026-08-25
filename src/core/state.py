@@ -174,7 +174,14 @@ class AppState:
             pass
 
     def add_cell(self, cell_type: str = "code", source: str = "") -> dict:
-        """Add a new cell to the notebook."""
+        """Add a new cell to the notebook.
+
+        Returns the STORED element, not the local dict: under
+        ``@ft.observable`` the observed list keeps its own copy of appended
+        items, and callers (autopilot pinning, narration, verification
+        badges) must mutate the same object the UI reads or their changes
+        silently vanish.
+        """
         import uuid
 
         cell = {
@@ -185,7 +192,7 @@ class AppState:
             "is_running": False,
         }
         self.notebook_cells.append(cell)
-        return cell
+        return self.notebook_cells[-1]
 
 
 # Module-level singleton

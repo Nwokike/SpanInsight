@@ -25,7 +25,6 @@ def build_forms_dashboard(
     on_voice_toggle,
     on_view_form,
     on_refresh,
-    scope_label: str = "",
 ) -> ft.Control:
     """Renders the main dashboard for surveys: AI prompt bar, form list, and status."""
     if is_loading:
@@ -245,21 +244,6 @@ def build_forms_dashboard(
                 tokens.SPACE_XL,
                 tokens.SPACE_XS,
             ),
-        ),
-        *(
-            [
-                ft.Container(
-                    content=ft.Text(
-                        scope_label,
-                        size=tokens.FONT_XS,
-                        color=ft.Colors.ON_SURFACE_VARIANT,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    margin=ft.Margin(tokens.SPACE_XL, 0, tokens.SPACE_XL, 0),
-                )
-            ]
-            if scope_label
-            else []
         ),
         *form_list_content,
         _build_ad_banner(),

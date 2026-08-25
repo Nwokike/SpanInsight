@@ -18,7 +18,7 @@ from screens.forms.handlers import (
     create_form_schema_async,
     delete_form_async,
     download_csv_async,
-    load_forms_async,
+    load_all_forms_async,
     publish_form_async,
     request_update_live_form_async,
 )
@@ -86,17 +86,27 @@ def FormsScreen() -> ft.Control:
             )
 
     async def _load_forms():
-        await load_forms_async(
-            state.active_project_id, state, set_user_forms, set_is_loading, _show_error
+        # Project-independent: every form the account owns, annotated with
+        # its owning project, so silent project switches never blank the tab.
+        await load_all_forms_async(
+            services.projects, state, set_user_forms, set_is_loading, _show_error
         )
 
-    # Forms are scoped per project; with no active project they file under
-    # the account itself - say so, or users read an empty list as data loss.
-    forms_scope_label = (
-        ""
-        if state.active_project_id
-        else "Default workspace — open a project to see the forms that belong to it."
-    )
+    def _form_project_scope(form_or: dict | str) -> str:
+        """Owning project id for a form (auth scope for its endpoints).
+
+        The active project may be unrelated to the form, so per-form actions
+        must always authenticate with the project the form was filed under.
+        """
+        if isinstance(form_or, dict):
+            pid = str(form_or.get("_project_id") or "").strip()
+            if pid:
+                return pid
+            form_or = form_or.get("id")
+        for f in state.forms or []:
+            if f.get("id") == form_or and f.get("_project_id"):
+                return f["_project_id"]
+        return state.active_project_id
 
     # ── Mount ────────────────────────────────────────────────────
     async def _on_mount():
@@ -215,7 +225,7 @@ def FormsScreen() -> ft.Control:
     async def on_view_form(form: dict):
         set_active_form(form)
         resp_data = await forms_service.get_responses(
-            form["id"], state.active_project_id
+            form["id"], _form_project_scope(form)
         )
         form["_responses"] = resp_data.get("responses", [])
         form["_count"] = resp_data.get("count", 0)
@@ -278,7 +288,7 @@ def FormsScreen() -> ft.Control:
             )
 
     async def on_renew_form(form_id: str):
-        new_exp = await forms_service.renew_form(form_id, state.active_project_id)
+        new_exp = await forms_service.renew_form(form_id, _form_project_scope(form_id))
         if new_exp:
             if page:
                 from core.utils import show_snack
@@ -392,7 +402,7 @@ def FormsScreen() -> ft.Control:
         )
 
         rows = await forms_service.fetch_all_responses(
-            form_data.get("id", ""), state.active_project_id
+            form_data.get("id", ""), _form_project_scope(form_data)
         )
         if not rows:
             _show_error("No responses to analyze yet.")
@@ -502,7 +512,7 @@ def FormsScreen() -> ft.Control:
                             draft_title,
                             draft_desc,
                             draft_schema,
-                            state.active_project_id,
+                            _form_project_scope(active_form),
                             page,
                             set_is_publishing,
                             set_mode,
@@ -567,7 +577,7 @@ def FormsScreen() -> ft.Control:
                 page.run_task(
                     delete_form_async,
                     fid,
-                    state.active_project_id,
+                    _form_project_scope(fid),
                     page,
                     set_is_loading,
                     set_active_form,
@@ -590,7 +600,6 @@ def FormsScreen() -> ft.Control:
             recording_time=recording_time,
             prompt_text=prompt_text,
             set_prompt_text=set_prompt_text,
-            scope_label=forms_scope_label,
             on_create_form=lambda e: (
                 (
                     set_editing_form_id(""),

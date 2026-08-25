@@ -129,6 +129,9 @@ async def save_notebook(projects, schema_json: dict, suggestions: list):
             )
             state.active_project_id = new_p["id"]
             state.active_project_name = new_p["name"]
+            # Mirror the import-path auto-create: persist so a cold start
+            # restores what's on screen instead of the previous project.
+            state._persist_last_project()
             return
 
         proj = await projects.get_project(state.active_project_id)

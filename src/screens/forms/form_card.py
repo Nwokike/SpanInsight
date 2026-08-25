@@ -57,6 +57,21 @@ def render_form_card(form: dict, on_view) -> ft.Container:
                                     size=tokens.FONT_SM,
                                     color=ft.Colors.ON_SURFACE_VARIANT,
                                 ),
+                                # Forms list spans all projects - show which
+                                # one owns this form when it's known.
+                                *(
+                                    [
+                                        ft.Text(
+                                            f"· {form['_project_name']}",
+                                            size=tokens.FONT_SM,
+                                            color=ft.Colors.ON_SURFACE_VARIANT,
+                                            max_lines=1,
+                                            overflow=ft.TextOverflow.ELLIPSIS,
+                                        )
+                                    ]
+                                    if form.get("_project_name")
+                                    else []
+                                ),
                             ],
                             spacing=tokens.SPACE_SM,
                         ),

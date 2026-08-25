@@ -162,6 +162,11 @@ async def submit_prompt_async(
                 # Executed successfully -> belongs in reports/briefs even if
                 # a later step or the verification is what falls short.
                 cell["pinned"] = True
+                if on_cell_change:
+                    try:
+                        on_cell_change()
+                    except Exception:
+                        pass
             final_cell = cell
 
             if state.autopilot_cancelled:
@@ -211,6 +216,13 @@ async def submit_prompt_async(
                         )
                     except Exception as mem_ex:
                         logger.warning("Findings memory save skipped: %s", mem_ex)
+                # Explicit rebuild: verdict badge/narration/pin must render
+                # now, not depend on the incidental is_generating flip.
+                if on_cell_change:
+                    try:
+                        on_cell_change()
+                    except Exception:
+                        pass
                 break
             gaps = verdict.get("gaps") or []
             analysis_context = (analysis_context + "\n" + step)[-2500:]
@@ -342,6 +354,7 @@ async def run_autopilot_async(
     page: ft.Page,
     add_cell_fn,
     run_cell_fn,
+    on_cell_change=None,
 ):
     """Execute autonomous multi-step analytical autopilot."""
     active_sess = state.active_session_name or session_name
@@ -444,6 +457,9 @@ async def run_autopilot_async(
                 last_out = cell["outputs"][-1]
                 if last_out.get("output_type") == "error":
                     success = False
+                    # The runner normally flags this via self-heal exhaustion;
+                    # mark defensively so report compilation can filter it.
+                    cell["failed"] = True
                     desc = "\n".join(last_out.get("traceback", []))[:200]
                 else:
                     try:
@@ -466,6 +482,14 @@ async def run_autopilot_async(
                 cell["narration"] = cell.get("narration") or (
                     "This step failed even after self-healing."
                 )
+            # page.update() alone never re-runs the screen body — without a
+            # version bump the pin icon/narration stay stale until something
+            # else rebuilds (the manual-pin path bumps, hence its parity).
+            if on_cell_change:
+                try:
+                    on_cell_change()
+                except Exception:
+                    pass
 
             step_duration = time.monotonic() - step_start
             step_entry["status"] = "done" if success else "pending"

@@ -469,6 +469,7 @@ def AnalysisScreen() -> Control:
                 page,
                 _add_cell,
                 _run_cell,
+                _on_cell_change,
             ),
         )
         if projects and state.active_project_dataset:
@@ -496,6 +497,10 @@ def AnalysisScreen() -> Control:
                     state.active_project_name = new_name
                     set_active_project_id(new_p["id"])
                     set_active_project_name(new_name)
+                    # Persist immediately: create_project alone doesn't, and
+                    # a cold start must restore what's on screen (project_ops
+                    # save_notebook has the same auto-create path).
+                    state._persist_last_project()
                 else:
                     proj = await projects.get_project(state.active_project_id)
                     if proj and (
@@ -674,6 +679,7 @@ def AnalysisScreen() -> Control:
                 page,
                 _add_cell,
                 _run_cell,
+                _on_cell_change,
             ),
             on_upload_dataset=lambda: page.run_task(_pick_and_upload_file),
             on_manage_files=lambda: show_manage_files_modal(page, colab, session_name),

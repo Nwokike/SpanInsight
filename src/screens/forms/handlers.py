@@ -60,15 +60,59 @@ def _form_schema_fields(form: dict) -> list[dict]:
     return []
 
 
-async def load_forms_async(
-    active_project_id: str, state, set_user_forms, set_is_loading, show_error
+async def load_all_forms_async(
+    projects, state, set_user_forms, set_is_loading, show_error
 ):
-    """Fetch all forms belonging to active project from backend."""
+    """Fetch EVERY form the user owns, regardless of the active project.
+
+    The list used to be scoped to ``state.active_project_id``, so any silent
+    project switch (e.g. new-analysis auto-create) made the tab look empty
+    until a restart. Forms are now gathered across all known projects plus
+    the account fallback scope, deduped, sorted newest-first, and annotated
+    with their owning project so every per-form action authenticates against
+    the right scope.
+    """
     set_is_loading(True)
     try:
-        forms = await forms_service.list_forms(active_project_id)
-        set_user_forms(forms)
-        state.forms = forms
+        scopes: dict[str, str] = {}  # project_id -> project_name
+        if projects is not None:
+            try:
+                for p in await projects.list_projects():
+                    pid = str(p.get("id") or "").strip()
+                    if pid:
+                        scopes[pid] = p.get("name") or ""
+            except Exception as proj_ex:
+                logger.warning("Project scan for forms failed: %s", proj_ex)
+        fallback = str(getattr(state, "user_uuid", "") or "").strip()
+        if fallback and fallback not in scopes:
+            scopes[fallback] = ""
+
+        merged: dict[str, dict] = {}
+        if scopes:
+            items = list(scopes.items())
+            results = await asyncio.gather(
+                *(forms_service.list_forms(pid) for pid, _ in items),
+                return_exceptions=True,
+            )
+            for (pid, pname), res in zip(items, results):
+                if isinstance(res, BaseException):
+                    logger.warning("Forms fetch failed for %s: %s", pid, res)
+                    continue
+                for f in res or []:
+                    fid = f.get("id")
+                    if not fid or fid in merged:
+                        continue
+                    f["_project_id"] = pid
+                    f["_project_name"] = pname
+                    merged[fid] = f
+
+        forms_list = sorted(
+            merged.values(),
+            key=lambda f: str(f.get("created_at") or ""),
+            reverse=True,
+        )
+        set_user_forms(forms_list)
+        state.forms = forms_list
     except Exception as e:
         logger.error("Failed to load forms: %s", e)
         show_error("Could not load forms. Check your connection.")
@@ -337,6 +381,10 @@ async def request_update_live_form_async(
     if not form or not page:
         return
 
+    # Forms are listed across all projects now - authenticate against the
+    # OWNING project, not whatever happens to be active right now.
+    project_scope = str(form.get("_project_id") or active_project_id or "").strip()
+
     error = forms_service._validate_schema(draft_schema)
     if error:
         show_error(f"Cannot save: {error}")
@@ -346,7 +394,7 @@ async def request_update_live_form_async(
     # re-fetch the live definition and the current response count at the
     # moment the user asks to update, so every line in the dialog is current.
     fresh = await forms_service.get_form(form["id"])
-    resp_data = await forms_service.get_responses(form["id"], active_project_id)
+    resp_data = await forms_service.get_responses(form["id"], project_scope)
     if fresh:
         form = {**form, "schema_json": fresh.get("schema_json", [])}
     total_responses = resp_data.get("count", len(resp_data.get("responses", [])))
@@ -385,15 +433,13 @@ async def request_update_live_form_async(
         try:
             ok = await forms_service.update_form(
                 form_id=form["id"],
-                project_id=active_project_id,
+                project_id=project_scope,
                 title=draft_title,
                 description=draft_desc,
                 schema_json=draft_schema,
             )
             if ok:
-                resp_data = await forms_service.get_responses(
-                    form["id"], active_project_id
-                )
+                resp_data = await forms_service.get_responses(form["id"], project_scope)
                 updated = dict(form)
                 updated["title"] = draft_title
                 updated["description"] = draft_desc
