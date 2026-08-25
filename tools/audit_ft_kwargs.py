@@ -65,7 +65,17 @@ def main() -> int:
             if func.value.id != "ft":
                 continue
             cls = getattr(ft, func.attr, None)
-            if cls is None or not isinstance(cls, type):
+            if cls is None:
+                # A constructor-shaped name that does not exist in the
+                # installed flet — this is exactly how runtime crashes like
+                # "module flet has no attribute 'ActionChip'" happen.
+                if func.attr[:1].isupper():
+                    problems.append(
+                        f"{py.relative_to(SRC.parent)}:{node.lineno}: "
+                        f"ft.{func.attr} — DOES NOT EXIST in installed flet"
+                    )
+                continue
+            if not isinstance(cls, type):
                 continue  # enum access (ft.Icons.X handled as Attribute of Attribute) or func
             kw = valid_kwargs(cls)
             if kw is None:

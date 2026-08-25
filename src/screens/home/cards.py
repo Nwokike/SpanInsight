@@ -288,10 +288,13 @@ def build_recent_projects_section(
 def build_findings_section(
     project_name: str, findings: list[dict]
 ) -> ft.Container | None:
-    """'What we know' — verified insights the project has accumulated."""
+    """'What we know' — verified insights the project has accumulated.
+
+    ALWAYS returns a Container (visible=False when empty): a None return
+    inside a controls list crashes Flet's patcher with "Null is not a
+    subtype of Control" on every render.
+    """
     items = [f for f in (findings or []) if f.get("text")]
-    if not items:
-        return None
 
     rows = []
     for f in items[:5]:
@@ -361,6 +364,7 @@ def build_findings_section(
     )
 
     return ft.Container(
+        visible=bool(items),
         content=ft.Column(
             [header, ft.Column(rows, spacing=tokens.SPACE_XS)],
             spacing=tokens.SPACE_SM,

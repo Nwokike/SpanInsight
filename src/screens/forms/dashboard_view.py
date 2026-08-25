@@ -136,7 +136,7 @@ def build_forms_dashboard(
                     # Starter templates: one tap fills the prompt (flywheel).
                     ft.Row(
                         [
-                            ft.ActionChip(
+                            ft.Chip(
                                 label=ft.Text(t["title"], size=tokens.FONT_XS),
                                 tooltip=t["prompt"][:120],
                                 on_click=lambda e, _p=t["prompt"]: set_prompt_text(_p),
