@@ -253,6 +253,6 @@ class StorageService:
         if raw:
             try:
                 return fast_loads(raw)
-            except json.JSONDecodeError, TypeError:
+            except (json.JSONDecodeError, TypeError):
                 return []
         return []

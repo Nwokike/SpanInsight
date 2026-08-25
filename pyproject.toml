@@ -67,4 +67,8 @@ host = "app"
 pythonpath = ["src"]
 
 [tool.ruff]
+# Pin formatter/lint assumptions to 3.13: ruff's py314 target enables PEP-758
+# paren-less `except A, B:` formatting, which rewrites our portable tuple
+# form on every `ruff format` run (breaks <3.14 runtimes + the verifier).
+target-version = "py313"
 lint.extend-ignore = ["BLE001", "S110"]

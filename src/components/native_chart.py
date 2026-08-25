@@ -33,7 +33,7 @@ def _num(v) -> float | None:
     try:
         f = float(v)
         return None if math.isnan(f) else f
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return None
 
 
