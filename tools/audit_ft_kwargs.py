@@ -40,7 +40,7 @@ def valid_kwargs(cls) -> set[str] | None:
             p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
         ):
             return None  # accepts **kwargs -> cannot validate
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         pass
     return names or None
 
